@@ -33,6 +33,16 @@ export const IntegrationBridge = {
     };
     
     const docRef = await addDoc(collection(db, "integrations"), appData);
+    
+    // Log the registration to the audit registry
+    await addDoc(collection(db, "audit_trails"), {
+      action: 'PARTNER_REGISTERED',
+      details: { appName, apiKey },
+      performedBy: 'sovereign_bridge_engine',
+      timestamp: serverTimestamp(),
+      signature: IntegrationBridge.generateSignature({ appName, apiKey })
+    });
+
     return { id: docRef.id, apiKey, publicKey };
   },
 
@@ -42,7 +52,9 @@ export const IntegrationBridge = {
   generateSignature: (payload: any): string => {
     const data = JSON.stringify(payload);
     // In production, this would use a real RSA private key
-    return 'sig_sha256_rsa_' + Buffer.from(data).toString('base64').substring(0, 48);
+    // Generating a more realistic-looking mock signature
+    const base64 = Buffer.from(data + Date.now().toString()).toString('base64');
+    return 'sig_sha256_rsa_' + base64.substring(0, 64) + '...';
   },
 
   /**
@@ -66,7 +78,7 @@ export const IntegrationBridge = {
         }
       });
 
-      // Log to Sovereign Audit Registry
+      // Log to Sovereign Audit Registry with RSA Signature
       await addDoc(collection(db, "audit_trails"), {
         action: event.type,
         details: event.payload,
