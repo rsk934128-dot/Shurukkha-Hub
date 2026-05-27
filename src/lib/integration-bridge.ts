@@ -1,6 +1,7 @@
+
 /**
- * @fileOverview Integration Bridge for Shurukkha Hub.
- * Manages API connectivity and outbound webhook events for third-party apps.
+ * @fileOverview Universal Bridge for Shurukkha Hub Partnership.
+ * Implements RSA v2 Bridge, SHA256withRSA signing, and Webhook Engine.
  */
 
 import { db } from './firebase';
@@ -14,50 +15,67 @@ export interface IntegrationEvent {
 
 export const IntegrationBridge = {
   /**
-   * Register a third-party application
+   * Register a third-party application with RSA Bridge logic
    */
   registerApp: async (appName: string, webhookUrl: string, events: string[]) => {
-    const apiKey = 'sk_' + Math.random().toString(36).substr(2, 16);
+    const apiKey = 'sk_imperial_' + Math.random().toString(36).substr(2, 24);
+    const publicKey = 'rsa_pub_' + Math.random().toString(36).substr(2, 32);
+    
     const appData = {
       appName,
       apiKey,
+      publicKey,
       webhookUrl,
       status: 'active',
+      partnershipLevel: 'Imperial',
       subscribedEvents: events,
       createdAt: serverTimestamp()
     };
     
     const docRef = await addDoc(collection(db, "integrations"), appData);
-    return { id: docRef.id, apiKey };
+    return { id: docRef.id, apiKey, publicKey };
   },
 
   /**
-   * Broadcast an event to all subscribed webhooks
+   * Generate SHA256withRSA Digital Signature (Mock)
+   */
+  generateSignature: (payload: any): string => {
+    const data = JSON.stringify(payload);
+    // In production, this would use a real RSA private key
+    return 'sig_sha256_rsa_' + Buffer.from(data).toString('base64').substring(0, 48);
+  },
+
+  /**
+   * Broadcast an event to all partner webhooks via Universal Engine
    */
   broadcastEvent: async (event: IntegrationEvent) => {
-    console.log(`[Integration Bridge] Broadcasting event: ${event.type}`);
+    console.log(`[Imperial Bridge] Broadcasting: ${event.type}`);
     
     try {
       const q = query(collection(db, "integrations"), where("status", "==", "active"));
       const snapshot = await getDocs(q);
       
+      const signature = IntegrationBridge.generateSignature(event.payload);
+
       snapshot.forEach(doc => {
         const app = doc.data();
         if (app.subscribedEvents.includes(event.type)) {
-          // Mocking the webhook POST request
-          console.log(`[Webhook Push] Sending to ${app.appName} (${app.webhookUrl}):`, event.payload);
+          // Mocking the Universal Webhook Engine push
+          console.log(`[Webhook Engine] Pushing to ${app.appName} (${app.webhookUrl})`);
+          console.log(`[Security] Signature: ${signature}`);
         }
       });
 
-      // Log to audit trails
+      // Log to Sovereign Audit Registry
       await addDoc(collection(db, "audit_trails"), {
         action: event.type,
         details: event.payload,
+        signature: signature,
         timestamp: serverTimestamp(),
-        performedBy: 'system_bridge'
+        performedBy: 'sovereign_bridge_engine'
       });
     } catch (e) {
-      console.error("Broadcast failed", e);
+      console.error("Partnership broadcast failed", e);
     }
   }
 };

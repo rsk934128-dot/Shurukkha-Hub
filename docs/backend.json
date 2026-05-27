@@ -22,7 +22,8 @@
             "properties": {
               "status": { "type": "string" },
               "note": { "type": "string" },
-              "timestamp": { "type": "string", "format": "date-time" }
+              "timestamp": { "type": "string", "format": "date-time" },
+              "automated": { "type": "boolean" }
             }
           }
         }
@@ -52,7 +53,19 @@
         "subscribedEvents": { 
           "type": "array", 
           "items": { "type": "string" } 
-        }
+        },
+        "partnershipLevel": { "type": "string", "enum": ["Standard", "Imperial", "Sovereign"] }
+      }
+    },
+    "PartnerRequest": {
+      "title": "Partnership Application",
+      "description": "Application from external entities to join the ecosystem.",
+      "type": "object",
+      "properties": {
+        "orgName": { "type": "string" },
+        "email": { "type": "string" },
+        "useCase": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] }
       }
     }
   },
@@ -70,7 +83,11 @@
     },
     "/integrations/{appId}": {
       "schema": "IntegrationApp",
-      "description": "Registry of third-party applications and their webhook configs."
+      "description": "Registry of authorized partner applications."
+    },
+    "/partner_requests/{requestId}": {
+      "schema": "PartnerRequest",
+      "description": "Applications for ecosystem partnership."
     }
   }
 }

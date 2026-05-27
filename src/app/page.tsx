@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -25,6 +25,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
 import { AutonomousOrchestrator } from '@/lib/orchestrator'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import Link from 'next/link'
 
 export default function ShurukkhaDashboard() {
   const [isOffline, setIsOffline] = useState(false)
@@ -117,9 +118,9 @@ export default function ShurukkhaDashboard() {
               <Shield className="text-primary" size={24} />
             </div>
             <div>
-              <h1 className="text-xl font-headline font-bold tracking-tighter leading-none">SHURUKKHA HUB</h1>
+              <h1 className="text-xl font-headline font-bold tracking-tighter leading-none uppercase">SHURUKKHA HUB</h1>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">Sirajganj Operations</span>
+                <span className="text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">Sovereign Grid</span>
                 <Badge variant="outline" className="h-4 text-[8px] uppercase px-1 border-primary/30 text-primary cursor-pointer hover:bg-primary/10" onClick={() => setUserRole(prev => prev === 'citizen' ? 'authority' : 'citizen')}>
                   {userRole === 'citizen' ? 'Citizen Mode' : 'Authority Mode'}
                 </Badge>
@@ -128,6 +129,12 @@ export default function ShurukkhaDashboard() {
           </div>
           
           <div className="flex items-center gap-6">
+            <Link href="/partnerships">
+              <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold gap-2 text-primary/60 hover:text-primary">
+                <Globe size={14} /> PARTNERSHIP HUB
+              </Button>
+            </Link>
+
             {userRole === 'authority' && (
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-full border border-white/5">
@@ -227,9 +234,9 @@ export default function ShurukkhaDashboard() {
           <TabsContent value="authority" className="w-full">
             <Tabs defaultValue="ops" className="w-full">
               <TabsList className="mb-6 bg-muted/20 border border-white/5 p-1 h-12">
-                <TabsTrigger value="ops" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"><Radio size={14}/> ডিসপ্যাচ কমান্ড</TabsTrigger>
-                <TabsTrigger value="analytics" className="gap-2 h-10 px-6 data-[state=active]:bg-accent/10 data-[state=active]:text-accent"><BarChart3 size={14}/> হেলথ ও সিমুলেশন</TabsTrigger>
-                <TabsTrigger value="integrations" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"><Share2 size={14}/> ডেভেলপার ব্রিজ</TabsTrigger>
+                <TabsTrigger value="ops" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest">১. ডিসপ্যাচ কমান্ড</TabsTrigger>
+                <TabsTrigger value="analytics" className="gap-2 h-10 px-6 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest">২. হেলথ ও সিমুলেশন</TabsTrigger>
+                <TabsTrigger value="integrations" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest">৩. পার্টনার ব্রিজ</TabsTrigger>
               </TabsList>
 
               <TabsContent value="ops" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
@@ -239,7 +246,7 @@ export default function ShurukkhaDashboard() {
                       <Zap className="h-4 w-4 text-accent" />
                       <AlertTitle className="text-xs font-bold uppercase text-accent">Autonomous Monitoring Enabled</AlertTitle>
                       <AlertDescription className="text-[10px]">
-                        সিস্টেম এখন স্বয়ংক্রিয়ভাবে অ্যালার্ট প্রসেস করছে। যেকোনো প্রয়োজনে "Emergency Stop" বাটন ব্যবহার করুন।
+                        সিস্টেম এখন স্বয়ংক্রিয়ভাবে অ্যালার্ট প্রসেস করছে। প্রতিটি অ্যাকশন Sovereign Audit Registry-তে রেকর্ড হচ্ছে।
                       </AlertDescription>
                     </Alert>
                   )}
@@ -270,7 +277,7 @@ export default function ShurukkhaDashboard() {
 
       <footer className="border-t border-white/5 py-8 bg-muted/20 mt-12">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-xs text-muted-foreground font-body">Shurukkha Hub © ২০২৪ | সিরাজগঞ্জ সুরক্ষা মিশন-ক্রিটিক্যাল ইনফ্রাস্ট্রাকচার</p>
+          <p className="text-xs text-muted-foreground font-body uppercase tracking-[0.4em]">Shurukkha Sovereign Hub © ২০২৪ | সিরাজগঞ্জ সুরক্ষা মিশন-ক্রিটিক্যাল ইনফ্রাস্ট্রাকচার</p>
         </div>
       </footer>
       

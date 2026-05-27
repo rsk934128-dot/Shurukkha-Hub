@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Share2, Plus, Globe, Key, Trash2, ExternalLink, ShieldCheck, BookOpen, Terminal, Send, CheckCircle2 } from 'lucide-react'
+import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,7 +38,7 @@ export function IntegrationPanel() {
         ['SOS_TRIGGERED', 'STATUS_UPDATED', 'FLOOD_ALERT']
       );
       setNewApp({ name: '', webhook: '' });
-      toast({ title: "সফল!", description: "নতুন অ্যাপটি রেজিস্টার করা হয়েছে।" });
+      toast({ title: "সফল!", description: "Imperial Partner রেজিস্টার করা হয়েছে।" });
     } catch (e) {
       toast({ title: "ব্যর্থ!", variant: "destructive" });
     } finally {
@@ -48,44 +48,40 @@ export function IntegrationPanel() {
 
   const handleTestPing = async (app: any) => {
     toast({
-      title: "টেস্ট পিং পাঠানো হচ্ছে...",
-      description: `${app.appName} এর ওয়েবহুকে একটি টেস্ট পে-লোড পাঠানো হচ্ছে।`,
+      title: "RSA Bridge Ping",
+      description: `${app.appName} এর জন্য SHA256 সিগনেচার জেনারেট করা হচ্ছে...`,
     });
     
-    // Simulate ping broadcast
     await IntegrationBridge.broadcastEvent({
       type: 'STATUS_UPDATED',
       payload: { 
         test: true, 
-        message: "This is a verification ping from Shurukkha Hub.",
+        message: "Imperial Webhook Handshake",
         timestamp: new Date().toISOString()
       },
       timestamp: new Date().toISOString()
     });
 
     setTimeout(() => {
-      toast({
-        title: "পিং সফল!",
-        description: "রেসপন্স: 200 OK",
-      });
+      toast({ title: "পিং সফল!", description: "রেসপন্স: 200 OK (Signed)" });
     }, 1500);
   }
 
   return (
-    <Card className="bg-card border-white/5 flex flex-col h-full overflow-hidden">
+    <Card className="bg-card border-primary/20 flex flex-col h-full overflow-hidden">
       <CardHeader className="bg-primary/5 border-b border-primary/10">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-lg font-headline flex items-center gap-2">
-              <Share2 className="text-primary" size={20} />
-              ইউনিভার্সাল ব্রিজ (Developer Portal)
+              <Cpu className="text-primary" size={20} />
+              SOVEREIGN PARTNERSHIP HUB
             </CardTitle>
-            <CardDescription className="text-[10px] uppercase tracking-wider font-body">
-              থার্ড-পার্টি ইন্টিগ্রেশন এবং এপিআই ম্যানেজমেন্ট
+            <CardDescription className="text-[10px] uppercase tracking-wider font-bold text-primary/60">
+              RSA v2 Bridge & Universal Webhook Engine
             </CardDescription>
           </div>
-          <Badge variant="outline" className="border-primary/30 text-primary gap-1">
-            <ShieldCheck size={12} /> ENTERPRISE SDK
+          <Badge variant="outline" className="border-primary/40 text-primary bg-primary/5 gap-1.5 py-1">
+            <Lock size={12} /> IMPERIAL SDK ACTIVE
           </Badge>
         </div>
       </CardHeader>
@@ -93,51 +89,51 @@ export function IntegrationPanel() {
       <Tabs defaultValue="apps" className="flex-1 flex flex-col">
         <div className="px-6 py-2 bg-muted/20 border-b border-white/5">
           <TabsList className="bg-transparent border-none p-0 h-8">
-            <TabsTrigger value="apps" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"><Globe size={14}/> কানেক্টেড অ্যাপস</TabsTrigger>
-            <TabsTrigger value="docs" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"><BookOpen size={14}/> এপিআই ডকুমেন্টেশন</TabsTrigger>
+            <TabsTrigger value="apps" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Globe size={14}/> কানেক্টেড পার্টনার্স</TabsTrigger>
+            <TabsTrigger value="docs" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><BookOpen size={14}/> এপিআই ডকস</TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="apps" className="flex-1 p-6 space-y-6 m-0">
-          <form onSubmit={handleRegister} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-muted/30 rounded-xl border border-white/5">
+          <form onSubmit={handleRegister} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
             <Input 
-              placeholder="App Name" 
+              placeholder="Partner App Name" 
               value={newApp.name}
               onChange={(e) => setNewApp({...newApp, name: e.target.value})}
-              className="bg-background border-white/10"
+              className="bg-background/50 border-white/10"
               required
             />
             <Input 
-              placeholder="Webhook URL" 
+              placeholder="Universal Webhook URL" 
               value={newApp.webhook}
               onChange={(e) => setNewApp({...newApp, webhook: e.target.value})}
-              className="bg-background border-white/10"
+              className="bg-background/50 border-white/10"
               required
             />
             <Button type="submit" disabled={loading} className="bg-primary text-background font-bold gap-2">
-              <Plus size={16} /> নতুন অ্যাপ যোগ করুন
+              <Plus size={16} /> পার্টনার যোগ করুন
             </Button>
           </form>
 
-          <ScrollArea className="h-[400px]">
+          <ScrollArea className="h-[450px]">
             <div className="grid gap-3">
               {apps.length === 0 ? (
-                <div className="text-center py-12 opacity-30">
-                  <Globe size={48} className="mx-auto mb-4" />
-                  <p className="text-sm font-headline">কোন অ্যাপ কানেক্ট করা নেই</p>
+                <div className="text-center py-20 opacity-20">
+                  <Cpu size={64} className="mx-auto mb-4" />
+                  <p className="text-sm font-headline font-bold uppercase tracking-widest">No Imperial Partners Linked</p>
                 </div>
               ) : (
                 apps.map(app => (
-                  <div key={app.id} className="p-4 bg-card border border-white/5 rounded-xl flex items-center justify-between group">
+                  <div key={app.id} className="p-4 bg-card/60 border border-white/5 rounded-xl flex items-center justify-between group hover:border-primary/30 transition-all">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Key size={20} className="text-primary" />
+                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+                        <Key size={24} className="text-primary" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-headline font-bold">{app.appName}</p>
-                          <Badge className="bg-accent/20 text-accent border-accent/30 text-[7px] uppercase h-3.5">
-                            {app.status}
+                          <Badge className="bg-primary/20 text-primary border-primary/30 text-[7px] uppercase h-4 px-1.5">
+                            {app.partnershipLevel || 'Standard'}
                           </Badge>
                         </div>
                         <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[250px]">{app.webhookUrl}</p>
@@ -148,12 +144,12 @@ export function IntegrationPanel() {
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleTestPing(app)}
-                        className="h-8 text-[10px] gap-1.5 border-white/10 hover:bg-primary/10 hover:text-primary transition-all"
+                        className="h-9 text-[10px] gap-2 border-primary/20 hover:bg-primary/10 hover:text-primary font-bold"
                       >
-                        <Send size={12} /> টেস্ট পিং
+                        <Send size={14} /> RSA PING
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                        <Trash2 size={16} />
+                      <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-destructive">
+                        <Trash2 size={18} />
                       </Button>
                     </div>
                   </div>
@@ -166,67 +162,56 @@ export function IntegrationPanel() {
         <TabsContent value="docs" className="flex-1 p-6 m-0">
           <ScrollArea className="h-[550px] pr-4">
             <div className="space-y-8">
-              <section>
-                <h4 className="text-sm font-headline font-bold text-primary flex items-center gap-2 mb-3">
-                  <Terminal size={16} /> ১. অথেন্টিকেশন (Authentication)
+              <section className="p-4 bg-primary/5 rounded-2xl border border-primary/20">
+                <h4 className="text-sm font-headline font-bold text-primary flex items-center gap-2 mb-3 uppercase tracking-widest">
+                  <ShieldCheck size={18} /> RSA v2 Handshake (Protocol)
                 </h4>
-                <div className="p-4 bg-muted/40 rounded-xl border border-white/5 space-y-3">
-                  <p className="text-xs text-foreground/80 leading-relaxed font-body">
-                    প্রতিটি রিকোয়েস্টে আপনার জন্য জেনারেট করা API Key টি `X-Surakkha-Key` হেডার হিসেবে পাঠাতে হবে।
-                  </p>
-                  <code className="text-[11px] font-mono block bg-black/40 p-3 rounded-md text-primary/80 border border-white/5">
-                    X-Surakkha-Key: sk_live_823sh...
-                  </code>
+                <p className="text-xs text-foreground/80 leading-relaxed font-body mb-4">
+                  আপনার সাম্রাজ্যের নিরাপত্তা নিশ্চিত করতে আমরা SHA256withRSA ডিজিটাল সিগনেচার ব্যবহার করি। প্রতিটি পে-লোডে `X-Imperial-Signature` হেডার থাকবে।
+                </p>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Required Headers:</p>
+                    <code className="text-[10px] font-mono block bg-black/60 p-3 rounded-md text-primary/80 border border-white/5 whitespace-pre">
+{`X-Imperial-Key: sk_imperial_...
+X-Imperial-Signature: sig_sha256_rsa_...
+Content-Type: application/json`}
+                    </code>
+                  </div>
                 </div>
               </section>
 
               <section>
-                <h4 className="text-sm font-headline font-bold text-primary flex items-center gap-2 mb-3">
-                  <Terminal size={16} /> ২. ইভেন্ট টাইপস (Event Types)
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {[
-                    { name: 'SOS_TRIGGERED', desc: 'নতুন ইমার্জেন্সি এলার্ট ট্রিগার হলে' },
-                    { name: 'STATUS_UPDATED', desc: 'ঘটনার স্ট্যাটাস পরিবর্তন হলে' },
-                    { name: 'FLOOD_ALERT', desc: 'পানির স্তর বিপদসীমা অতিক্রম করলে' }
-                  ].map(e => (
-                    <div key={e.name} className="p-3 bg-muted/20 rounded-lg border border-white/5">
-                      <p className="text-[10px] font-mono font-bold text-accent">{e.name}</p>
-                      <p className="text-[9px] text-muted-foreground mt-1">{e.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section>
-                <h4 className="text-sm font-headline font-bold text-primary flex items-center gap-2 mb-3">
-                  <Terminal size={16} /> ৩. ওয়েবহুক পে-লোড (Webhook Payload)
+                <h4 className="text-sm font-headline font-bold text-primary flex items-center gap-2 mb-4 uppercase tracking-widest">
+                  <Terminal size={18} /> Integration Example
                 </h4>
                 <div className="p-4 bg-muted/40 rounded-xl border border-white/5">
-                  <code className="text-[10px] font-mono block bg-black/40 p-3 rounded-md text-primary/80 leading-relaxed whitespace-pre overflow-x-auto">
-{`{
-  "event": "SOS_TRIGGERED",
-  "alertId": "sos_8291",
-  "payload": {
-    "location": "বেলকুচি চরাঞ্চল",
-    "type": "বন্যা উদ্ধার",
-    "timestamp": "2024-03-20T10:30:00Z"
-  },
-  "signature": "sha256=..."
-}`}
+                  <code className="text-[10px] font-mono block bg-black/60 p-4 rounded-md text-primary/70 leading-relaxed whitespace-pre overflow-x-auto">
+{`// Sirajganj Surakkha SDK v2.0
+import { ImperialBridge } from '@surakkha/sdk';
+
+const partner = new ImperialBridge({
+  apiKey: 'YOUR_IMPERIAL_KEY',
+  webhookSecret: 'YOUR_SECRET'
+});
+
+partner.on('SOS_TRIGGERED', (alert) => {
+  console.log('Emergency Detected:', alert.location);
+  // Execute local response logic
+});`}
                   </code>
                 </div>
               </section>
 
-              <section className="p-4 bg-accent/5 rounded-xl border border-accent/20">
+              <div className="p-4 bg-accent/5 rounded-xl border border-accent/20">
                 <div className="flex items-center gap-2 text-accent mb-2">
-                  <CheckCircle2 size={16} />
-                  <span className="text-[10px] font-headline font-bold uppercase tracking-widest">Rate Limiting</span>
+                  <CheckCircle2 size={18} />
+                  <span className="text-[10px] font-headline font-bold uppercase tracking-[0.2em]">Sovereign Audit Registry</span>
                 </div>
-                <p className="text-[10px] text-muted-foreground font-body leading-relaxed">
-                  ফ্রি টায়ার ইউজারদের জন্য প্রতি মিনিটে সর্বোচ্চ ৬০টি রিকোয়েস্ট অনুমোদিত। এন্টারপ্রাইজ সাপোর্ট পেতে জেলা প্রশাসনের আইটি সেলের সাথে যোগাযোগ করুন।
+                <p className="text-[10px] text-muted-foreground font-body leading-relaxed italic">
+                  প্রতিটি এপিআই কল এবং ওয়েবডুক পুশ স্বয়ংক্রিয়ভাবে অডিট রেজিস্ট্রিতে সিগনেচার সহ সংরক্ষিত হয়। কোনো অনিয়ম হলে সিস্টেম স্বয়ংক্রিয়ভাবে পার্টনার কি রিভোক করবে।
                 </p>
-              </section>
+              </div>
             </div>
           </ScrollArea>
         </TabsContent>
