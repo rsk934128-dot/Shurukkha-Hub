@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -12,6 +12,7 @@ import { ResourceMap } from '@/components/dashboard/resource-map'
 import { DisasterFeed } from '@/components/dashboard/disaster-feed'
 import { DispatcherConsole } from '@/components/dashboard/dispatcher-console'
 import { IntegrationPanel } from '@/components/dashboard/integration-panel'
+import { SystemHealth } from '@/components/dashboard/system-health'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -199,19 +200,37 @@ export default function ShurukkhaDashboard() {
             </div>
           </TabsContent>
 
-          <TabsContent value="authority" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
-            <div className="lg:col-span-8 space-y-6">
-              <div className="h-[calc(100vh-450px)]">
-                <DispatcherConsole />
-              </div>
-              <div className="h-[350px]">
+          <TabsContent value="authority" className="w-full">
+            <Tabs defaultValue="ops" className="w-full">
+              <TabsList className="mb-6 bg-muted/20 border border-white/5 p-1 h-12">
+                <TabsTrigger value="ops" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"><Radio size={14}/> ডিসপ্যাচ কমান্ড</TabsTrigger>
+                <TabsTrigger value="analytics" className="gap-2 h-10 px-6 data-[state=active]:bg-accent/10 data-[state=active]:text-accent"><BarChart3 size={14}/> হেলথ ও সিমুলেশন</TabsTrigger>
+                <TabsTrigger value="integrations" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"><Share2 size={14}/> ডেভেলপার ব্রিজ</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="ops" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
+                <div className="lg:col-span-8 space-y-6">
+                  <div className="h-[calc(100vh-450px)]">
+                    <DispatcherConsole />
+                  </div>
+                  <div className="h-[350px]">
+                    <RiverTelemetry />
+                  </div>
+                </div>
+                <div className="lg:col-span-4 space-y-6 h-full">
+                  <ResourceMap />
+                  <EmergencyDirectory />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="analytics" className="space-y-6 mt-0">
+                <SystemHealth />
+              </TabsContent>
+
+              <TabsContent value="integrations" className="h-[800px] mt-0">
                 <IntegrationPanel />
-              </div>
-            </div>
-            <div className="lg:col-span-4 space-y-6 h-full">
-              <RiverTelemetry />
-              <ResourceMap />
-            </div>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
       </main>
