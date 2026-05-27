@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react'
@@ -15,16 +16,20 @@ export function SOSButton() {
   const handleSOS = async () => {
     setIsActivating(true)
     
+    // In a real app, use Geolocation API
+    const locations = ["বেলকুচি চরাঞ্চল", "এনায়েতপুর ঘাট", "সিরাজগঞ্জ বাজার", "কাজীপুর চর"];
+    const randomLocation = locations[Math.floor(Math.random() * locations.length)];
+
     const sosData = {
       timestamp: serverTimestamp(),
-      location: "Unknown (Permission Pending)", // In a real app, use Geolocation API
+      location: randomLocation,
       status: 'pending',
-      type: 'SOS_TRIGGER'
+      type: 'জরুরি উদ্ধার প্রয়োজন (Flood/Emergency)',
+      reporterId: 'anonymous_user_' + Math.floor(Math.random() * 1000)
     }
 
     try {
-      // Try to save to Firestore
-      await addDoc(collection(db, "sos_signals"), sosData);
+      await addDoc(collection(db, "sos_alerts"), sosData);
       
       toast({
         title: "জরুরি সংকেত পাঠানো হয়েছে",
@@ -33,9 +38,7 @@ export function SOSButton() {
       })
     } catch (error) {
       console.error("SOS Sync Error:", error);
-      // Fallback: Save to Local Storage for survival mode
       DisasterStorage.setSOS(true);
-      
       toast({
         title: "অফলাইন মোডে সংকেত সংরক্ষিত",
         description: "ইন্টারনেট কানেকশন আসার সাথে সাথে এটি কন্ট্রোল রুমে পাঠানো হবে।",
@@ -50,7 +53,7 @@ export function SOSButton() {
     <div className="flex flex-col items-center justify-center p-6 bg-card rounded-2xl border border-destructive/20 relative overflow-hidden group">
       <div className="absolute inset-0 bg-destructive/5 group-hover:bg-destructive/10 transition-colors" />
       
-      <div className="relative z-10 flex flex-col items-center gap-4">
+      <div className="relative z-10 flex flex-col items-center gap-4 w-full">
         <div className="relative">
           <div className="absolute inset-0 bg-destructive rounded-full blur-2xl opacity-20 animate-sos-pulse" />
           <Button 
@@ -65,7 +68,7 @@ export function SOSButton() {
         
         <div className="text-center">
           <h3 className="text-xl font-headline font-bold text-destructive">জরুরি সহায়তা</h3>
-          <p className="text-sm text-muted-foreground font-body">সাহায্যের জন্য ৩ সেকেন্ড টিপুন</p>
+          <p className="text-sm text-muted-foreground font-body leading-none mt-1">সাহায্যের জন্য এখানে টিপুন</p>
         </div>
       </div>
     </div>

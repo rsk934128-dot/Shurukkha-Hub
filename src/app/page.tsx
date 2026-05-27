@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, Menu, User, Search, Map as MapIcon, Wind, Compass, WifiOff, Zap, Video } from 'lucide-react'
+import { Shield, Bell, Menu, User, Video, LayoutDashboard, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -10,12 +11,15 @@ import { EmergencyDirectory } from '@/components/dashboard/emergency-directory'
 import { IncidentReport } from '@/components/dashboard/incident-report'
 import { ResourceMap } from '@/components/dashboard/resource-map'
 import { DisasterFeed } from '@/components/dashboard/disaster-feed'
+import { DispatcherConsole } from '@/components/dashboard/dispatcher-console'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default function ShurukkhaDashboard() {
   const [isOffline, setIsOffline] = useState(false)
+  const [userRole, setUserRole] = useState<'citizen' | 'authority'>('citizen')
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false)
@@ -23,7 +27,6 @@ export default function ShurukkhaDashboard() {
     
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
-    
     setIsOffline(!navigator.onLine)
     
     return () => {
@@ -44,22 +47,14 @@ export default function ShurukkhaDashboard() {
               <h1 className="text-xl font-headline font-bold tracking-tighter leading-none">SHURUKKHA HUB</h1>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">Sirajganj Operations</span>
-                {isOffline && (
-                  <Badge variant="destructive" className="h-4 text-[8px] uppercase px-1 gap-1">
-                    <WifiOff size={8} /> Survival Mode
-                  </Badge>
-                )}
+                <Badge variant="outline" className="h-4 text-[8px] uppercase px-1 border-primary/30 text-primary cursor-pointer hover:bg-primary/10" onClick={() => setUserRole(prev => prev === 'citizen' ? 'authority' : 'citizen')}>
+                  {userRole === 'citizen' ? 'Citizen Mode' : 'Authority Mode'}
+                </Badge>
               </div>
             </div>
           </div>
           
-          <div className="hidden md:flex items-center gap-8">
-            <nav className="flex items-center gap-6">
-              <a href="#" className="text-sm font-headline font-bold text-primary hover:text-primary/80 transition-colors">ড্যাশবোর্ড</a>
-              <a href="#" className="text-sm font-headline font-bold text-muted-foreground hover:text-primary transition-colors">মানচিত্র</a>
-              <a href="#" className="text-sm font-headline font-bold text-muted-foreground hover:text-primary transition-colors">হেল্পলাইন</a>
-            </nav>
-            <div className="h-6 w-px bg-white/10" />
+          <div className="hidden md:flex items-center gap-6">
             <div className="flex items-center gap-2">
               <Dialog>
                 <DialogTrigger asChild>
@@ -90,85 +85,72 @@ export default function ShurukkhaDashboard() {
               </Button>
             </div>
           </div>
-          
-          <Button size="icon" variant="ghost" className="md:hidden">
-            <Menu size={24} />
-          </Button>
         </div>
       </header>
 
       {isOffline && (
         <div className="bg-destructive/20 border-b border-destructive/30 py-2">
           <div className="container mx-auto px-4 flex items-center justify-center gap-3">
-            <Zap size={14} className="text-destructive animate-pulse" />
-            <p className="text-xs font-headline font-bold text-destructive uppercase tracking-widest">
-              আপনি এখন অফলাইন মোডে আছেন। সংরক্ষিত ডেটা ও ডিরেক্টরি ব্যবহার করুন।
+            <Badge variant="destructive" className="h-4 text-[8px]">OFFLINE</Badge>
+            <p className="text-xs font-headline font-bold text-destructive uppercase tracking-widest leading-none">
+              সারভাইভাল মোড অ্যাক্টিভ। লোকাল ডেটা ব্যবহৃত হচ্ছে।
             </p>
           </div>
         </div>
       )}
 
-      <main className="flex-1 container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-3 space-y-6">
-          <SOSButton />
-          
-          <div className="p-4 bg-muted/40 rounded-2xl border border-white/5 space-y-4">
-            <h3 className="text-sm font-headline font-bold uppercase tracking-wider text-muted-foreground">তড়িৎ তথ্য</h3>
-            <div className="grid gap-3">
-              <div className="flex items-center justify-between p-3 bg-background/50 rounded-xl border border-white/5">
-                <div className="flex items-center gap-3">
-                  <Wind size={18} className="text-accent" />
-                  <span className="text-sm font-body">বাতাস</span>
-                </div>
-                <span className="text-sm font-headline font-bold">১২ কি.মি./ঘণ্টা</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-background/50 rounded-xl border border-white/5">
-                <div className="flex items-center gap-3">
-                  <Compass size={18} className="text-accent" />
-                  <span className="text-sm font-body">আর্দ্রতা</span>
-                </div>
-                <span className="text-sm font-headline font-bold">৭৮%</span>
-              </div>
+      <main className="flex-1 container mx-auto px-4 py-8">
+        <Tabs defaultValue="citizen" value={userRole} onValueChange={(val: any) => setUserRole(val)} className="w-full">
+          <div className="flex justify-between items-center mb-8">
+            <div className="space-y-1">
+              <h2 className="text-3xl font-headline font-bold tracking-tight">
+                {userRole === 'citizen' ? 'সুরক্ষা ড্যাশবোর্ড' : 'অপারেশনাল কমান্ড সেন্টার'}
+              </h2>
+              <p className="text-muted-foreground text-sm font-body">
+                {userRole === 'citizen' ? 'সিরাজগঞ্জ জেলা প্রশাসনের পাবলিক সেফটি পোর্টাল' : 'জরুরি পরিস্থিতি মনিটরিং ও ডিসপ্যাচ ম্যানেজমেন্ট'}
+              </p>
             </div>
+            <TabsList className="bg-muted/40 border border-white/5">
+              <TabsTrigger value="citizen" className="gap-2"><LayoutDashboard size={14}/> পাবলিক</TabsTrigger>
+              <TabsTrigger value="authority" className="gap-2"><Radio size={14}/> অথরিটি</TabsTrigger>
+            </TabsList>
           </div>
-          
-          <AIAdviceTool />
-          <DisasterFeed />
-        </div>
 
-        <div className="lg:col-span-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <RiverTelemetry />
+          <TabsContent value="citizen" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
+            <div className="lg:col-span-3 space-y-6">
+              <SOSButton />
+              <AIAdviceTool />
+              <DisasterFeed />
             </div>
-            <div className="md:col-span-2 h-[450px]">
+            <div className="lg:col-span-6 space-y-6">
+              <RiverTelemetry />
               <ResourceMap />
             </div>
-          </div>
-        </div>
+            <div className="lg:col-span-3 space-y-6">
+              <IncidentReport />
+              <EmergencyDirectory />
+            </div>
+          </TabsContent>
 
-        <div className="lg:col-span-3 space-y-6">
-          <IncidentReport />
-          <EmergencyDirectory />
-          
-          <div className="p-6 bg-primary/10 rounded-2xl border border-primary/20 relative overflow-hidden group cursor-pointer">
-            <div className="relative z-10 space-y-2">
-              <div className="flex items-center gap-2 text-primary">
-                <Shield size={18} />
-                <h4 className="text-sm font-headline font-bold">অফলাইন সুরক্ষা গাইড</h4>
+          <TabsContent value="authority" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
+            <div className="lg:col-span-4 space-y-6 h-[calc(100vh-200px)]">
+              <DispatcherConsole />
+            </div>
+            <div className="lg:col-span-8 space-y-6 h-[calc(100vh-200px)]">
+              <div className="grid grid-cols-2 gap-6 h-1/2">
+                <RiverTelemetry />
+                <DisasterFeed />
               </div>
-              <p className="text-xs font-body text-primary/80 leading-relaxed">জরুরি নির্দেশিকা ও নম্বরগুলো এখন অফলাইনেও সংরক্ষিত।</p>
-              <Button variant="link" className="p-0 h-auto text-primary font-bold text-xs">বুকমার্ক দেখুন →</Button>
+              <div className="h-1/2">
+                <ResourceMap />
+              </div>
             </div>
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-              <Shield size={80} className="text-primary" />
-            </div>
-          </div>
-        </div>
+          </TabsContent>
+        </Tabs>
       </main>
 
-      <footer className="border-t border-white/5 py-8 bg-muted/20">
-        <div className="container mx-auto px-4 text-center space-y-2">
+      <footer className="border-t border-white/5 py-8 bg-muted/20 mt-12">
+        <div className="container mx-auto px-4 text-center">
           <p className="text-xs text-muted-foreground font-body">Shurukkha Hub © ২০২৪ | সিরাজগঞ্জ জেলা প্রশাসন কর্তৃক পরিচালিত</p>
         </div>
       </footer>

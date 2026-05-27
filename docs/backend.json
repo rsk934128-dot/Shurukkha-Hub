@@ -1,36 +1,29 @@
+
 {
   "entities": {
-    "SOSSignal": {
-      "title": "SOS Signal",
-      "description": "Emergency distress signal from a citizen.",
+    "SOSAlert": {
+      "title": "SOS Alert",
+      "description": "Emergency distress signal with status and assigned responder.",
       "type": "object",
       "properties": {
-        "userId": { "type": "string" },
-        "location": { "type": "object" },
-        "status": { "type": "string", "enum": ["pending", "responding", "resolved"] },
-        "timestamp": { "type": "string", "format": "date-time" }
-      },
-      "required": ["status", "timestamp"]
-    },
-    "Incident": {
-      "title": "Incident Report",
-      "description": "Reported disaster or public safety incident.",
-      "type": "object",
-      "properties": {
+        "reporterId": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "dispatched", "resolved"] },
+        "timestamp": { "type": "string", "format": "date-time" },
         "type": { "type": "string" },
-        "description": { "type": "string" },
-        "status": { "type": "string" },
-        "userId": { "type": "string" }
-      }
+        "assignedResponder": { "type": "string" }
+      },
+      "required": ["status", "timestamp", "location"]
     },
-    "WebRTCSession": {
-      "title": "WebRTC Session",
-      "description": "Signaling data for live verification calls.",
+    "Responder": {
+      "title": "Emergency Responder",
+      "description": "Information about available emergency teams.",
       "type": "object",
       "properties": {
-        "offer": { "type": "object" },
-        "answer": { "type": "object" },
-        "participants": { "type": "array", "items": { "type": "string" } }
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Police", "Fire", "Medical", "Volunteer"] },
+        "status": { "type": "string", "enum": ["available", "busy"] },
+        "currentLocation": { "type": "string" }
       }
     }
   },
@@ -38,17 +31,13 @@
     "providers": ["google.com", "phone"]
   },
   "firestore": {
-    "/sos_signals/{signalId}": {
-      "schema": "SOSSignal",
-      "description": "Distress signals from field users."
+    "/sos_alerts/{alertId}": {
+      "schema": "SOSAlert",
+      "description": "Active emergency distress signals."
     },
-    "/incidents/{incidentId}": {
-      "schema": "Incident",
-      "description": "Publicly reported incidents."
-    },
-    "/webrtc_sessions/{sessionId}": {
-      "schema": "WebRTCSession",
-      "description": "P2P signaling channel for live verification."
+    "/responders/{responderId}": {
+      "schema": "Responder",
+      "description": "Directory of emergency response teams."
     }
   }
 }
