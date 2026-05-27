@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, Menu, User, Video, LayoutDashboard, Radio } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -63,17 +63,31 @@ export default function ShurukkhaDashboard() {
                     <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full animate-ping" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-card border-white/10 text-foreground">
+                <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[700px]">
                   <DialogHeader>
-                    <DialogTitle className="font-headline font-bold">লাইভ ভেরিফিকেশন টার্মিনাল</DialogTitle>
+                    <DialogTitle className="font-headline font-bold flex items-center gap-2">
+                      <Video size={20} className="text-primary" />
+                      লাইভ ভেরিফিকেশন টার্মিনাল
+                    </DialogTitle>
                   </DialogHeader>
-                  <div className="aspect-video bg-muted rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-white/5">
-                    <Video size={48} className="text-muted-foreground/20" />
-                    <p className="text-xs text-muted-foreground mt-4 font-body">কোন কল সক্রিয় নেই।</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="aspect-video bg-muted rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-white/5 relative overflow-hidden">
+                      <Video size={48} className="text-muted-foreground/20" />
+                      <p className="text-xs text-muted-foreground mt-4 font-body">লোকাল ক্যামেরা ফিড</p>
+                      <div className="absolute bottom-2 left-2 px-2 py-1 bg-background/80 rounded text-[10px] font-bold">AUTHORITY UNIT</div>
+                    </div>
+                    <div className="aspect-video bg-black rounded-xl flex flex-col items-center justify-center border-2 border-white/5 relative overflow-hidden">
+                      <div className="flex flex-col items-center">
+                        <Loader2 className="animate-spin text-primary/40 mb-2" size={32} />
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Waiting for citizen...</p>
+                      </div>
+                      <div className="absolute bottom-2 left-2 px-2 py-1 bg-destructive/80 rounded text-[10px] font-bold">CITIZEN FEED</div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <Button className="bg-primary text-background font-bold">নতুন সেশন শুরু করুন</Button>
-                    <Button variant="outline" className="border-white/10">আইডি দিয়ে যোগ দিন</Button>
+                  <div className="flex items-center justify-center gap-4 mt-2">
+                    <Button variant="outline" className="h-12 w-12 rounded-full border-white/10 text-destructive"><Radio size={24} /></Button>
+                    <Button className="h-16 w-16 rounded-full bg-primary text-background shadow-xl"><Play size={32} /></Button>
+                    <Button variant="outline" className="h-12 w-12 rounded-full border-white/10"><User size={24} /></Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -133,13 +147,12 @@ export default function ShurukkhaDashboard() {
           </TabsContent>
 
           <TabsContent value="authority" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
-            <div className="lg:col-span-4 space-y-6 h-[calc(100vh-200px)]">
+            <div className="lg:col-span-6 h-[calc(100vh-250px)]">
               <DispatcherConsole />
             </div>
-            <div className="lg:col-span-8 space-y-6 h-[calc(100vh-200px)]">
-              <div className="grid grid-cols-2 gap-6 h-1/2">
+            <div className="lg:col-span-6 space-y-6 h-[calc(100vh-250px)]">
+              <div className="grid grid-cols-1 gap-6 h-1/2">
                 <RiverTelemetry />
-                <DisasterFeed />
               </div>
               <div className="h-1/2">
                 <ResourceMap />

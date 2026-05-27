@@ -3,15 +3,29 @@
   "entities": {
     "SOSAlert": {
       "title": "SOS Alert",
-      "description": "Emergency distress signal with status and assigned responder.",
+      "description": "Emergency distress signal with status, assigned responder, and incident timeline.",
       "type": "object",
       "properties": {
         "reporterId": { "type": "string" },
         "location": { "type": "string" },
-        "status": { "type": "string", "enum": ["pending", "dispatched", "resolved"] },
+        "status": { 
+          "type": "string", 
+          "enum": ["pending", "dispatched", "arrived", "resolved"] 
+        },
         "timestamp": { "type": "string", "format": "date-time" },
         "type": { "type": "string" },
-        "assignedResponder": { "type": "string" }
+        "assignedResponder": { "type": "string" },
+        "timeline": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "status": { "type": "string" },
+              "note": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
       },
       "required": ["status", "timestamp", "location"]
     },
@@ -33,7 +47,7 @@
   "firestore": {
     "/sos_alerts/{alertId}": {
       "schema": "SOSAlert",
-      "description": "Active emergency distress signals."
+      "description": "Active emergency distress signals with forensic timeline."
     },
     "/responders/{responderId}": {
       "schema": "Responder",
