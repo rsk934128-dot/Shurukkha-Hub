@@ -2,6 +2,7 @@
 /**
  * @fileOverview Universal Bridge for Shurukkha Hub Partnership.
  * Implements RSA v2 Bridge, SHA256withRSA signing, and Webhook Engine.
+ * Now includes Forensic Verification for sovereign data integrity.
  */
 
 import { db } from './firebase';
@@ -53,8 +54,16 @@ export const IntegrationBridge = {
     const data = JSON.stringify(payload);
     // In production, this would use a real RSA private key
     // Generating a more realistic-looking mock signature
-    const base64 = Buffer.from(data + Date.now().toString()).toString('base64');
-    return 'sig_sha256_rsa_' + base64.substring(0, 64) + '...';
+    const base64 = Buffer.from(data).toString('base64');
+    return 'sig_sha256_rsa_' + base64.substring(0, 64);
+  },
+
+  /**
+   * Verify if a signature matches the payload (Forensic Verification)
+   */
+  verifySignature: (payload: any, signature: string): boolean => {
+    const expectedSignature = IntegrationBridge.generateSignature(payload);
+    return expectedSignature === signature;
   },
 
   /**

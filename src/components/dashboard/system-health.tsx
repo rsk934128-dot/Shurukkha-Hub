@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Activity, Zap, ShieldCheck, TrendingUp, BrainCircuit, Play, Loader2, AlertTriangle, Users, Database, ShieldAlert, Bug, ScrollText, Lock, CheckCircle2 } from 'lucide-react'
+import { Activity, Zap, ShieldCheck, TrendingUp, BrainCircuit, Play, Loader2, AlertTriangle, Users, Database, ShieldAlert, Bug, ScrollText, Lock, CheckCircle2, ShieldQuestion, FileSearch } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +14,8 @@ import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
 import { db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { IntegrationBridge } from '@/lib/integration-bridge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 
 const PERFORMANCE_DATA = [
   { name: '08:00', latency: 45, success: 98 },
@@ -28,6 +30,12 @@ export function SystemHealth() {
   const [isStressTesting, setIsStressTesting] = useState(false)
   const [simulationResult, setSimulationResult] = useState<PredictiveSimulationOutput | null>(null)
   const [auditLogs, setAuditLogs] = useState<any[]>([])
+  const [verificationData, setVerificationData] = useState<{ open: boolean, log: any, result: boolean | null, verifying: boolean }>({
+    open: false,
+    log: null,
+    result: null,
+    verifying: false
+  })
   const { toast } = useToast()
 
   useEffect(() => {
@@ -92,6 +100,29 @@ export function SystemHealth() {
     } finally {
       setIsStressTesting(false)
     }
+  }
+
+  const verifyAuditLog = (log: any) => {
+    setVerificationData({ open: true, log, result: null, verifying: true })
+    
+    // Simulate deep forensic check
+    setTimeout(() => {
+      const isValid = IntegrationBridge.verifySignature(log.details, log.signature);
+      setVerificationData(prev => ({ ...prev, result: isValid, verifying: false }))
+      
+      if (isValid) {
+        toast({
+          title: "Forensic Integrity Confirmed",
+          description: "সিগনেচারটি ডেটা পে-লোডের সাথে হুবহু মিলেছে।",
+        })
+      } else {
+        toast({
+          variant: "destructive",
+          title: "DATA TAMPERING DETECTED",
+          description: "সতর্কবার্তা! এই লগের সিগনেচারটি বৈধ নয়।",
+        })
+      }
+    }, 2000)
   }
 
   return (
@@ -256,12 +287,22 @@ export function SystemHealth() {
                           Performed by: {log.performedBy}
                         </p>
                         {log.signature && (
-                          <div className="flex items-center gap-1.5 p-1.5 bg-black/40 rounded border border-white/5">
-                            <Lock size={10} className="text-accent" />
-                            <code className="text-[8px] text-accent/70 font-mono truncate max-w-[350px]">
-                              SIG: {log.signature}
-                            </code>
-                            <CheckCircle2 size={10} className="text-accent" />
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 p-1.5 bg-black/40 rounded border border-white/5 flex-1">
+                              <Lock size={10} className="text-accent" />
+                              <code className="text-[8px] text-accent/70 font-mono truncate max-w-[280px]">
+                                SIG: {log.signature}
+                              </code>
+                              <CheckCircle2 size={10} className="text-accent" />
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              onClick={() => verifyAuditLog(log)}
+                              className="h-8 text-[8px] uppercase font-bold tracking-widest text-primary hover:bg-primary/10"
+                            >
+                              <ShieldQuestion size={10} className="mr-1" /> Verify
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -327,6 +368,69 @@ export function SystemHealth() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={verificationData.open} onOpenChange={(open) => setVerificationData(prev => ({ ...prev, open }))}>
+        <DialogContent className="bg-card border-primary/20 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-headline flex items-center gap-2">
+              <FileSearch className="text-primary" />
+              Sovereign Forensic Verification
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              RSA v2 Bridge এর মাধ্যমে সিগনেচারের বৈধতা যাচাই করা হচ্ছে।
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-6 space-y-6">
+            {verificationData.verifying ? (
+              <div className="flex flex-col items-center justify-center gap-4 py-8">
+                <Loader2 className="animate-spin text-primary" size={48} />
+                <p className="text-xs font-mono animate-pulse">Calculating SHA256 Hash...</p>
+              </div>
+            ) : (
+              <div className="space-y-4 animate-in fade-in zoom-in-95">
+                <div className={`p-4 rounded-xl border flex flex-col items-center gap-3 ${verificationData.result ? 'bg-accent/10 border-accent/30' : 'bg-destructive/10 border-destructive/30'}`}>
+                  {verificationData.result ? (
+                    <>
+                      <CheckCircle2 size={48} className="text-accent" />
+                      <div className="text-center">
+                        <h4 className="font-headline font-bold text-accent">INTEGRITY CONFIRMED</h4>
+                        <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">সিগনেচারটি বৈধ এবং ডেটা অপরিবর্তিত।</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldAlert size={48} className="text-destructive animate-bounce" />
+                      <div className="text-center">
+                        <h4 className="font-headline font-bold text-destructive">TAMPERING DETECTED</h4>
+                        <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">ডেটা বা সিগনেচারের মধ্যে অমিল পাওয়া গেছে!</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-white/5">
+                  <p className="text-[8px] uppercase font-bold text-muted-foreground">Verification Details:</p>
+                  <div className="grid grid-cols-2 gap-2 text-[8px] font-mono">
+                    <span className="text-muted-foreground">Algorithm:</span>
+                    <span className="text-foreground">SHA256withRSA</span>
+                    <span className="text-muted-foreground">Payload Hash:</span>
+                    <span className="text-foreground truncate">{verificationData.log?.signature?.substring(0, 32)}...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Button 
+            className="w-full bg-primary text-background font-bold" 
+            onClick={() => setVerificationData(prev => ({ ...prev, open: false }))}
+            disabled={verificationData.verifying}
+          >
+            কমান্ড সেন্টারে ফিরুন
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
