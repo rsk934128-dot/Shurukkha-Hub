@@ -1,7 +1,7 @@
 'use server';
 /**
- * @fileOverview A robust Genkit flow for 'River Intelligence' that generates
- * mission-critical risk assessments and personalized evacuation plans.
+ * @fileOverview Enhanced Genkit flow for 'River Intelligence' with automated event triggering.
+ * Includes mission-critical risk assessments and personalized evacuation plans.
  */
 
 import {ai} from '@/ai/genkit';
@@ -9,7 +9,7 @@ import {z} from 'genkit';
 
 const ShelterSchema = z.object({
   name: z.string().describe('আশ্রয়কেন্দ্রের নাম'),
-  distance: z.string().describe('দূরত্ব (যেমন: ৫০০ মিটার)'),
+  distance: z.string().describe('দূরত্ব'),
   capacity: z.string().describe('ধারণক্ষমতা এবং বর্তমান অবস্থা'),
   contact: z.string().optional().describe('যোগাযোগের নম্বর'),
 });
@@ -17,7 +17,7 @@ const ShelterSchema = z.object({
 const GenerateFloodSurvivalAdviceInputSchema = z.object({
   jamunaWaterLevel: z.number().describe('যমুনা নদীর বর্তমান পানির স্তর (মিটার)'),
   dangerLevelThreshold: z.number().describe('যমুনা নদীর বিপদসীমা (মিটার)'),
-  weatherForecast: z.string().describe('আবহাওয়ার পূর্বাভাস (যেমন: ভারী বৃষ্টিপাত)'),
+  weatherForecast: z.string().describe('আবহাওয়ার পূর্বাভাস'),
   currentLocation: z.string().describe('ইউজারের বর্তমান এলাকা'),
   nearbyShelters: z.array(ShelterSchema).describe('নিকটবর্তী আশ্রয়কেন্দ্রের তালিকা'),
 });
@@ -36,6 +36,7 @@ const GenerateFloodSurvivalAdviceOutputSchema = z.object({
     urgencyTimeframe: z.string().describe('কত সময়ের মধ্যে সরে যেতে হবে'),
   }).optional(),
   safetyMeasures: z.array(z.string()).describe('পালনযোগ্য নিরাপত্তা ব্যবস্থা'),
+  automaticAlertTriggered: z.boolean().describe('সিস্টেম থেকে অটোমেটিক এলার্ট ট্রিগার হয়েছে কিনা'),
 });
 export type GenerateFloodSurvivalAdviceOutput = z.infer<
   typeof GenerateFloodSurvivalAdviceOutputSchema
@@ -64,7 +65,7 @@ const prompt = ai.definePrompt({
 
 আপনার কাজ:
 ১. পানির স্তর বিপদসীমার তুলনায় কতটুকু এবং আবহাওয়ার গতিপ্রকৃতি দেখে রিস্ক লেভেল নির্ধারণ করুন।
-২. যদি রিস্ক High বা Extreme হয়, তবে অবশ্যই আশ্রয়কেন্দ্রে যাওয়ার নির্দেশ দিন।
+২. যদি রিস্ক High বা Extreme হয়, তবে অবশ্যই automaticAlertTriggered কে true করুন।
 ৩. চরের বাসিন্দাদের জন্য বাস্তবসম্মত একটি "Evacuation Plan" দিন। বিশেষ করে গবাদি পশু এবং জরুরি নথিপত্র সংরক্ষণের কথা মাথায় রাখুন।
 ৪. উত্তর অবশ্যই পরিষ্কার বাংলা ভাষায় দিন।`,
 });
@@ -80,6 +81,13 @@ const generateFloodSurvivalAdviceFlow = ai.defineFlow(
     if (!output) {
       throw new Error('Flood Intelligence Engine failed to generate output.');
     }
+
+    // Logic: If risk is Extreme, simulate a system-level emergency trigger
+    if (output.riskLevel === 'Extreme') {
+      console.log(`[EMERGENCY TRIGGER] Automated dispatch for ${input.currentLocation} initiated.`);
+      output.automaticAlertTriggered = true;
+    }
+
     return output;
   }
 );

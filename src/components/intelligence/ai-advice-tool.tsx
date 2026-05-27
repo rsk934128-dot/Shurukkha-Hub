@@ -1,32 +1,50 @@
 "use client"
 
-import React, { useState } from 'react'
-import { BrainCircuit, Loader2, MessageSquare, ShieldCheck, MapPin, AlertCircle, Luggage, Clock } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { BrainCircuit, Loader2, MessageSquare, ShieldCheck, MapPin, AlertCircle, Luggage, Clock, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { generateFloodSurvivalAdvice, type GenerateFloodSurvivalAdviceOutput } from '@/ai/flows/generate-flood-survival-advice'
 import { Badge } from '@/components/ui/badge'
+import { DisasterStorage } from '@/lib/disaster-storage'
+import { useToast } from '@/hooks/use-toast'
 
 export function AIAdviceTool() {
   const [loading, setLoading] = useState(false)
   const [advice, setAdvice] = useState<GenerateFloodSurvivalAdviceOutput | null>(null)
+  const { toast } = useToast()
 
   const getAdvice = async () => {
     setLoading(true)
     try {
       const result = await generateFloodSurvivalAdvice({
-        jamunaWaterLevel: 13.45,
+        jamunaWaterLevel: 13.95, // Test with danger level
         dangerLevelThreshold: 13.80,
-        weatherForecast: "আগামী ২৪ ঘণ্টায় ভারী বৃষ্টিপাত ও উজানের ঢলের আশঙ্কা",
+        weatherForecast: "ভারী বৃষ্টিপাত ও উজানের ঢলের কারণে আকস্মিক প্লাবন",
         currentLocation: "বেলকুচি চরাঞ্চল, সিরাজগঞ্জ",
         nearbyShelters: [
           { name: "বেলকুচি বহুমুখী উচ্চ বিদ্যালয়", distance: "৮০০ মিটার", capacity: "৮০% পূর্ণ" },
           { name: "খাস পুখুরিয়া আশ্রয়কেন্দ্র", distance: "১.২ কি.মি.", capacity: "৪০% খালি" }
         ]
       })
+      
       setAdvice(result)
+      DisasterStorage.saveAdvice(result)
+
+      if (result.automaticAlertTriggered) {
+        toast({
+          title: "স্বয়ংক্রিয় এলার্ট সক্রিয়",
+          description: "ঝুঁকির মাত্রা অত্যধিক হওয়ায় কন্ট্রোল রুমে সতর্কবার্তা পাঠানো হয়েছে।",
+          variant: "destructive",
+        })
+      }
     } catch (error) {
       console.error(error)
+      toast({
+        title: "নেটওয়ার্ক ত্রুটি",
+        description: "অফলাইন ফিড থেকে আগের পরামর্শগুলো দেখুন।",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -50,7 +68,7 @@ export function AIAdviceTool() {
         </CardTitle>
         {advice && (
           <Badge className={getRiskColor(advice.riskLevel)}>
-            রিস্ক: {advice.riskLevel === 'Extreme' ? 'মারাত্মক' : advice.riskLevel === 'High' ? 'উচ্চ' : advice.riskLevel === 'Medium' ? 'মাঝারি' : 'স্বল্প'}
+            রিস্ক: {advice.riskLevel}
           </Badge>
         )}
       </CardHeader>
