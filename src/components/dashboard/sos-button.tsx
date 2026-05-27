@@ -1,24 +1,49 @@
 "use client"
 
 import React, { useState } from 'react'
-import { AlertCircle, ShieldAlert } from 'lucide-react'
+import { ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
+import { db } from '@/lib/firebase'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { DisasterStorage } from '@/lib/disaster-storage'
 
 export function SOSButton() {
   const [isActivating, setIsActivating] = useState(false)
   const { toast } = useToast()
 
-  const handleSOS = () => {
+  const handleSOS = async () => {
     setIsActivating(true)
-    setTimeout(() => {
-      setIsActivating(false)
+    
+    const sosData = {
+      timestamp: serverTimestamp(),
+      location: "Unknown (Permission Pending)", // In a real app, use Geolocation API
+      status: 'pending',
+      type: 'SOS_TRIGGER'
+    }
+
+    try {
+      // Try to save to Firestore
+      await addDoc(collection(db, "sos_signals"), sosData);
+      
       toast({
         title: "জরুরি সংকেত পাঠানো হয়েছে",
         description: "আপনার অবস্থান সিরাজগঞ্জ কন্ট্রোল রুমে পাঠানো হয়েছে। শান্ত থাকুন, সাহায্য আসছে।",
         variant: "destructive",
       })
-    }, 2000)
+    } catch (error) {
+      console.error("SOS Sync Error:", error);
+      // Fallback: Save to Local Storage for survival mode
+      DisasterStorage.setSOS(true);
+      
+      toast({
+        title: "অফলাইন মোডে সংকেত সংরক্ষিত",
+        description: "ইন্টারনেট কানেকশন আসার সাথে সাথে এটি কন্ট্রোল রুমে পাঠানো হবে।",
+        variant: "destructive",
+      })
+    } finally {
+      setIsActivating(false)
+    }
   }
 
   return (

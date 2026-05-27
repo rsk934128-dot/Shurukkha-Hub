@@ -7,18 +7,39 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { db } from '@/lib/firebase'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { DisasterStorage } from '@/lib/disaster-storage'
 
 export function IncidentReport() {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    type: '',
+    description: ''
+  })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
+
+    const reportData = {
+      ...formData,
+      timestamp: serverTimestamp(),
+      status: 'new'
+    }
+
+    try {
+      await addDoc(collection(db, "incidents"), reportData);
       setSubmitted(true)
-    }, 1500)
+    } catch (error) {
+      console.error("Incident Sync Error:", error);
+      // Offline Fallback
+      DisasterStorage.saveReport({ ...reportData, timestamp: new Date().toISOString() });
+      setSubmitted(true);
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (submitted) {
@@ -50,7 +71,10 @@ export function IncidentReport() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label className="text-xs font-headline uppercase text-muted-foreground tracking-wider">ঘটনার ধরণ</label>
-            <Select required>
+            <Select 
+              required 
+              onValueChange={(val) => setFormData({...formData, type: val})}
+            >
               <SelectTrigger className="bg-muted border-none h-11 focus:ring-accent">
                 <SelectValue placeholder="নির্বাচন করুন" />
               </SelectTrigger>
@@ -58,6 +82,7 @@ export function IncidentReport() {
                 <SelectItem value="theft">চুরি / ছিনতাই</SelectItem>
                 <SelectItem value="accident">সড়ক দুর্ঘটনা</SelectItem>
                 <SelectItem value="road">রাস্তা বন্ধ / জ্যাম</SelectItem>
+                <SelectItem value="flood">বন্যা / পানিবন্দী</SelectItem>
                 <SelectItem value="other">অন্যান্য</SelectItem>
               </SelectContent>
             </Select>
@@ -69,6 +94,7 @@ export function IncidentReport() {
               placeholder="কি ঘটেছে সংক্ষেপে লিখুন..." 
               className="bg-muted border-none resize-none h-20 focus:ring-accent"
               required
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
             />
           </div>
 
