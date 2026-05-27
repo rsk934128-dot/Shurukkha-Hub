@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, Menu, User, Search, Map as MapIcon, Wind, Compass, WifiOff, Zap } from 'lucide-react'
+import { Shield, Bell, Menu, User, Search, Map as MapIcon, Wind, Compass, WifiOff, Zap, Video } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -12,6 +12,7 @@ import { ResourceMap } from '@/components/dashboard/resource-map'
 import { DisasterFeed } from '@/components/dashboard/disaster-feed'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 export default function ShurukkhaDashboard() {
   const [isOffline, setIsOffline] = useState(false)
@@ -23,7 +24,6 @@ export default function ShurukkhaDashboard() {
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
     
-    // Initial check
     setIsOffline(!navigator.onLine)
     
     return () => {
@@ -34,7 +34,6 @@ export default function ShurukkhaDashboard() {
 
   return (
     <div className={`min-h-screen text-foreground flex flex-col transition-colors duration-500 ${isOffline ? 'bg-[#0a0c10]' : 'bg-background'}`}>
-      {/* Navigation Header */}
       <header className="sticky top-0 z-50 border-b border-white/5 bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -62,6 +61,27 @@ export default function ShurukkhaDashboard() {
             </nav>
             <div className="h-6 w-px bg-white/10" />
             <div className="flex items-center gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary relative">
+                    <Video size={20} />
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full animate-ping" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-white/10 text-foreground">
+                  <DialogHeader>
+                    <DialogTitle className="font-headline font-bold">লাইভ ভেরিফিকেশন টার্মিনাল</DialogTitle>
+                  </DialogHeader>
+                  <div className="aspect-video bg-muted rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-white/5">
+                    <Video size={48} className="text-muted-foreground/20" />
+                    <p className="text-xs text-muted-foreground mt-4 font-body">কোন কল সক্রিয় নেই।</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <Button className="bg-primary text-background font-bold">নতুন সেশন শুরু করুন</Button>
+                    <Button variant="outline" className="border-white/10">আইডি দিয়ে যোগ দিন</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
                 <Bell size={20} />
               </Button>
@@ -77,7 +97,6 @@ export default function ShurukkhaDashboard() {
         </div>
       </header>
 
-      {/* Emergency Status Banner */}
       {isOffline && (
         <div className="bg-destructive/20 border-b border-destructive/30 py-2">
           <div className="container mx-auto px-4 flex items-center justify-center gap-3">
@@ -89,9 +108,7 @@ export default function ShurukkhaDashboard() {
         </div>
       )}
 
-      {/* Main Grid Content */}
       <main className="flex-1 container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column - High Priority Actions */}
         <div className="lg:col-span-3 space-y-6">
           <SOSButton />
           
@@ -119,7 +136,6 @@ export default function ShurukkhaDashboard() {
           <DisasterFeed />
         </div>
 
-        {/* Center Column - Real-time Monitoring */}
         <div className="lg:col-span-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
@@ -131,12 +147,10 @@ export default function ShurukkhaDashboard() {
           </div>
         </div>
 
-        {/* Right Column - Secondary Actions & Directory */}
         <div className="lg:col-span-3 space-y-6">
           <IncidentReport />
           <EmergencyDirectory />
           
-          {/* Offline Handbook Teaser */}
           <div className="p-6 bg-primary/10 rounded-2xl border border-primary/20 relative overflow-hidden group cursor-pointer">
             <div className="relative z-10 space-y-2">
               <div className="flex items-center gap-2 text-primary">
@@ -153,7 +167,6 @@ export default function ShurukkhaDashboard() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-white/5 py-8 bg-muted/20">
         <div className="container mx-auto px-4 text-center space-y-2">
           <p className="text-xs text-muted-foreground font-body">Shurukkha Hub © ২০২৪ | সিরাজগঞ্জ জেলা প্রশাসন কর্তৃক পরিচালিত</p>

@@ -1,35 +1,51 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if the user is authenticated
+    
+    // Helper functions
     function isAuthenticated() {
       return request.auth != null;
     }
+    
+    function isRole(role) {
+      return isAuthenticated() && request.auth.token.role == role;
+    }
 
-    // SOS Signals: Anyone can create (even anonymous users for safety), but only responders can read
+    // SOS Signals: Citizens can create, Authorities can manage
     match /sos_signals/{signalId} {
-      allow create: if true;
-      allow read, update: if isAuthenticated() && (
-        request.auth.token.role == 'responder' || 
-        request.auth.token.role == 'admin'
-      );
-      allow delete: if isAuthenticated() && request.auth.token.role == 'admin';
+      allow create: if true; // Allow anonymous for extreme emergencies
+      allow read: if isAuthenticated() && (isRole('authority') || isRole('admin'));
+      allow update: if isRole('authority') || isRole('admin');
+      allow delete: if isRole('admin');
     }
 
-    // Incidents: Citizens can create/read their own, responders/admins can manage
+    // Incident Reports: Public read, User/Authority write
     match /incidents/{incidentId} {
+      allow read: if true;
       allow create: if true;
-      allow read: if true; // Public awareness, but sensitive data can be filtered in UI
-      allow update, delete: if isAuthenticated() && (
-        request.auth.token.role == 'admin' || 
-        request.auth.uid == resource.data.userId
-      );
+      allow update, delete: if isAuthenticated() && (isRole('admin') || request.auth.uid == resource.data.userId);
     }
 
-    // Shelters: Publicly readable, only admins can update/delete
+    // Shelters: Public read, Admin write
     match /shelters/{shelterId} {
       allow read: if true;
-      allow write: if isAuthenticated() && request.auth.token.role == 'admin';
+      allow write: if isRole('admin');
+    }
+
+    // WebRTC Signaling: Private sessions between two parties
+    match /webrtc_sessions/{sessionId} {
+      allow read, write: if isAuthenticated();
+      
+      match /ice_candidates/{candidateId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // Audit Trails: Immutable logs
+    match /audit_trails/{logId} {
+      allow read: if isRole('admin');
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
     }
   }
 }

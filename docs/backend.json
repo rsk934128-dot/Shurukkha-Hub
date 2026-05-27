@@ -1,0 +1,54 @@
+{
+  "entities": {
+    "SOSSignal": {
+      "title": "SOS Signal",
+      "description": "Emergency distress signal from a citizen.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "location": { "type": "object" },
+        "status": { "type": "string", "enum": ["pending", "responding", "resolved"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["status", "timestamp"]
+    },
+    "Incident": {
+      "title": "Incident Report",
+      "description": "Reported disaster or public safety incident.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string" },
+        "userId": { "type": "string" }
+      }
+    },
+    "WebRTCSession": {
+      "title": "WebRTC Session",
+      "description": "Signaling data for live verification calls.",
+      "type": "object",
+      "properties": {
+        "offer": { "type": "object" },
+        "answer": { "type": "object" },
+        "participants": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "phone"]
+  },
+  "firestore": {
+    "/sos_signals/{signalId}": {
+      "schema": "SOSSignal",
+      "description": "Distress signals from field users."
+    },
+    "/incidents/{incidentId}": {
+      "schema": "Incident",
+      "description": "Publicly reported incidents."
+    },
+    "/webrtc_sessions/{sessionId}": {
+      "schema": "WebRTCSession",
+      "description": "P2P signaling channel for live verification."
+    }
+  }
+}
