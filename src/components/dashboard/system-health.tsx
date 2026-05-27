@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState } from 'react'
-import { Activity, Zap, ShieldCheck, TrendingUp, BrainCircuit, Play, Loader2, AlertTriangle, Users, Map as MapIcon } from 'lucide-react'
+import { Activity, Zap, ShieldCheck, TrendingUp, BrainCircuit, Play, Loader2, AlertTriangle, Users, Database, ShieldAlert, Bug } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +11,8 @@ import { runPredictiveSimulation, type PredictiveSimulationOutput } from '@/ai/f
 import { useToast } from '@/hooks/use-toast'
 import { BarChart, Bar, XValue, YValue, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { db } from '@/lib/firebase'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 
 const PERFORMANCE_DATA = [
   { name: '08:00', latency: 45, success: 98 },
@@ -21,6 +24,7 @@ const PERFORMANCE_DATA = [
 
 export function SystemHealth() {
   const [isSimulating, setIsSimulating] = useState(false)
+  const [isStressTesting, setIsStressTesting] = useState(false)
   const [simulationResult, setSimulationResult] = useState<PredictiveSimulationOutput | null>(null)
   const { toast } = useToast()
 
@@ -28,7 +32,7 @@ export function SystemHealth() {
     setIsSimulating(true)
     try {
       const result = await runPredictiveSimulation({
-        projectedWaterLevel: 14.20, // Simulated extreme level
+        projectedWaterLevel: 14.20,
         historicalContext: {
           previousPeakWaterLevel: 13.90,
           affectedAreaCount: 12,
@@ -47,6 +51,41 @@ export function SystemHealth() {
     }
   }
 
+  const handleMassStressTest = async () => {
+    setIsStressTesting(true)
+    toast({
+      title: "Stress Test Initiated",
+      description: "সিস্টেমে ১০টি ফেক SOS অ্যালার্ট পুশ করা হচ্ছে...",
+    })
+
+    const testLocations = ["কাজীপুর চর", "সদরের দক্ষিণ অংশ", "বেলকুচি ঘাট", "এনায়েতপুর বাজার"];
+    const testTypes = ["বন্যা উদ্ধার", "মেডিকেল ইমার্জেন্সি", "অগ্নিকাণ্ড"];
+
+    try {
+      for (let i = 0; i < 10; i++) {
+        await addDoc(collection(db, "sos_alerts"), {
+          location: testLocations[i % testLocations.length] + ` (Test-${i+1})`,
+          type: testTypes[i % testTypes.length],
+          status: 'pending',
+          timestamp: serverTimestamp(),
+          isStressTest: true,
+          reporterId: 'system_stress_bot'
+        });
+        // Small delay to simulate rapid-fire arrival
+        await new Promise(r => setTimeout(r, 500));
+      }
+      
+      toast({
+        title: "Stress Test Successful",
+        description: "১০টি অ্যালার্ট সফলভাবে পুশ করা হয়েছে। অর্কেস্ট্রেটর এগুলো প্রসেস করছে।",
+      })
+    } catch (e) {
+      toast({ title: "Stress Test Failed", variant: "destructive" })
+    } finally {
+      setIsStressTesting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -58,8 +97,10 @@ export function SystemHealth() {
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-headline font-bold">৪২ms</span>
-              <Badge variant="outline" className="text-[8px] border-accent/30 text-accent h-4">-১২%</span>
+              <span className="text-2xl font-headline font-bold">{isStressTesting ? '৮৯ms' : '৪২ms'}</span>
+              <Badge variant="outline" className={`text-[8px] h-4 ${isStressTesting ? 'text-destructive border-destructive/30' : 'text-accent border-accent/30'}`}>
+                {isStressTesting ? '+৪৫% LOAD' : '-১২%'}
+              </Badge>
             </div>
             <p className="text-[10px] text-muted-foreground mt-1">গড় ডিসপ্যাচ প্রসেসিং সময়</p>
           </CardContent>
@@ -74,7 +115,7 @@ export function SystemHealth() {
           <CardContent>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-headline font-bold">৯৮.৪%</span>
-              <Badge variant="outline" className="text-[8px] border-primary/30 text-primary h-4">STABLE</span>
+              <Badge variant="outline" className="text-[8px] border-primary/30 text-primary h-4">STABLE</Badge>
             </div>
             <p className="text-[10px] text-muted-foreground mt-1">স্বয়ংক্রিয় ডিসপ্যাচ নির্ভুলতা</p>
           </CardContent>
@@ -88,8 +129,8 @@ export function SystemHealth() {
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-headline font-bold">২৪%</span>
-              <Progress value={24} className="h-1 flex-1 bg-muted [&>div]:bg-destructive" />
+              <span className="text-2xl font-headline font-bold">{isStressTesting ? '৮২%' : '২৪%'}</span>
+              <Progress value={isStressTesting ? 82 : 24} className="h-1 flex-1 bg-muted [&>div]:bg-destructive" />
             </div>
             <p className="text-[10px] text-muted-foreground mt-1">কারেন্ট ইনফ্রাস্ট্রাকচার ইউসেজ</p>
           </CardContent>
@@ -101,19 +142,31 @@ export function SystemHealth() {
           <CardHeader className="bg-muted/20 border-b border-white/5 flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-sm font-headline flex items-center gap-2 uppercase tracking-widest">
-                <BrainCircuit className="text-accent" size={16} /> প্রিডিক্টিভ সিমুলেশন ইঞ্জিন
+                <BrainCircuit className="text-accent" size={16} /> প্রিডিক্টিভ সিমুলেশন ও স্ট্রেস ইঞ্জিন
               </CardTitle>
-              <CardDescription className="text-[10px]">What-if সিনারিও অ্যানালাইসিস</CardDescription>
+              <CardDescription className="text-[10px]">What-if সিনারিও অ্যানালাইসিস এবং লোড টেস্টিং</CardDescription>
             </div>
-            <Button 
-              size="sm" 
-              onClick={handleStartSimulation} 
-              disabled={isSimulating}
-              className="bg-accent text-background font-bold h-8 text-[10px] gap-2"
-            >
-              {isSimulating ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
-              রান সিমুলেশন
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={handleMassStressTest} 
+                disabled={isStressTesting}
+                className="border-destructive/30 text-destructive font-bold h-8 text-[10px] gap-2 hover:bg-destructive/10"
+              >
+                {isStressTesting ? <Loader2 size={12} className="animate-spin" /> : <Bug size={12} />}
+                স্ট্রেস টেস্ট
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={handleStartSimulation} 
+                disabled={isSimulating}
+                className="bg-accent text-background font-bold h-8 text-[10px] gap-2"
+              >
+                {isSimulating ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
+                রান সিমুলেশন
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {simulationResult ? (
@@ -176,8 +229,8 @@ export function SystemHealth() {
             ) : (
               <div className="flex flex-col items-center justify-center p-12 opacity-20 text-center grayscale">
                 <BrainCircuit size={64} className="mb-4" />
-                <p className="text-sm font-headline font-bold">সিমুলেশন ইঞ্জিন স্ট্যান্ডবাই</p>
-                <p className="text-xs">ভবিষ্যতের ঝুঁকি এবং রিসোর্স রিকোয়ারমেন্ট দেখতে সিমুলেশন রান করুন</p>
+                <p className="text-sm font-headline font-bold">সিমুলেশন ও স্ট্রেস ইঞ্জিন স্ট্যান্ডবাই</p>
+                <p className="text-xs">সিস্টেমের স্থায়িত্ব এবং ভবিষ্যতের ঝুঁকি যাচাই করতে রান করুন</p>
               </div>
             )}
           </CardContent>

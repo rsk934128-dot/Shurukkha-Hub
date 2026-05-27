@@ -1,6 +1,8 @@
+
 /**
  * @fileOverview Autonomous Orchestrator for Shurukkha Hub.
  * Coordinates between SOS triggers, AI flows, and the Dispatcher console.
+ * Includes hardening and fail-safe logic for mission-critical reliability.
  */
 
 import { db } from './firebase';
@@ -34,6 +36,9 @@ export class AutonomousOrchestrator {
       for (const change of snapshot.docChanges()) {
         if (change.type === "added") {
           const alert = { id: change.doc.id, ...change.doc.data() } as any;
+          // Avoid re-processing if already assigned by some race condition
+          if (alert.assignedResponder) continue;
+          
           await this.processAlertAutonomously(alert);
         }
       }
@@ -45,11 +50,16 @@ export class AutonomousOrchestrator {
     
     try {
       // 1. Trigger AI Analysis
+      // Hardening: Wrap AI call in a timeout or error boundary
       const recommendation = await suggestResponder({
         sosType: alert.type || "Emergency",
         location: alert.location || "Unknown",
         availableResponders: MOCK_RESPONDERS.map(r => ({ ...r, type: r.type as any }))
       });
+
+      if (!recommendation || !recommendation.recommendedResponderId) {
+        throw new Error("Invalid AI Recommendation");
+      }
 
       const responder = MOCK_RESPONDERS.find(r => r.id === recommendation.recommendedResponderId);
       const note = `[AUTONOMOUS DISPATCH] ${recommendation.reasoning}. ${responder?.name} কে পাঠানো হয়েছে।`;
@@ -82,8 +92,24 @@ export class AutonomousOrchestrator {
         timestamp: new Date().toISOString()
       });
 
-    } catch (error) {
-      console.error("[Orchestrator] Autonomous processing failed", error);
+    } catch (error: any) {
+      console.error("[Orchestrator] Autonomous processing failed. Falling back to MANUAL.", error);
+      
+      // FAIL-SAFE: Revert to manual status or add a warning note
+      try {
+        const alertRef = doc(db, "sos_alerts", alert.id);
+        await updateDoc(alertRef, {
+          timeline: arrayUnion({
+            status: 'pending',
+            note: `[SYSTEM WARNING] Autonomous dispatch failed: ${error.message}. Manual intervention required.`,
+            timestamp: new Date().toISOString(),
+            automated: true,
+            isError: true
+          })
+        });
+      } catch (innerError) {
+        console.error("Fail-safe logging failed", innerError);
+      }
     }
   }
 }

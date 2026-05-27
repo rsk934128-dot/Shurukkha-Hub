@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -23,6 +24,7 @@ import { db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
 import { AutonomousOrchestrator } from '@/lib/orchestrator'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 export default function ShurukkhaDashboard() {
   const [isOffline, setIsOffline] = useState(false)
@@ -65,6 +67,16 @@ export default function ShurukkhaDashboard() {
         ? "সিস্টেম এখন স্বয়ংক্রিয়ভাবে ডিসপ্যাচ ম্যানেজ করবে।" 
         : "কর্তৃপক্ষকে এখন ম্যানুয়ালি ডিসপ্যাচ হ্যান্ডেল করতে হবে।",
       variant: enabled ? "default" : "outline"
+    })
+  }
+
+  const handleEmergencyKillSwitch = () => {
+    setIsAutoMode(false)
+    AutonomousOrchestrator.setAutoMode(false)
+    toast({
+      title: "EMERGENCY STOP ACTIVATED",
+      description: "সব স্বয়ংক্রিয় কার্যক্রম বন্ধ করা হয়েছে। সিস্টেম এখন সম্পূর্ণ ম্যানুয়াল মোডে।",
+      variant: "destructive"
     })
   }
 
@@ -117,15 +129,27 @@ export default function ShurukkhaDashboard() {
           
           <div className="flex items-center gap-6">
             {userRole === 'authority' && (
-              <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-full border border-white/5">
-                <BrainCircuit size={14} className={isAutoMode ? "text-accent animate-pulse" : "text-muted-foreground"} />
-                <Label htmlFor="auto-mode" className="text-[10px] uppercase font-bold tracking-widest cursor-pointer">Autonomous Mode</Label>
-                <Switch 
-                  id="auto-mode" 
-                  checked={isAutoMode} 
-                  onCheckedChange={handleAutoModeToggle}
-                  className="scale-75 data-[state=checked]:bg-accent" 
-                />
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-full border border-white/5">
+                  <BrainCircuit size={14} className={isAutoMode ? "text-accent animate-pulse" : "text-muted-foreground"} />
+                  <Label htmlFor="auto-mode" className="text-[10px] uppercase font-bold tracking-widest cursor-pointer">Autonomous Mode</Label>
+                  <Switch 
+                    id="auto-mode" 
+                    checked={isAutoMode} 
+                    onCheckedChange={handleAutoModeToggle}
+                    className="scale-75 data-[state=checked]:bg-accent" 
+                  />
+                </div>
+                {isAutoMode && (
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="h-8 px-3 text-[10px] font-bold gap-1 animate-pulse"
+                    onClick={handleEmergencyKillSwitch}
+                  >
+                    <PowerOff size={12} /> EMERGENCY STOP
+                  </Button>
+                )}
               </div>
             )}
             
@@ -210,6 +234,15 @@ export default function ShurukkhaDashboard() {
 
               <TabsContent value="ops" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
                 <div className="lg:col-span-8 space-y-6">
+                  {isAutoMode && (
+                    <Alert className="bg-accent/10 border-accent/20">
+                      <Zap className="h-4 w-4 text-accent" />
+                      <AlertTitle className="text-xs font-bold uppercase text-accent">Autonomous Monitoring Enabled</AlertTitle>
+                      <AlertDescription className="text-[10px]">
+                        সিস্টেম এখন স্বয়ংক্রিয়ভাবে অ্যালার্ট প্রসেস করছে। যেকোনো প্রয়োজনে "Emergency Stop" বাটন ব্যবহার করুন।
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   <div className="h-[calc(100vh-450px)]">
                     <DispatcherConsole />
                   </div>
