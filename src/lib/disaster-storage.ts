@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Offline-first storage utility for disaster intelligence and reports.
  * Uses localStorage to persist data during network outages.
@@ -41,6 +42,11 @@ export const DisasterStorage = {
     if (typeof window === 'undefined') return [];
     const stored = localStorage.getItem(STORAGE_KEYS.INCIDENT_REPORTS);
     return stored ? JSON.parse(stored) : [];
+  },
+
+  clearReports: () => {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(STORAGE_KEYS.INCIDENT_REPORTS);
   },
 
   setSOS: (active: boolean) => {

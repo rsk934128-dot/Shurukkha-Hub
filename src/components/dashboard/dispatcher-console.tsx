@@ -2,12 +2,12 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Radio, MapPin, ShieldAlert, CheckCircle2, Navigation, Loader2, BrainCircuit, Video, Clock, History, Send } from 'lucide-react'
+import { Radio, MapPin, ShieldAlert, CheckCircle2, Navigation, Loader2, BrainCircuit, Video, Clock, History, Send, ClipboardList } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { db } from '@/lib/firebase'
-import { collection, onSnapshot, query, orderBy, updateDoc, doc, arrayUnion, serverTimestamp } from 'firebase/firestore'
+import { collection, onSnapshot, query, orderBy, updateDoc, doc, arrayUnion, serverTimestamp, addDoc } from 'firebase/firestore'
 import { suggestResponder, type SuggestResponderOutput } from '@/ai/flows/suggest-responder-flow'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -31,7 +31,6 @@ export function DispatcherConsole() {
       const activeAlerts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setAlerts(activeAlerts);
       
-      // Update selected alert if it exists in the new data
       if (selectedAlert) {
         const updated = activeAlerts.find(a => a.id === selectedAlert.id);
         if (updated) setSelectedAlert(updated);
@@ -39,6 +38,19 @@ export function DispatcherConsole() {
     });
     return () => unsubscribe();
   }, [selectedAlert])
+
+  const logAuditAction = async (action: string, details: any) => {
+    try {
+      await addDoc(collection(db, "audit_trails"), {
+        action,
+        details,
+        timestamp: serverTimestamp(),
+        performedBy: 'authority_admin_01'
+      });
+    } catch (e) {
+      console.error("Audit Logging Failed", e);
+    }
+  }
 
   const handleAnalyze = async (alert: any) => {
     setSelectedAlert(alert)
@@ -52,6 +64,7 @@ export function DispatcherConsole() {
         availableResponders: MOCK_RESPONDERS.map(r => ({ ...r, type: r.type as any }))
       })
       setRecommendation(result)
+      await logAuditAction('AI_ANALYSIS_TRIGGERED', { alertId: alert.id, result: result.recommendedResponderId });
     } catch (error) {
       console.error(error)
       toast({ title: "Analysis Failed", variant: "destructive" })
@@ -77,6 +90,7 @@ export function DispatcherConsole() {
       if (responderId) updateData.assignedResponder = responderId;
 
       await updateDoc(alertRef, updateData);
+      await logAuditAction('STATUS_UPDATE', { alertId: selectedAlert.id, status, note, responderId });
       
       toast({
         title: `Status Updated: ${status}`,
@@ -103,7 +117,6 @@ export function DispatcherConsole() {
       </CardHeader>
       
       <div className="flex flex-1 overflow-hidden">
-        {/* Alerts List */}
         <div className="w-1/3 border-r border-white/5 flex flex-col">
           <ScrollArea className="flex-1">
             <div className="p-4 space-y-3">
@@ -138,7 +151,6 @@ export function DispatcherConsole() {
           </ScrollArea>
         </div>
 
-        {/* Selected Alert Details & Timeline */}
         <div className="flex-1 flex flex-col bg-background/50">
           {selectedAlert ? (
             <>
@@ -165,11 +177,10 @@ export function DispatcherConsole() {
 
               <div className="flex-1 flex flex-col overflow-hidden">
                 <ScrollArea className="flex-1 p-4">
-                  {/* Timeline */}
                   <div className="space-y-6">
                     <div>
                       <h4 className="text-[10px] font-headline font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
-                        <History size={12} /> ইনসিডেন্ট টাইমলাইন (Forensic Log)
+                        <ClipboardList size={12} /> ইনসিডেন্ট টাইমলাইন (Forensic Log)
                       </h4>
                       <div className="space-y-4 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-white/5">
                         <div className="relative pl-6">
@@ -197,7 +208,6 @@ export function DispatcherConsole() {
                       </div>
                     </div>
 
-                    {/* AI Recommendations */}
                     {analyzing ? (
                       <div className="py-8 flex flex-col items-center justify-center text-center gap-2">
                         <Loader2 className="animate-spin text-primary" size={20} />

@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2 } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -16,24 +16,66 @@ import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { DisasterStorage } from '@/lib/disaster-storage'
+import { db } from '@/lib/firebase'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { useToast } from '@/hooks/use-toast'
 
 export default function ShurukkhaDashboard() {
   const [isOffline, setIsOffline] = useState(false)
   const [userRole, setUserRole] = useState<'citizen' | 'authority'>('citizen')
+  const [isSyncing, setIsSyncing] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false)
+    const handleOnline = () => {
+      setIsOffline(false)
+      syncOfflineData()
+    }
     const handleOffline = () => setIsOffline(true)
     
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
     setIsOffline(!navigator.onLine)
     
+    // Initial sync check
+    if (navigator.onLine) {
+      syncOfflineData()
+    }
+
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
   }, [])
+
+  const syncOfflineData = async () => {
+    const reports = DisasterStorage.getReports()
+    if (reports.length === 0) return
+
+    setIsSyncing(true)
+    let syncedCount = 0
+
+    try {
+      for (const report of reports) {
+        await addDoc(collection(db, "incidents"), {
+          ...report,
+          timestamp: serverTimestamp(),
+          syncedFromOffline: true
+        })
+        syncedCount++
+      }
+      DisasterStorage.clearReports()
+      toast({
+        title: "অফলাইন ডেটা সিঙ্ক সফল",
+        description: `${syncedCount}টি রিপোর্ট সার্ভারে আপলোড করা হয়েছে।`,
+      })
+    } catch (e) {
+      console.error("Sync Failed", e)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   return (
     <div className={`min-h-screen text-foreground flex flex-col transition-colors duration-500 ${isOffline ? 'bg-[#0a0c10]' : 'bg-background'}`}>
@@ -54,48 +96,19 @@ export default function ShurukkhaDashboard() {
             </div>
           </div>
           
-          <div className="hidden md:flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            {isSyncing && (
+              <Badge variant="outline" className="h-6 gap-1 border-primary/20 text-primary animate-pulse">
+                <RefreshCw size={10} className="animate-spin" /> সিঙ্কিং...
+              </Badge>
+            )}
             <div className="flex items-center gap-2">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary relative">
-                    <Video size={20} />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full animate-ping" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[700px]">
-                  <DialogHeader>
-                    <DialogTitle className="font-headline font-bold flex items-center gap-2">
-                      <Video size={20} className="text-primary" />
-                      লাইভ ভেরিফিকেশন টার্মিনাল
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="aspect-video bg-muted rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-white/5 relative overflow-hidden">
-                      <Video size={48} className="text-muted-foreground/20" />
-                      <p className="text-xs text-muted-foreground mt-4 font-body">লোকাল ক্যামেরা ফিড</p>
-                      <div className="absolute bottom-2 left-2 px-2 py-1 bg-background/80 rounded text-[10px] font-bold">AUTHORITY UNIT</div>
-                    </div>
-                    <div className="aspect-video bg-black rounded-xl flex flex-col items-center justify-center border-2 border-white/5 relative overflow-hidden">
-                      <div className="flex flex-col items-center">
-                        <Loader2 className="animate-spin text-primary/40 mb-2" size={32} />
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Waiting for citizen...</p>
-                      </div>
-                      <div className="absolute bottom-2 left-2 px-2 py-1 bg-destructive/80 rounded text-[10px] font-bold">CITIZEN FEED</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-center gap-4 mt-2">
-                    <Button variant="outline" className="h-12 w-12 rounded-full border-white/10 text-destructive"><Radio size={24} /></Button>
-                    <Button className="h-16 w-16 rounded-full bg-primary text-background shadow-xl"><Play size={32} /></Button>
-                    <Button variant="outline" className="h-12 w-12 rounded-full border-white/10"><User size={24} /></Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
-                <Bell size={20} />
+              <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary relative">
+                <Video size={20} />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full animate-ping" />
               </Button>
               <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
-                <User size={20} />
+                {isOffline ? <WifiOff size={20} className="text-destructive" /> : <Wifi size={20} className="text-accent" />}
               </Button>
             </div>
           </div>
@@ -105,9 +118,9 @@ export default function ShurukkhaDashboard() {
       {isOffline && (
         <div className="bg-destructive/20 border-b border-destructive/30 py-2">
           <div className="container mx-auto px-4 flex items-center justify-center gap-3">
-            <Badge variant="destructive" className="h-4 text-[8px]">OFFLINE</Badge>
+            <Badge variant="destructive" className="h-4 text-[8px]">SURVIVAL MODE ACTIVE</Badge>
             <p className="text-xs font-headline font-bold text-destructive uppercase tracking-widest leading-none">
-              সারভাইভাল মোড অ্যাক্টিভ। লোকাল ডেটা ব্যবহৃত হচ্ছে।
+              নেটওয়ার্ক বিচ্ছিন্ন। লোকাল ডেটা ব্যবহৃত হচ্ছে।
             </p>
           </div>
         </div>
