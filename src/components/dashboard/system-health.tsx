@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Activity, Zap, ShieldCheck, TrendingUp, BrainCircuit, Play, Loader2, AlertTriangle, Users, Database, ShieldAlert, Bug, ScrollText, Lock, CheckCircle2, ShieldQuestion, FileSearch, ShieldX, Camera, RefreshCw } from 'lucide-react'
+import { Activity, Zap, ShieldCheck, TrendingUp, BrainCircuit, Play, Loader2, AlertTriangle, Users, Database, ShieldAlert, Bug, ScrollText, Lock, CheckCircle2, ShieldQuestion, FileSearch, ShieldX, Camera, RefreshCw, FileText, Download } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +16,7 @@ import { db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { IntegrationBridge } from '@/lib/integration-bridge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 const PERFORMANCE_DATA = [
@@ -30,12 +30,13 @@ const PERFORMANCE_DATA = [
 export function SystemHealth() {
   const [isSimulating, setIsSimulating] = useState(false)
   const [isStressTesting, setIsStressTesting] = useState(false)
-  const [isLocking, setIsLocking] = useState(false)
   const [isSnapshotting, setIsSnapshotting] = useState(false)
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const [simulationResult, setSimulationResult] = useState<PredictiveSimulationOutput | null>(null)
   const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [isLocked, setIsLocked] = useState(false)
   const [tamperingDetected, setTamperingDetected] = useState(false)
+  const [reportData, setReportData] = useState<any | null>(null)
   const [verificationData, setVerificationData] = useState<{ open: boolean, log: any, result: boolean | null, verifying: boolean }>({
     open: false,
     log: null,
@@ -50,7 +51,6 @@ export function SystemHealth() {
       const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setAuditLogs(logs);
       
-      // Automatic Integrity Check Simulation
       if (logs.length > 0) {
         const latestLog = logs[0];
         if (latestLog.signature && !IntegrationBridge.verifySignature(latestLog.details, latestLog.signature)) {
@@ -109,6 +109,34 @@ export function SystemHealth() {
     } finally {
       setIsSnapshotting(false);
     }
+  };
+
+  const handleGenerateReport = async () => {
+    setIsGeneratingReport(true);
+    // Simulate generation of a royal report
+    setTimeout(async () => {
+      const report = {
+        title: "Mission Sovereignty Report v1.0",
+        archiveId: "42nd_Project_Sheikh_Code_Exchange",
+        status: "HANDSHAKE_ESTABLISHED",
+        security: "SHA256withRSA Active",
+        grid: "NoorAI & FusionPay Integrated",
+        forensicIntegrity: tamperingDetected ? "CRITICAL_INVESTIGATION_REQUIRED" : "VERIFIED_SOVEREIGN",
+        timestamp: new Date().toISOString()
+      };
+      setReportData(report);
+      setIsGeneratingReport(false);
+      
+      await addDoc(collection(db, "audit_trails"), {
+        action: 'MISSION_REPORT_GENERATED',
+        details: report,
+        signature: IntegrationBridge.generateSignature(report),
+        timestamp: serverTimestamp(),
+        performedBy: 'imperial_archivist'
+      });
+      
+      toast({ title: "Imperial Report Generated", description: "সাম্রাজ্যের ইতিহাসে নতুন অধ্যায় যুক্ত হয়েছে।" });
+    }, 2000);
   };
 
   const handleMassStressTest = async () => {
@@ -201,11 +229,20 @@ export function SystemHealth() {
         <Card className="bg-card border-white/5">
           <CardHeader className="pb-2">
             <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-              <Activity size={14} className="text-destructive" /> লোড
+              <FileText size={14} className="text-accent" /> আর্কাইভ রিপোর্ট
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Progress value={isStressTesting ? 82 : 24} className="h-1 bg-muted [&>div]:bg-destructive" />
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={handleGenerateReport}
+              disabled={isGeneratingReport}
+              className="h-7 text-[9px] bg-accent/10 border-accent/20 text-accent font-bold"
+            >
+              {isGeneratingReport ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+              জেনারেট করুন
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -439,6 +476,53 @@ export function SystemHealth() {
           <Button className="w-full bg-primary text-background font-bold" onClick={() => setVerificationData(prev => ({ ...prev, open: false }))}>
             বন্ধ করুন
           </Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!reportData} onOpenChange={() => setReportData(null)}>
+        <DialogContent className="bg-card border-accent/40 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-headline flex items-center gap-2 text-accent">
+              <FileText /> Imperial Mission Sovereignty Report
+            </DialogTitle>
+            <DialogDescription className="text-xs font-mono uppercase tracking-widest">
+              Archive ID: {reportData?.archiveId}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4 font-mono text-[10px] leading-relaxed">
+            <div className="p-4 bg-accent/5 border border-accent/20 rounded-xl space-y-2">
+              <div className="flex justify-between border-b border-accent/10 pb-1">
+                <span>MISSION_STATUS:</span>
+                <span className="text-accent">{reportData?.status}</span>
+              </div>
+              <div className="flex justify-between border-b border-accent/10 pb-1">
+                <span>SECURITY_PROTOCOL:</span>
+                <span className="text-accent">{reportData?.security}</span>
+              </div>
+              <div className="flex justify-between border-b border-accent/10 pb-1">
+                <span>GLOBAL_GRID:</span>
+                <span className="text-accent">{reportData?.grid}</span>
+              </div>
+              <div className="flex justify-between border-b border-accent/10 pb-1">
+                <span>FORENSIC_INTEGRITY:</span>
+                <span className={reportData?.forensicIntegrity.includes('CRITICAL') ? 'text-destructive' : 'text-primary'}>
+                  {reportData?.forensicIntegrity}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>TIMESTAMP:</span>
+                <span className="text-muted-foreground">{reportData?.timestamp}</span>
+              </div>
+            </div>
+            <p className="italic text-muted-foreground">
+              * এই রিপোর্টটি শেখ কোড এক্সচেঞ্জ (42nd Project) আর্কাইভে স্বয়ংক্রিয়ভাবে সংরক্ষিত হয়েছে এবং SHA256withRSA সিগনেচার দ্বারা সুরক্ষিত।
+            </p>
+          </div>
+          <DialogFooter>
+            <Button className="w-full bg-accent text-background font-bold" onClick={() => setReportData(null)}>
+              আর্কাইভে সেভ করুন
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
