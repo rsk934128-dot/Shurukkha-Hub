@@ -138,7 +138,7 @@ export default function ShurukkhaDashboard() {
                   <Switch 
                     id="auto-mode" 
                     checked={isAutoMode} 
-                    onValueChange={handleAutoModeToggle}
+                    onCheckedChange={handleAutoModeToggle}
                     className="scale-75 data-[state=checked]:bg-accent" 
                   />
                 </div>
