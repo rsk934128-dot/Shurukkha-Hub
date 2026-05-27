@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Integration Bridge for Shurukkha Hub.
  * Manages API connectivity and outbound webhook events for third-party apps.
@@ -8,7 +7,7 @@ import { db } from './firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 
 export interface IntegrationEvent {
-  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT';
+  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT';
   payload: any;
   timestamp: string;
 }
@@ -34,7 +33,6 @@ export const IntegrationBridge = {
 
   /**
    * Broadcast an event to all subscribed webhooks
-   * Note: In a production app, this would be handled by Cloud Functions.
    */
   broadcastEvent: async (event: IntegrationEvent) => {
     console.log(`[Integration Bridge] Broadcasting event: ${event.type}`);
@@ -53,8 +51,8 @@ export const IntegrationBridge = {
 
       // Log to audit trails
       await addDoc(collection(db, "audit_trails"), {
-        action: 'EXTERNAL_EVENT_BROADCAST',
-        details: { eventType: event.type },
+        action: event.type,
+        details: event.payload,
         timestamp: serverTimestamp(),
         performedBy: 'system_bridge'
       });

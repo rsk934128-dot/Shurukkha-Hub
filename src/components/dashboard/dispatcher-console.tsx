@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Radio, MapPin, ShieldAlert, CheckCircle2, Navigation, Loader2, BrainCircuit, Video, Clock, History, Send, ClipboardList } from 'lucide-react'
+import { Radio, MapPin, ShieldAlert, CheckCircle2, Navigation, Loader2, BrainCircuit, Video, Clock, History, Send, ClipboardList, Zap } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -55,6 +54,11 @@ export function DispatcherConsole() {
 
   const handleAnalyze = async (alert: any) => {
     setSelectedAlert(alert)
+    if (alert.status === 'dispatched') {
+      setRecommendation(null);
+      return;
+    }
+    
     setAnalyzing(true)
     setRecommendation(null)
     
@@ -93,7 +97,6 @@ export function DispatcherConsole() {
       await updateDoc(alertRef, updateData);
       await logAuditAction('STATUS_UPDATE', { alertId: selectedAlert.id, status, note, responderId });
       
-      // Trigger Integration Event
       IntegrationBridge.broadcastEvent({
         type: 'STATUS_UPDATED',
         payload: { alertId: selectedAlert.id, status, note },
@@ -138,8 +141,13 @@ export function DispatcherConsole() {
                   <div 
                     key={alert.id} 
                     onClick={() => handleAnalyze(alert)}
-                    className={`p-3 rounded-xl border transition-all cursor-pointer ${selectedAlert?.id === alert.id ? 'bg-primary/10 border-primary' : 'bg-muted/30 border-white/5 hover:bg-muted/50'}`}
+                    className={`p-3 rounded-xl border transition-all cursor-pointer relative overflow-hidden ${selectedAlert?.id === alert.id ? 'bg-primary/10 border-primary' : 'bg-muted/30 border-white/5 hover:bg-muted/50'}`}
                   >
+                    {alert.timeline?.some((t: any) => t.automated) && (
+                      <div className="absolute top-0 right-0 p-1">
+                        <Zap size={10} className="text-accent fill-accent" />
+                      </div>
+                    )}
                     <div className="flex justify-between items-start mb-2">
                       <Badge variant={alert.status === 'pending' ? 'destructive' : 'default'} className="uppercase text-[8px] h-4">
                         {alert.status}
@@ -163,9 +171,16 @@ export function DispatcherConsole() {
           {selectedAlert ? (
             <>
               <div className="p-4 border-b border-white/5 flex justify-between items-center">
-                <div>
-                  <h3 className="text-sm font-headline font-bold">{selectedAlert.location}</h3>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{selectedAlert.type}</p>
+                <div className="flex items-center gap-2">
+                  <div>
+                    <h3 className="text-sm font-headline font-bold">{selectedAlert.location}</h3>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{selectedAlert.type}</p>
+                  </div>
+                  {selectedAlert.timeline?.some((t: any) => t.automated) && (
+                    <Badge variant="outline" className="text-[8px] h-4 border-accent/20 text-accent gap-0.5">
+                      <Zap size={8} fill="currentColor" /> AUTO
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" className="h-8 text-[10px] gap-1 border-primary/30 text-primary">
@@ -203,10 +218,15 @@ export function DispatcherConsole() {
                         
                         {selectedAlert.timeline?.map((event: any, idx: number) => (
                           <div key={idx} className="relative pl-6">
-                            <div className="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                            <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full ${event.automated ? 'bg-accent' : 'bg-primary'} flex items-center justify-center`}>
                               <div className="w-1.5 h-1.5 bg-white rounded-full" />
                             </div>
-                            <p className="text-xs font-bold text-primary uppercase">{event.status}</p>
+                            <div className="flex items-center gap-2">
+                              <p className={`text-xs font-bold uppercase ${event.automated ? 'text-accent' : 'text-primary'}`}>
+                                {event.status}
+                              </p>
+                              {event.automated && <Zap size={10} className="text-accent fill-accent" />}
+                            </div>
                             <p className="text-[10px] text-foreground/80">{event.note}</p>
                             <p className="text-[9px] text-muted-foreground">
                               {new Date(event.timestamp).toLocaleString('bn-BD')}

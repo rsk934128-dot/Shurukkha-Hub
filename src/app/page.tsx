@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2 } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -16,15 +15,19 @@ import { IntegrationPanel } from '@/components/dashboard/integration-panel'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { DisasterStorage } from '@/lib/disaster-storage'
 import { db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
+import { AutonomousOrchestrator } from '@/lib/orchestrator'
 
 export default function ShurukkhaDashboard() {
   const [isOffline, setIsOffline] = useState(false)
   const [userRole, setUserRole] = useState<'citizen' | 'authority'>('citizen')
   const [isSyncing, setIsSyncing] = useState(false)
+  const [isAutoMode, setIsAutoMode] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -42,11 +45,27 @@ export default function ShurukkhaDashboard() {
       syncOfflineData()
     }
 
+    // Start Orchestrator Monitoring
+    const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
+
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
+      unsubscribeOrchestrator()
     }
   }, [])
+
+  const handleAutoModeToggle = (enabled: boolean) => {
+    setIsAutoMode(enabled)
+    AutonomousOrchestrator.setAutoMode(enabled)
+    toast({
+      title: enabled ? "Autonomous Mode Enabled" : "Manual Mode Enabled",
+      description: enabled 
+        ? "সিস্টেম এখন স্বয়ংক্রিয়ভাবে ডিসপ্যাচ ম্যানেজ করবে।" 
+        : "কর্তৃপক্ষকে এখন ম্যানুয়ালি ডিসপ্যাচ হ্যান্ডেল করতে হবে।",
+      variant: enabled ? "default" : "outline"
+    })
+  }
 
   const syncOfflineData = async () => {
     const reports = DisasterStorage.getReports()
@@ -95,20 +114,35 @@ export default function ShurukkhaDashboard() {
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
-            {isSyncing && (
-              <Badge variant="outline" className="h-6 gap-1 border-primary/20 text-primary animate-pulse">
-                <RefreshCw size={10} className="animate-spin" /> সিঙ্কিং...
-              </Badge>
+          <div className="flex items-center gap-6">
+            {userRole === 'authority' && (
+              <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-full border border-white/5">
+                <BrainCircuit size={14} className={isAutoMode ? "text-accent animate-pulse" : "text-muted-foreground"} />
+                <Label htmlFor="auto-mode" className="text-[10px] uppercase font-bold tracking-widest cursor-pointer">Autonomous Mode</Label>
+                <Switch 
+                  id="auto-mode" 
+                  checked={isAutoMode} 
+                  onCheckedChange={handleAutoModeToggle}
+                  className="scale-75 data-[state=checked]:bg-accent" 
+                />
+              </div>
             )}
-            <div className="flex items-center gap-2">
-              <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary relative">
-                <Video size={20} />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full animate-ping" />
-              </Button>
-              <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
-                {isOffline ? <WifiOff size={20} className="text-destructive" /> : <Wifi size={20} className="text-accent" />}
-              </Button>
+            
+            <div className="flex items-center gap-3">
+              {isSyncing && (
+                <Badge variant="outline" className="h-6 gap-1 border-primary/20 text-primary animate-pulse">
+                  <RefreshCw size={10} className="animate-spin" /> সিঙ্কিং...
+                </Badge>
+              )}
+              <div className="flex items-center gap-2">
+                <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary relative">
+                  <Video size={20} />
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full animate-ping" />
+                </Button>
+                <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
+                  {isOffline ? <WifiOff size={20} className="text-destructive" /> : <Wifi size={20} className="text-accent" />}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -129,9 +163,16 @@ export default function ShurukkhaDashboard() {
         <Tabs defaultValue="citizen" value={userRole} onValueChange={(val: any) => setUserRole(val)} className="w-full">
           <div className="flex justify-between items-center mb-8">
             <div className="space-y-1">
-              <h2 className="text-3xl font-headline font-bold tracking-tight">
-                {userRole === 'citizen' ? 'সুরক্ষা ড্যাশবোর্ড' : 'অপারেশনাল কমান্ড সেন্টার'}
-              </h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-3xl font-headline font-bold tracking-tight">
+                  {userRole === 'citizen' ? 'সুরক্ষা ড্যাশবোর্ড' : 'অপারেশনাল কমান্ড সেন্টার'}
+                </h2>
+                {userRole === 'authority' && isAutoMode && (
+                  <Badge variant="outline" className="border-accent/30 text-accent gap-1 animate-pulse">
+                    <Zap size={10} fill="currentColor" /> AUTONOMOUS ACTIVE
+                  </Badge>
+                )}
+              </div>
               <p className="text-muted-foreground text-sm font-body">
                 {userRole === 'citizen' ? 'সিরাজগঞ্জ জেলা প্রশাসনের পাবলিক সেফটি পোর্টাল' : 'জরুরি পরিস্থিতি মনিটরিং ও ডিসপ্যাচ ম্যানেজমেন্ট'}
               </p>
