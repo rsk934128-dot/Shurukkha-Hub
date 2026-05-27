@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -13,6 +14,7 @@ import { DisasterFeed } from '@/components/dashboard/disaster-feed'
 import { DispatcherConsole } from '@/components/dashboard/dispatcher-console'
 import { IntegrationPanel } from '@/components/dashboard/integration-panel'
 import { SystemHealth } from '@/components/dashboard/system-health'
+import { NetworkStatusBoard } from '@/components/dashboard/network-status-board'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -46,7 +48,6 @@ export default function ShurukkhaDashboard() {
     window.addEventListener('offline', handleOffline)
     setIsOffline(!navigator.onLine)
     
-    // Check for Lockdown state updates (mocked via IntegrationBridge property)
     const interval = setInterval(() => {
       setIsLockedDown(IntegrationBridge.isLocked);
     }, 1000);
@@ -233,13 +234,6 @@ export default function ShurukkhaDashboard() {
                       <AlertDescription className="text-[10px]">সিস্টেম এখন স্বয়ংক্রিয়ভাবে অ্যালার্ট প্রসেস করছে।</AlertDescription>
                     </Alert>
                   )}
-                  {isLockedDown && (
-                    <Alert variant="destructive" className="bg-destructive/10">
-                      <Lock className="h-4 w-4" />
-                      <AlertTitle className="text-xs font-bold uppercase">Emergency Lockdown Active</AlertTitle>
-                      <AlertDescription className="text-[10px]">বাইরের সব এপিআই এক্সেস ব্লক করা হয়েছে। শুধুমাত্র লোকাল কমান্ড কার্যকর।</AlertDescription>
-                    </Alert>
-                  )}
                   <div className="h-[calc(100vh-450px)]">
                     <DispatcherConsole />
                   </div>
@@ -257,8 +251,15 @@ export default function ShurukkhaDashboard() {
                 <SystemHealth />
               </TabsContent>
 
-              <TabsContent value="integrations" className="h-[800px] mt-0">
-                <IntegrationPanel />
+              <TabsContent value="integrations" className="space-y-6 mt-0">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  <div className="lg:col-span-7">
+                    <IntegrationPanel />
+                  </div>
+                  <div className="lg:col-span-5">
+                    <NetworkStatusBoard />
+                  </div>
+                </div>
               </TabsContent>
             </Tabs>
           </TabsContent>
