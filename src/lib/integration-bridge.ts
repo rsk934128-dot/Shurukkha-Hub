@@ -8,13 +8,12 @@ import { db } from './firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 
 export interface IntegrationEvent {
-  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT';
+  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT' | 'SOVEREIGN_HANDSHAKE';
   payload: any;
   timestamp: string;
 }
 
 export const IntegrationBridge = {
-  // Global state for lockdown (mock persistence)
   isLocked: false,
 
   setLockdown: (locked: boolean) => {
@@ -22,9 +21,6 @@ export const IntegrationBridge = {
     console.log(`[Sovereign Bridge] Lockdown Mode: ${locked ? 'ACTIVE' : 'INACTIVE'}`);
   },
 
-  /**
-   * Register a third-party application with RSA Bridge logic
-   */
   registerApp: async (appName: string, webhookUrl: string, events: string[]) => {
     if (IntegrationBridge.isLocked) {
       throw new Error("System is in SOVEREIGN LOCKDOWN. No new integrations allowed.");
@@ -46,7 +42,6 @@ export const IntegrationBridge = {
     
     const docRef = await addDoc(collection(db, "integrations"), appData);
     
-    // Log the registration to the audit registry
     await addDoc(collection(db, "audit_trails"), {
       action: 'PARTNER_REGISTERED',
       details: { appName, apiKey },
@@ -58,34 +53,23 @@ export const IntegrationBridge = {
     return { id: docRef.id, apiKey, publicKey };
   },
 
-  /**
-   * Generate SHA256withRSA Digital Signature (Mock)
-   */
   generateSignature: (payload: any): string => {
     const data = JSON.stringify(payload);
-    const base64 = Buffer.from(data).toString('base64');
+    const base64 = typeof window !== 'undefined' ? btoa(data) : Buffer.from(data).toString('base64');
     return 'sig_sha256_rsa_' + base64.substring(0, 64);
   },
 
-  /**
-   * Verify if a signature matches the payload (Forensic Verification)
-   */
   verifySignature: (payload: any, signature: string): boolean => {
     const expectedSignature = IntegrationBridge.generateSignature(payload);
     return expectedSignature === signature;
   },
 
-  /**
-   * Broadcast an event to all partner webhooks via Universal Engine
-   */
   broadcastEvent: async (event: IntegrationEvent) => {
     if (IntegrationBridge.isLocked && event.type !== 'SYSTEM_LOCKDOWN') {
       console.warn("[Sovereign Bridge] Broadcast blocked by Lockdown.");
       return;
     }
 
-    console.log(`[Imperial Bridge] Broadcasting: ${event.type}`);
-    
     try {
       const q = query(collection(db, "integrations"), where("status", "==", "active"));
       const snapshot = await getDocs(q);
@@ -99,7 +83,6 @@ export const IntegrationBridge = {
         }
       });
 
-      // Log to Sovereign Audit Registry with RSA Signature
       await addDoc(collection(db, "audit_trails"), {
         action: event.type,
         details: event.payload,
@@ -112,9 +95,6 @@ export const IntegrationBridge = {
     }
   },
 
-  /**
-   * Create a Forensic Snapshot of the Registry
-   */
   createSnapshot: async (logs: any[]) => {
     const snapshotHash = IntegrationBridge.generateSignature(logs);
     const snapshotData = {

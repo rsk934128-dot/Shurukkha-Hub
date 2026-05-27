@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "SOSAlert": {
@@ -57,15 +56,15 @@
         "partnershipLevel": { "type": "string", "enum": ["Standard", "Imperial", "Sovereign"] }
       }
     },
-    "PartnerRequest": {
-      "title": "Partnership Application",
-      "description": "Application from external entities to join the ecosystem.",
+    "SovereignHandshake": {
+      "title": "Sovereign Handshake",
+      "description": "Records of secure digital handshakes with NoorAI/FusionPay.",
       "type": "object",
       "properties": {
-        "orgName": { "type": "string" },
-        "email": { "type": "string" },
-        "useCase": { "type": "string" },
-        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] }
+        "transactionId": { "type": "string" },
+        "action": { "type": "string" },
+        "status": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
       }
     }
   },
@@ -85,9 +84,9 @@
       "schema": "IntegrationApp",
       "description": "Registry of authorized partner applications."
     },
-    "/partner_requests/{requestId}": {
-      "schema": "PartnerRequest",
-      "description": "Applications for ecosystem partnership."
+    "/sovereign_handshakes/{handshakeId}": {
+      "schema": "SovereignHandshake",
+      "description": "Audit log of NoorAI/FusionPay handshakes."
     }
   }
 }

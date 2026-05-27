@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu } from 'lucide-react'
+import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { db } from '@/lib/firebase'
 import { collection, onSnapshot, query } from 'firebase/firestore'
 import { IntegrationBridge } from '@/lib/integration-bridge'
+import { SovereignConnector } from '@/lib/sovereign-connector'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -18,6 +18,7 @@ export function IntegrationPanel() {
   const [apps, setApps] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [newApp, setNewApp] = useState({ name: '', webhook: '' })
+  const [isHandshaking, setIsHandshaking] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -46,25 +47,29 @@ export function IntegrationPanel() {
     }
   }
 
-  const handleTestPing = async (app: any) => {
-    toast({
-      title: "RSA Bridge Ping",
-      description: `${app.appName} এর জন্য SHA256 সিগনেচার জেনারেট করা হচ্ছে...`,
-    });
-    
-    await IntegrationBridge.broadcastEvent({
-      type: 'STATUS_UPDATED',
-      payload: { 
-        test: true, 
-        message: "Imperial Webhook Handshake",
+  const handleSovereignHandshake = async () => {
+    setIsHandshaking(true)
+    try {
+      const result = await SovereignConnector.authorizeAction('SYSTEM_HANDSHAKE', {
+        source: 'SIRAJGANJ_SURAKKHA_HUB',
+        target: 'NOORAI_FUSIONPAY_GRID'
+      });
+      
+      await IntegrationBridge.broadcastEvent({
+        type: 'SOVEREIGN_HANDSHAKE',
+        payload: result,
         timestamp: new Date().toISOString()
-      },
-      timestamp: new Date().toISOString()
-    });
+      });
 
-    setTimeout(() => {
-      toast({ title: "পিং সফল!", description: "রেসপন্স: 200 OK (Signed)" });
-    }, 1500);
+      toast({
+        title: "Sovereign Handshake ACTIVE",
+        description: `NoorAI/FusionPay এর সাথে ডিজিটাল সেতু স্থাপিত হয়েছে। TXID: ${result.transactionId}`,
+      });
+    } catch (e) {
+      toast({ title: "Handshake Failed", variant: "destructive" });
+    } finally {
+      setIsHandshaking(false)
+    }
   }
 
   return (
@@ -74,15 +79,26 @@ export function IntegrationPanel() {
           <div>
             <CardTitle className="text-lg font-headline flex items-center gap-2">
               <Cpu className="text-primary" size={20} />
-              SOVEREIGN PARTNERSHIP HUB
+              DEVELOPER PORTAL V21.0
             </CardTitle>
-            <CardDescription className="text-[10px] uppercase tracking-wider font-bold text-primary/60">
-              RSA v2 Bridge & Universal Webhook Engine
+            <CardDescription className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/60">
+              Sovereign API Access ACTIVE • NoorAI & FusionPay Bridge
             </CardDescription>
           </div>
-          <Badge variant="outline" className="border-primary/40 text-primary bg-primary/5 gap-1.5 py-1">
-            <Lock size={12} /> IMPERIAL SDK ACTIVE
-          </Badge>
+          <div className="flex gap-2">
+            <Badge variant="outline" className="border-accent/40 text-accent bg-accent/5 gap-1.5 py-1">
+              <Zap size={12} className="fill-accent" /> SANDBOX_V2
+            </Badge>
+            <Button 
+              size="sm" 
+              onClick={handleSovereignHandshake}
+              disabled={isHandshaking}
+              className="h-7 text-[9px] bg-accent text-background font-bold gap-1"
+            >
+              {isHandshaking ? <Database size={12} className="animate-spin" /> : <ShieldCheck size={12} />}
+              HANDSHAKE TEST
+            </Button>
+          </div>
         </div>
       </CardHeader>
       
@@ -90,11 +106,26 @@ export function IntegrationPanel() {
         <div className="px-6 py-2 bg-muted/20 border-b border-white/5">
           <TabsList className="bg-transparent border-none p-0 h-8">
             <TabsTrigger value="apps" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Globe size={14}/> কানেক্টেড পার্টনার্স</TabsTrigger>
-            <TabsTrigger value="docs" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><BookOpen size={14}/> এপিআই ডকস</TabsTrigger>
+            <TabsTrigger value="docs" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Code2 size={14}/> এপিআই ডকস (Sovereign)</TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="apps" className="flex-1 p-6 space-y-6 m-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+            <div className="p-4 bg-muted/30 border border-white/5 rounded-xl space-y-2">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5">
+                <Lock size={10} /> Public App Key (X-R-AK)
+              </p>
+              <code className="text-xs font-mono text-primary truncate block bg-black/40 p-2 rounded">X-R-AK-SURAKKHA-2024</code>
+            </div>
+            <div className="p-4 bg-muted/30 border border-white/5 rounded-xl space-y-2">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1.5">
+                <ShieldCheck size={10} /> Imperial Secret Key
+              </p>
+              <code className="text-xs font-mono text-accent truncate block bg-black/40 p-2 rounded">sk_imperial_master_key_v21</code>
+            </div>
+          </div>
+
           <form onSubmit={handleRegister} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
             <Input 
               placeholder="Partner App Name" 
@@ -115,19 +146,19 @@ export function IntegrationPanel() {
             </Button>
           </form>
 
-          <ScrollArea className="h-[450px]">
+          <ScrollArea className="h-[350px]">
             <div className="grid gap-3">
               {apps.length === 0 ? (
-                <div className="text-center py-20 opacity-20">
-                  <Cpu size={64} className="mx-auto mb-4" />
-                  <p className="text-sm font-headline font-bold uppercase tracking-widest">No Imperial Partners Linked</p>
+                <div className="text-center py-12 opacity-20">
+                  <Cpu size={48} className="mx-auto mb-4" />
+                  <p className="text-xs font-headline font-bold uppercase tracking-widest">No Partners Linked</p>
                 </div>
               ) : (
                 apps.map(app => (
-                  <div key={app.id} className="p-4 bg-card/60 border border-white/5 rounded-xl flex items-center justify-between group hover:border-primary/30 transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
-                        <Key size={24} className="text-primary" />
+                  <div key={app.id} className="p-3 bg-card/60 border border-white/5 rounded-xl flex items-center justify-between group hover:border-primary/30 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+                        <Key size={20} className="text-primary" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -136,22 +167,12 @@ export function IntegrationPanel() {
                             {app.partnershipLevel || 'Standard'}
                           </Badge>
                         </div>
-                        <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[250px]">{app.webhookUrl}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[200px]">{app.webhookUrl}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => handleTestPing(app)}
-                        className="h-9 text-[10px] gap-2 border-primary/20 hover:bg-primary/10 hover:text-primary font-bold"
-                      >
-                        <Send size={14} /> RSA PING
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-destructive">
-                        <Trash2 size={18} />
-                      </Button>
-                    </div>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                      <Trash2 size={16} />
+                    </Button>
                   </div>
                 ))
               )}
@@ -160,56 +181,51 @@ export function IntegrationPanel() {
         </TabsContent>
 
         <TabsContent value="docs" className="flex-1 p-6 m-0">
-          <ScrollArea className="h-[550px] pr-4">
-            <div className="space-y-8">
+          <ScrollArea className="h-[500px] pr-4">
+            <div className="space-y-6">
               <section className="p-4 bg-primary/5 rounded-2xl border border-primary/20">
                 <h4 className="text-sm font-headline font-bold text-primary flex items-center gap-2 mb-3 uppercase tracking-widest">
-                  <ShieldCheck size={18} /> RSA v2 Handshake (Protocol)
+                  <Terminal size={18} /> Imperial SDK Integration
                 </h4>
                 <p className="text-xs text-foreground/80 leading-relaxed font-body mb-4">
-                  আপনার সাম্রাজ্যের নিরাপত্তা নিশ্চিত করতে আমরা SHA256withRSA ডিজিটাল সিগনেচার ব্যবহার করি। প্রতিটি পে-লোডে `X-Imperial-Signature` হেডার থাকবে।
+                  নূরআই এবং ফিউশনপে-এর সাথে আপনার সিস্টেমকে যুক্ত করার জন্য নিচের প্রোটোকল অনুসরণ করুন। প্রতিটি রিকোয়েস্টে ডিজিটাল সিগনেচার বাধ্যতামূলক।
                 </p>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Required Headers:</p>
-                    <code className="text-[10px] font-mono block bg-black/60 p-3 rounded-md text-primary/80 border border-white/5 whitespace-pre">
-{`X-Imperial-Key: sk_imperial_...
-X-Imperial-Signature: sig_sha256_rsa_...
-Content-Type: application/json`}
-                    </code>
-                  </div>
+                <div className="p-4 bg-black/60 rounded-xl border border-white/5 overflow-x-auto">
+                  <pre className="text-[10px] font-mono text-accent/80 leading-relaxed">
+{`// Sovereign Handshake Example
+const response = await fetch('https://api.noorai.io/v1/handshake', {
+  method: 'POST',
+  headers: {
+    'X-R-AK': 'X-R-AK-SURAKKHA-2024',
+    'X-R-TS': Date.now().toString(),
+    'X-R-Signature': generateSignature(payload, secretKey)
+  },
+  body: JSON.stringify({ action: 'AUTHORIZE_PAYMENT' })
+});`}
+                  </pre>
                 </div>
               </section>
 
-              <section>
-                <h4 className="text-sm font-headline font-bold text-primary flex items-center gap-2 mb-4 uppercase tracking-widest">
-                  <Terminal size={18} /> Integration Example
+              <section className="space-y-4">
+                <h4 className="text-sm font-headline font-bold text-primary flex items-center gap-2 uppercase tracking-widest">
+                  <ShieldCheck size={18} /> Webhook Subscription
                 </h4>
-                <div className="p-4 bg-muted/40 rounded-xl border border-white/5">
-                  <code className="text-[10px] font-mono block bg-black/60 p-4 rounded-md text-primary/70 leading-relaxed whitespace-pre overflow-x-auto">
-{`// Sirajganj Surakkha SDK v2.0
-import { ImperialBridge } from '@surakkha/sdk';
-
-const partner = new ImperialBridge({
-  apiKey: 'YOUR_IMPERIAL_KEY',
-  webhookSecret: 'YOUR_SECRET'
-});
-
-partner.on('SOS_TRIGGERED', (alert) => {
-  console.log('Emergency Detected:', alert.location);
-  // Execute local response logic
-});`}
-                  </code>
+                <div className="p-4 bg-muted/40 rounded-xl border border-white/5 space-y-2">
+                  <p className="text-[11px] font-bold text-foreground">Supported Events:</p>
+                  <ul className="grid grid-cols-2 gap-2">
+                    {['SOS_TRIGGERED', 'STATUS_UPDATED', 'FLOOD_ALERT', 'ORCHESTRATION_EVENT'].map(ev => (
+                      <li key={ev} className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                        <CheckCircle2 size={10} className="text-accent" /> {ev}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </section>
 
               <div className="p-4 bg-accent/5 rounded-xl border border-accent/20">
-                <div className="flex items-center gap-2 text-accent mb-2">
-                  <CheckCircle2 size={18} />
-                  <span className="text-[10px] font-headline font-bold uppercase tracking-[0.2em]">Sovereign Audit Registry</span>
-                </div>
+                <p className="text-[10px] text-accent font-bold uppercase tracking-widest mb-1">Security Audit Note:</p>
                 <p className="text-[10px] text-muted-foreground font-body leading-relaxed italic">
-                  প্রতিটি এপিআই কল এবং ওয়েবডুক পুশ স্বয়ংক্রিয়ভাবে অডিট রেজিস্ট্রিতে সিগনেচার সহ সংরক্ষিত হয়। কোনো অনিয়ম হলে সিস্টেম স্বয়ংক্রিয়ভাবে পার্টনার কি রিভোক করবে।
+                  প্রতিটি এপিআই রিকোয়েস্ট সার্বভৌম অডিট রেজিস্ট্রিতে (RSA v2) সিগনেচার সহ সংরক্ষিত হয়। নূরআই থ্রেশহোল্ড অতিক্রম করলে সিস্টেম অটোমেটিক রিভোক হবে।
                 </p>
               </div>
             </div>
