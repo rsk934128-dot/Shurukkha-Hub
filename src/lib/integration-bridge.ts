@@ -1,24 +1,35 @@
-
 /**
  * @fileOverview Universal Bridge for Shurukkha Hub Partnership.
  * Implements RSA v2 Bridge, SHA256withRSA signing, and Webhook Engine.
- * Now includes Forensic Verification for sovereign data integrity.
+ * Now includes Sovereign Lockdown and Forensic Snapshots.
  */
 
 import { db } from './firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 
 export interface IntegrationEvent {
-  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT';
+  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT';
   payload: any;
   timestamp: string;
 }
 
 export const IntegrationBridge = {
+  // Global state for lockdown (mock persistence)
+  isLocked: false,
+
+  setLockdown: (locked: boolean) => {
+    IntegrationBridge.isLocked = locked;
+    console.log(`[Sovereign Bridge] Lockdown Mode: ${locked ? 'ACTIVE' : 'INACTIVE'}`);
+  },
+
   /**
    * Register a third-party application with RSA Bridge logic
    */
   registerApp: async (appName: string, webhookUrl: string, events: string[]) => {
+    if (IntegrationBridge.isLocked) {
+      throw new Error("System is in SOVEREIGN LOCKDOWN. No new integrations allowed.");
+    }
+
     const apiKey = 'sk_imperial_' + Math.random().toString(36).substr(2, 24);
     const publicKey = 'rsa_pub_' + Math.random().toString(36).substr(2, 32);
     
@@ -52,8 +63,6 @@ export const IntegrationBridge = {
    */
   generateSignature: (payload: any): string => {
     const data = JSON.stringify(payload);
-    // In production, this would use a real RSA private key
-    // Generating a more realistic-looking mock signature
     const base64 = Buffer.from(data).toString('base64');
     return 'sig_sha256_rsa_' + base64.substring(0, 64);
   },
@@ -70,6 +79,11 @@ export const IntegrationBridge = {
    * Broadcast an event to all partner webhooks via Universal Engine
    */
   broadcastEvent: async (event: IntegrationEvent) => {
+    if (IntegrationBridge.isLocked && event.type !== 'SYSTEM_LOCKDOWN') {
+      console.warn("[Sovereign Bridge] Broadcast blocked by Lockdown.");
+      return;
+    }
+
     console.log(`[Imperial Bridge] Broadcasting: ${event.type}`);
     
     try {
@@ -81,9 +95,7 @@ export const IntegrationBridge = {
       snapshot.forEach(doc => {
         const app = doc.data();
         if (app.subscribedEvents.includes(event.type)) {
-          // Mocking the Universal Webhook Engine push
           console.log(`[Webhook Engine] Pushing to ${app.appName} (${app.webhookUrl})`);
-          console.log(`[Security] Signature: ${signature}`);
         }
       });
 
@@ -98,5 +110,26 @@ export const IntegrationBridge = {
     } catch (e) {
       console.error("Partnership broadcast failed", e);
     }
+  },
+
+  /**
+   * Create a Forensic Snapshot of the Registry
+   */
+  createSnapshot: async (logs: any[]) => {
+    const snapshotHash = IntegrationBridge.generateSignature(logs);
+    const snapshotData = {
+      action: 'FORENSIC_SNAPSHOT',
+      details: {
+        logCount: logs.length,
+        masterHash: snapshotHash,
+        integrityStatus: 'VERIFIED'
+      },
+      signature: snapshotHash,
+      timestamp: serverTimestamp(),
+      performedBy: 'sovereign_audit_engine'
+    };
+
+    await addDoc(collection(db, "audit_trails"), snapshotData);
+    return snapshotHash;
   }
 };

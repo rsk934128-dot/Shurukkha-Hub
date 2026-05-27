@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -25,6 +24,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
 import { AutonomousOrchestrator } from '@/lib/orchestrator'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { IntegrationBridge } from '@/lib/integration-bridge'
 import Link from 'next/link'
 
 export default function ShurukkhaDashboard() {
@@ -32,6 +32,7 @@ export default function ShurukkhaDashboard() {
   const [userRole, setUserRole] = useState<'citizen' | 'authority'>('citizen')
   const [isSyncing, setIsSyncing] = useState(false)
   const [isAutoMode, setIsAutoMode] = useState(false)
+  const [isLockedDown, setIsLockedDown] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -45,17 +46,18 @@ export default function ShurukkhaDashboard() {
     window.addEventListener('offline', handleOffline)
     setIsOffline(!navigator.onLine)
     
-    if (navigator.onLine) {
-      syncOfflineData()
-    }
+    // Check for Lockdown state updates (mocked via IntegrationBridge property)
+    const interval = setInterval(() => {
+      setIsLockedDown(IntegrationBridge.isLocked);
+    }, 1000);
 
-    // Start Orchestrator Monitoring
     const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
 
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
       unsubscribeOrchestrator()
+      clearInterval(interval);
     }
   }, [])
 
@@ -74,9 +76,10 @@ export default function ShurukkhaDashboard() {
   const handleEmergencyKillSwitch = () => {
     setIsAutoMode(false)
     AutonomousOrchestrator.setAutoMode(false)
+    IntegrationBridge.setLockdown(true)
     toast({
-      title: "EMERGENCY STOP ACTIVATED",
-      description: "সব স্বয়ংক্রিয় কার্যক্রম বন্ধ করা হয়েছে। সিস্টেম এখন সম্পূর্ণ ম্যানুয়াল মোডে।",
+      title: "EMERGENCY STOP & LOCKDOWN ACTIVATED",
+      description: "সব স্বয়ংক্রিয় কার্যক্রম এবং বাহ্যিক কানেকশন বন্ধ করা হয়েছে।",
       variant: "destructive"
     })
   }
@@ -86,8 +89,6 @@ export default function ShurukkhaDashboard() {
     if (reports.length === 0) return
 
     setIsSyncing(true)
-    let syncedCount = 0
-
     try {
       for (const report of reports) {
         await addDoc(collection(db, "incidents"), {
@@ -95,13 +96,9 @@ export default function ShurukkhaDashboard() {
           timestamp: serverTimestamp(),
           syncedFromOffline: true
         })
-        syncedCount++
       }
       DisasterStorage.clearReports()
-      toast({
-        title: "অফলাইন ডেটা সিঙ্ক সফল",
-        description: `${syncedCount}টি রিপোর্ট সার্ভারে আপলোড করা হয়েছে।`,
-      })
+      toast({ title: "অফলাইন ডেটা সিঙ্ক সফল" })
     } catch (e) {
       console.error("Sync Failed", e)
     } finally {
@@ -110,27 +107,25 @@ export default function ShurukkhaDashboard() {
   }
 
   return (
-    <div className={`min-h-screen text-foreground flex flex-col transition-colors duration-500 ${isOffline ? 'bg-[#0a0c10]' : 'bg-background'}`}>
-      <header className="sticky top-0 z-50 border-b border-white/5 bg-background/80 backdrop-blur-lg">
+    <div className={`min-h-screen text-foreground flex flex-col transition-all duration-500 ${isLockedDown ? 'grayscale-[0.5] contrast-125' : ''}`}>
+      <header className={`sticky top-0 z-50 border-b transition-colors duration-500 ${isLockedDown ? 'bg-destructive/20 border-destructive/40' : 'bg-background/80 border-white/5'} backdrop-blur-lg`}>
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
-              <Shield className="text-primary" size={24} />
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors ${isLockedDown ? 'bg-destructive/20 border-destructive/40' : 'bg-primary/10 border-primary/20'}`}>
+              <Shield className={isLockedDown ? "text-destructive" : "text-primary"} size={24} />
             </div>
             <div>
               <h1 className="text-xl font-headline font-bold tracking-tighter leading-none uppercase">SHURUKKHA HUB</h1>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">Sovereign Grid</span>
-                <Badge variant="outline" className="h-4 text-[8px] uppercase px-1 border-primary/30 text-primary cursor-pointer hover:bg-primary/10" onClick={() => setUserRole(prev => prev === 'citizen' ? 'authority' : 'citizen')}>
-                  {userRole === 'citizen' ? 'Citizen Mode' : 'Authority Mode'}
-                </Badge>
+                {isLockedDown && <Badge variant="destructive" className="h-4 text-[8px] animate-pulse">LOCKDOWN</Badge>}
               </div>
             </div>
           </div>
           
           <div className="flex items-center gap-6">
             <Link href="/partnerships">
-              <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold gap-2 text-primary/60 hover:text-primary">
+              <Button variant="ghost" size="sm" className={`h-8 text-[10px] font-bold gap-2 ${isLockedDown ? 'text-destructive' : 'text-primary/60 hover:text-primary'}`}>
                 <Globe size={14} /> PARTNERSHIP HUB
               </Button>
             </Link>
@@ -143,15 +138,15 @@ export default function ShurukkhaDashboard() {
                   <Switch 
                     id="auto-mode" 
                     checked={isAutoMode} 
-                    onCheckedChange={handleAutoModeToggle}
+                    onValueChange={handleAutoModeToggle}
                     className="scale-75 data-[state=checked]:bg-accent" 
                   />
                 </div>
-                {isAutoMode && (
+                {(isAutoMode || !isLockedDown) && (
                   <Button 
                     variant="destructive" 
                     size="sm" 
-                    className="h-8 px-3 text-[10px] font-bold gap-1 animate-pulse"
+                    className="h-8 px-3 text-[10px] font-bold gap-1"
                     onClick={handleEmergencyKillSwitch}
                   >
                     <PowerOff size={12} /> EMERGENCY STOP
@@ -161,33 +156,23 @@ export default function ShurukkhaDashboard() {
             )}
             
             <div className="flex items-center gap-3">
-              {isSyncing && (
-                <Badge variant="outline" className="h-6 gap-1 border-primary/20 text-primary animate-pulse">
-                  <RefreshCw size={10} className="animate-spin" /> সিঙ্কিং...
-                </Badge>
-              )}
               <div className="flex items-center gap-2">
-                <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary relative">
-                  <Video size={20} />
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full animate-ping" />
-                </Button>
-                <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
-                  {isOffline ? <WifiOff size={20} className="text-destructive" /> : <Wifi size={20} className="text-accent" />}
-                </Button>
+                {isLockedDown ? (
+                  <Badge variant="destructive" className="h-6 gap-1"><Lock size={10} /> SECURE</Badge>
+                ) : (
+                  <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
+                    {isOffline ? <WifiOff size={20} className="text-destructive" /> : <Wifi size={20} className="text-accent" />}
+                  </Button>
+                )}
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      {isOffline && (
-        <div className="bg-destructive/20 border-b border-destructive/30 py-2">
-          <div className="container mx-auto px-4 flex items-center justify-center gap-3">
-            <Badge variant="destructive" className="h-4 text-[8px]">SURVIVAL MODE ACTIVE</Badge>
-            <p className="text-xs font-headline font-bold text-destructive uppercase tracking-widest leading-none">
-              নেটওয়ার্ক বিচ্ছিন্ন। লোকাল ডেটা ব্যবহৃত হচ্ছে।
-            </p>
-          </div>
+      {isLockedDown && (
+        <div className="bg-destructive text-destructive-foreground py-1 text-center font-bold text-[10px] uppercase tracking-[0.5em] animate-pulse">
+          Sovereign Security Protocol Active - External Bridges Revoked
         </div>
       )}
 
@@ -199,9 +184,9 @@ export default function ShurukkhaDashboard() {
                 <h2 className="text-3xl font-headline font-bold tracking-tight">
                   {userRole === 'citizen' ? 'সুরক্ষা ড্যাশবোর্ড' : 'অপারেশনাল কমান্ড সেন্টার'}
                 </h2>
-                {userRole === 'authority' && isAutoMode && (
-                  <Badge variant="outline" className="border-accent/30 text-accent gap-1 animate-pulse">
-                    <Zap size={10} fill="currentColor" /> AUTONOMOUS ACTIVE
+                {isLockedDown && userRole === 'authority' && (
+                  <Badge variant="outline" className="border-destructive/30 text-destructive gap-1">
+                    <Lock size={10} /> SOVEREIGN LOCK
                   </Badge>
                 )}
               </div>
@@ -234,20 +219,25 @@ export default function ShurukkhaDashboard() {
           <TabsContent value="authority" className="w-full">
             <Tabs defaultValue="ops" className="w-full">
               <TabsList className="mb-6 bg-muted/20 border border-white/5 p-1 h-12">
-                <TabsTrigger value="ops" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest">১. ডিসপ্যাচ কমান্ড</TabsTrigger>
-                <TabsTrigger value="analytics" className="gap-2 h-10 px-6 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest">২. হেলথ ও সিমুলেশন</TabsTrigger>
-                <TabsTrigger value="integrations" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest">৩. পার্টনার ব্রিজ</TabsTrigger>
+                <TabsTrigger value="ops" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[10px]">১. ডিসপ্যাচ কমান্ড</TabsTrigger>
+                <TabsTrigger value="analytics" className="gap-2 h-10 px-6 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[10px]">২. হেলথ ও ফরেনসিক</TabsTrigger>
+                <TabsTrigger value="integrations" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[10px]">৩. পার্টনার ব্রিজ</TabsTrigger>
               </TabsList>
 
               <TabsContent value="ops" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
                 <div className="lg:col-span-8 space-y-6">
-                  {isAutoMode && (
+                  {isAutoMode && !isLockedDown && (
                     <Alert className="bg-accent/10 border-accent/20">
                       <Zap className="h-4 w-4 text-accent" />
                       <AlertTitle className="text-xs font-bold uppercase text-accent">Autonomous Monitoring Enabled</AlertTitle>
-                      <AlertDescription className="text-[10px]">
-                        সিস্টেম এখন স্বয়ংক্রিয়ভাবে অ্যালার্ট প্রসেস করছে। প্রতিটি অ্যাকশন Sovereign Audit Registry-তে রেকর্ড হচ্ছে।
-                      </AlertDescription>
+                      <AlertDescription className="text-[10px]">সিস্টেম এখন স্বয়ংক্রিয়ভাবে অ্যালার্ট প্রসেস করছে।</AlertDescription>
+                    </Alert>
+                  )}
+                  {isLockedDown && (
+                    <Alert variant="destructive" className="bg-destructive/10">
+                      <Lock className="h-4 w-4" />
+                      <AlertTitle className="text-xs font-bold uppercase">Emergency Lockdown Active</AlertTitle>
+                      <AlertDescription className="text-[10px]">বাইরের সব এপিআই এক্সেস ব্লক করা হয়েছে। শুধুমাত্র লোকাল কমান্ড কার্যকর।</AlertDescription>
                     </Alert>
                   )}
                   <div className="h-[calc(100vh-450px)]">
