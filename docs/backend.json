@@ -39,6 +39,21 @@
         "status": { "type": "string", "enum": ["available", "busy"] },
         "currentLocation": { "type": "string" }
       }
+    },
+    "IntegrationApp": {
+      "title": "Third-party Integration",
+      "description": "External apps authorized to consume Shurukkha Hub events.",
+      "type": "object",
+      "properties": {
+        "appName": { "type": "string" },
+        "apiKey": { "type": "string" },
+        "webhookUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "revoked"] },
+        "subscribedEvents": { 
+          "type": "array", 
+          "items": { "type": "string" } 
+        }
+      }
     }
   },
   "auth": {
@@ -52,6 +67,10 @@
     "/responders/{responderId}": {
       "schema": "Responder",
       "description": "Directory of emergency response teams."
+    },
+    "/integrations/{appId}": {
+      "schema": "IntegrationApp",
+      "description": "Registry of third-party applications and their webhook configs."
     }
   }
 }

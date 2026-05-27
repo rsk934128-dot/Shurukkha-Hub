@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { db } from '@/lib/firebase'
 import { collection, onSnapshot, query, orderBy, updateDoc, doc, arrayUnion, serverTimestamp, addDoc } from 'firebase/firestore'
 import { suggestResponder, type SuggestResponderOutput } from '@/ai/flows/suggest-responder-flow'
+import { IntegrationBridge } from '@/lib/integration-bridge'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -92,6 +93,13 @@ export function DispatcherConsole() {
       await updateDoc(alertRef, updateData);
       await logAuditAction('STATUS_UPDATE', { alertId: selectedAlert.id, status, note, responderId });
       
+      // Trigger Integration Event
+      IntegrationBridge.broadcastEvent({
+        type: 'STATUS_UPDATED',
+        payload: { alertId: selectedAlert.id, status, note },
+        timestamp: new Date().toISOString()
+      });
+
       toast({
         title: `Status Updated: ${status}`,
         description: note,

@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -12,9 +12,9 @@ import { IncidentReport } from '@/components/dashboard/incident-report'
 import { ResourceMap } from '@/components/dashboard/resource-map'
 import { DisasterFeed } from '@/components/dashboard/disaster-feed'
 import { DispatcherConsole } from '@/components/dashboard/dispatcher-console'
+import { IntegrationPanel } from '@/components/dashboard/integration-panel'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DisasterStorage } from '@/lib/disaster-storage'
 import { db } from '@/lib/firebase'
@@ -38,7 +38,6 @@ export default function ShurukkhaDashboard() {
     window.addEventListener('offline', handleOffline)
     setIsOffline(!navigator.onLine)
     
-    // Initial sync check
     if (navigator.onLine) {
       syncOfflineData()
     }
@@ -160,16 +159,17 @@ export default function ShurukkhaDashboard() {
           </TabsContent>
 
           <TabsContent value="authority" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
-            <div className="lg:col-span-6 h-[calc(100vh-250px)]">
-              <DispatcherConsole />
+            <div className="lg:col-span-8 space-y-6">
+              <div className="h-[calc(100vh-450px)]">
+                <DispatcherConsole />
+              </div>
+              <div className="h-[350px]">
+                <IntegrationPanel />
+              </div>
             </div>
-            <div className="lg:col-span-6 space-y-6 h-[calc(100vh-250px)]">
-              <div className="grid grid-cols-1 gap-6 h-1/2">
-                <RiverTelemetry />
-              </div>
-              <div className="h-1/2">
-                <ResourceMap />
-              </div>
+            <div className="lg:col-span-4 space-y-6 h-full">
+              <RiverTelemetry />
+              <ResourceMap />
             </div>
           </TabsContent>
         </Tabs>
@@ -177,7 +177,7 @@ export default function ShurukkhaDashboard() {
 
       <footer className="border-t border-white/5 py-8 bg-muted/20 mt-12">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-xs text-muted-foreground font-body">Shurukkha Hub © ২০২৪ | সিরাজগঞ্জ জেলা প্রশাসন কর্তৃক পরিচালিত</p>
+          <p className="text-xs text-muted-foreground font-body">Shurukkha Hub © ২০২৪ | সিরাজগঞ্জ সুরক্ষা মিশন-ক্রিটিক্যাল ইনফ্রাস্ট্রাকচার</p>
         </div>
       </footer>
       
