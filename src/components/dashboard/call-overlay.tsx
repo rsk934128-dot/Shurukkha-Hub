@@ -216,7 +216,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             <div className="flex flex-col items-center gap-8 z-50 animate-in fade-in zoom-in-95 duration-500 w-full px-6">
                <div className="relative">
                   <div className="absolute -inset-8 md:-inset-12 bg-primary/20 rounded-full blur-2xl md:blur-3xl animate-pulse" />
-                  <Avatar className="h-40 w-40 md:h-48 md:h-48 border-4 border-primary/40 relative z-10 shadow-2xl">
+                  <Avatar className="h-40 w-40 md:h-48 md:w-48 border-4 border-primary/40 relative z-10 shadow-2xl">
                     <AvatarImage src={callData.callerAvatar} />
                     <AvatarFallback className="bg-primary/10 text-5xl md:text-6xl font-headline font-bold text-primary">
                       {callData.callerName?.[0] || 'S'}
@@ -348,7 +348,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
               )}
 
               <Button onClick={handleEndCall} className="h-14 w-14 md:h-16 md:w-16 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-xl shadow-destructive/40 transition-transform active:scale-90 border-4 border-background">
-                <PhoneOff size={24} md:size={28} />
+                <PhoneOff size={24} className="md:w-7 md:h-7" />
               </Button>
             </div>
           )}

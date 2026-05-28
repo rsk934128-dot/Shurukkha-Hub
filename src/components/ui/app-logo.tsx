@@ -1,7 +1,7 @@
-
 "use client"
 
 import React from 'react'
+import { cn } from '@/lib/utils'
 
 interface AppLogoProps {
   className?: string;
@@ -9,15 +9,18 @@ interface AppLogoProps {
   variant?: 'default' | 'accent' | 'white';
 }
 
-export function AppLogo({ className, size = 40, variant = 'default' }: AppLogoProps) {
+export function AppLogo({ className, size, variant = 'default' }: AppLogoProps) {
   const colors = {
     default: "text-primary",
     accent: "text-accent",
     white: "text-white"
   }
 
+  // If size is provided as a number, we use it for absolute pixel sizing
+  const style = size ? { width: size, height: size } : {};
+
   return (
-    <div className={`relative flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
+    <div className={cn("relative flex items-center justify-center", className)} style={style}>
       <svg
         viewBox="0 0 100 100"
         fill="none"

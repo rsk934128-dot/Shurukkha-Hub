@@ -82,7 +82,7 @@ export function BankDirectory() {
     onLog("[WEBHOOK_SIMULATOR]: Mocking bKash Payload...");
     setTimeout(() => {
       setTerminalLogs(prev => [...prev, "> [WEBHOOK_SENT]: Payload verified with RSA_v2 signature."]);
-      setTerminalLogs(prev => [...prev, "> [SETTLEMENT]: Imperial Tax collected successfully."]);
+      setTerminalLogs(prev => [...prev, "> [SETল্ডSETTLEMENT]: Imperial Tax collected successfully."]);
       toast({ title: "Webhook Handshake Successful" });
       setLoading(false);
     }, 1500);
@@ -250,7 +250,7 @@ export function BankDirectory() {
                 return (
                   <div key={step.id} className="flex flex-col items-center gap-1.5 md:gap-2 relative">
                     <div className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isCompleted ? 'bg-primary border-primary text-background' : isCurrent ? 'bg-muted border-accent text-accent animate-pulse' : 'bg-card border-white/5 text-muted-foreground'}`}>
-                      <Icon size={14} md:size={16} />
+                      <Icon className="w-[14px] h-[14px] md:w-4 md:h-4" />
                     </div>
                     <span className={`text-[6px] md:text-[8px] font-bold uppercase text-center ${isCompleted ? 'text-primary' : 'text-muted-foreground'}`}>
                       {step.label}

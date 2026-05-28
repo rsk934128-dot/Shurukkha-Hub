@@ -155,7 +155,7 @@ export function DispatcherConsole() {
            <Card className="bg-card/40 border-primary/20 flex flex-col flex-1 overflow-hidden neon-glow-primary min-h-[300px] lg:min-h-[400px]">
               <CardHeader className="bg-primary/10 border-b border-white/5 py-2 md:py-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-[10px] md:text-xs font-headline flex items-center gap-2 uppercase tracking-widest neon-text-primary">
-                  <Activity size={12} md:size={14} className="animate-pulse" /> Live_Feed
+                  <Activity className="w-3 h-3 md:w-[14px] md:h-[14px] animate-pulse" /> Live_Feed
                 </CardTitle>
                 <Badge variant="outline" className="text-[6px] md:text-[7px] border-primary/40 text-primary">{alerts.length} ACTIVE</Badge>
               </CardHeader>
@@ -223,7 +223,7 @@ export function DispatcherConsole() {
           <Card className="bg-card/40 border-accent/20 flex-1 flex flex-col overflow-hidden relative neon-glow-accent min-h-[300px] lg:min-h-[400px]">
              <CardHeader className="bg-accent/10 border-b border-white/5 py-3 md:py-4">
                 <CardTitle className="text-xs md:text-sm font-headline flex items-center gap-2 uppercase tracking-[0.2em] neon-text-accent">
-                   <Target size={16} md:size={18} /> Tactical_Ops
+                   <Target className="w-4 h-4 md:w-[18px] md:h-[18px]" /> Tactical_Ops
                 </CardTitle>
              </CardHeader>
              <CardContent className="p-0 flex-1 flex flex-col">
@@ -232,12 +232,12 @@ export function DispatcherConsole() {
                     <div className="aspect-video bg-black/60 relative m-2 md:m-4 rounded-xl md:rounded-3xl border border-white/5 overflow-hidden">
                        {isCalling ? (
                          <div className="w-full h-full flex flex-col items-center justify-center space-y-2 md:space-y-3 bg-accent/5">
-                            <Volume2 className="text-accent animate-bounce" size={24} md:size={32} />
+                            <Volume2 className="text-accent animate-bounce w-6 h-6 md:w-8 md:h-8" />
                             <p className="text-[8px] md:text-[9px] font-mono text-accent uppercase tracking-[0.3em] animate-pulse">Session Active</p>
                          </div>
                        ) : (
                          <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2">
-                            <Video size={24} md:size={32} className="text-white/10" />
+                            <Video className="text-white/10 w-6 h-6 md:w-8 md:h-8" />
                             <p className="text-[8px] md:text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">No Signal</p>
                          </div>
                        )}

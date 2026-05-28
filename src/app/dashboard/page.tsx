@@ -254,7 +254,7 @@ export default function ShurukkhaDashboard() {
           <header className="sticky top-0 z-40 border-b bg-background/80 border-white/5 backdrop-blur-lg px-2 md:px-4 h-14 md:h-16 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-9 w-9 md:hidden" />
-              <AppLogo size={24} md:size={32} />
+              <AppLogo className="w-6 h-6 md:w-8 md:h-8" />
               <div className="hidden xs:block">
                 <h1 className="text-xs md:text-sm font-headline font-bold uppercase leading-none">SHURUKKHA</h1>
                 <span className="text-[6px] md:text-[8px] text-muted-foreground uppercase tracking-widest">v31.0</span>
