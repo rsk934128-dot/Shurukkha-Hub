@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -27,7 +28,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { DisasterStorage } from '@/lib/disaster-storage'
 import { useFirestore, useUser, useAuth } from '@/firebase'
-import { collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
 import { AutonomousOrchestrator } from '@/lib/orchestrator'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -42,7 +43,7 @@ import { useRouter } from 'next/navigation'
 
 export default function ShurukkhaDashboard() {
   const [isOffline, setIsOffline] = useState(false)
-  const [userRole, setUserRole] = useState<'citizen' | 'authority'>('citizen')
+  const [userRole, setUserRole] = useState<'citizen' | 'authority' | 'admin'>('citizen')
   const [isSyncing, setIsSyncing] = useState(false)
   const [isAutoMode, setIsAutoMode] = useState(false)
   const [isLockedDown, setIsLockedDown] = useState(false)
@@ -84,14 +85,26 @@ export default function ShurukkhaDashboard() {
 
   useEffect(() => {
     if (user && firestore) {
+      // Imperial Decree: Hardcoded Admin Assignment
+      const isAdmin = user.email === 'rubels1k994@gmail.com';
+      
       const userRef = doc(firestore, "users", user.uid);
-      setDoc(userRef, {
-        displayName: user.displayName,
-        email: user.email,
-        photoURL: user.photoURL,
-        lastLogin: new Date().toISOString(),
-        deviceFingerprint: DeviceValidator.generateFingerprint()
-      }, { merge: true });
+      
+      // Fetch role first to avoid overwriting manually set roles (except for the admin decree)
+      getDoc(userRef).then(snap => {
+        const data = snap.data();
+        const currentRole = isAdmin ? 'admin' : (data?.role || 'citizen');
+        setUserRole(currentRole as any);
+
+        setDoc(userRef, {
+          displayName: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+          role: currentRole,
+          lastLogin: new Date().toISOString(),
+          deviceFingerprint: DeviceValidator.generateFingerprint()
+        }, { merge: true });
+      });
     }
   }, [user, firestore])
 
@@ -112,7 +125,7 @@ export default function ShurukkhaDashboard() {
 
     const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
 
-    SovereignAudit.logMilestone('Phase_30.0', 'Imperial Access Audit & Auto-Lockdown Engine Live');
+    SovereignAudit.logMilestone('Phase_31.0', 'Admin Decree: rubels1k994@gmail.com Elevated to Sovereign Admin');
 
     return () => {
       window.removeEventListener('online', handleOnline)
@@ -198,7 +211,7 @@ export default function ShurukkhaDashboard() {
                 </Badge>
               </div>
               <div className="flex items-center gap-1 md:gap-2">
-                <span className="text-[8px] md:text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">v30.0</span>
+                <span className="text-[8px] md:text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">v31.0</span>
                 {isLockedDown && <Badge variant="destructive" className="h-3 md:h-4 text-[6px] md:text-[8px] animate-pulse px-1">LOCKDOWN</Badge>}
               </div>
             </div>
@@ -216,7 +229,7 @@ export default function ShurukkhaDashboard() {
               <div className="flex items-center gap-3">
                 <div className="hidden sm:block text-right">
                   <p className="text-[10px] font-bold leading-none">{user.displayName}</p>
-                  <p className="text-[8px] text-muted-foreground uppercase tracking-widest">{userRole}</p>
+                  <p className="text-[8px] text-primary uppercase tracking-widest font-bold">{userRole}</p>
                 </div>
                 <Avatar className="h-8 w-8 border border-primary/20">
                   <AvatarImage src={user.photoURL || ''} />
@@ -234,7 +247,7 @@ export default function ShurukkhaDashboard() {
               </Link>
             )}
 
-            {userRole === 'authority' && (
+            {(userRole === 'authority' || userRole === 'admin') && (
               <div className="flex items-center gap-2 md:gap-4">
                 <div className="hidden md:flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-full border border-white/5">
                   <BrainCircuit size={14} className={isAutoMode ? "text-accent animate-pulse" : "text-muted-foreground"} />
@@ -259,16 +272,16 @@ export default function ShurukkhaDashboard() {
       )}
 
       <main className="flex-1 container mx-auto px-4 py-4 md:py-8">
-        <Tabs defaultValue="citizen" value={userRole} onValueChange={(val: any) => setUserRole(val)} className="w-full">
+        <Tabs defaultValue="citizen" value={userRole === 'admin' ? undefined : (userRole === 'authority' ? 'authority' : 'citizen')} onValueChange={(val: any) => setUserRole(val)} className="w-full">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl md:text-3xl font-headline font-bold tracking-tight">
                   {userRole === 'citizen' ? 'সুরক্ষা ড্যাশবোর্ড' : 'কমান্ড সেন্টার'}
                 </h2>
-                {isLockedDown && userRole === 'authority' && (
-                  <Badge variant="outline" className="border-destructive/30 text-destructive gap-1 text-[8px] h-5">
-                    <Lock size={8} /> SOVEREIGN
+                {(isLockedDown || userRole === 'admin') && (
+                  <Badge variant="outline" className={`${userRole === 'admin' ? 'border-accent/40 text-accent' : 'border-destructive/30 text-destructive'} gap-1 text-[8px] h-5`}>
+                    <Lock size={8} /> {userRole === 'admin' ? 'SUPREME ADMIN' : 'SOVEREIGN'}
                   </Badge>
                 )}
               </div>
@@ -276,89 +289,96 @@ export default function ShurukkhaDashboard() {
                 {userRole === 'citizen' ? 'সিরাজগঞ্জ পাবলিক সেফটি পোর্টাল' : 'মনিটরিং ও ডিসপ্যাচ ম্যানেজমেন্ট'}
               </p>
             </div>
-            <TabsList className="bg-muted/40 border border-white/5 w-full md:w-auto grid grid-cols-2 h-10">
-              <TabsTrigger value="citizen" className="gap-2 text-xs"><LayoutDashboard size={14}/> পাবলিক</TabsTrigger>
-              <TabsTrigger value="authority" className="gap-2 text-xs"><Radio size={14}/> অথরিটি</TabsTrigger>
-            </TabsList>
+            
+            {userRole !== 'admin' && (
+              <TabsList className="bg-muted/40 border border-white/5 w-full md:w-auto grid grid-cols-2 h-10">
+                <TabsTrigger value="citizen" className="gap-2 text-xs"><LayoutDashboard size={14}/> পাবলিক</TabsTrigger>
+                <TabsTrigger value="authority" className="gap-2 text-xs"><Radio size={14}/> অথরিটি</TabsTrigger>
+              </TabsList>
+            )}
           </div>
 
-          <TabsContent value="citizen" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
-            <div className="lg:col-span-3 space-y-6 order-1">
-              <SOSButton />
-              <AIAdviceTool />
-              <DisasterFeed />
+          {(userRole === 'citizen') && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
+              <div className="lg:col-span-3 space-y-6 order-1">
+                <SOSButton />
+                <AIAdviceTool />
+                <DisasterFeed />
+              </div>
+              <div className="lg:col-span-6 space-y-6 order-2">
+                <RiverTelemetry />
+                <ResourceMap />
+              </div>
+              <div className="lg:col-span-3 space-y-6 order-3">
+                <IncidentReport />
+                <EmergencyDirectory />
+              </div>
             </div>
-            <div className="lg:col-span-6 space-y-6 order-2">
-              <RiverTelemetry />
-              <ResourceMap />
+          )}
+
+          {(userRole === 'authority' || userRole === 'admin') && (
+            <div className="w-full">
+              <Tabs defaultValue="ops" className="w-full">
+                <TabsList className="mb-6 bg-muted/20 border border-white/5 p-1 h-auto flex flex-wrap md:flex-nowrap justify-start overflow-x-auto no-scrollbar">
+                  <TabsTrigger value="ops" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">১. ডিসপ্যাচ</TabsTrigger>
+                  <TabsTrigger value="analytics" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">২. হেলথ</TabsTrigger>
+                  <TabsTrigger value="audits" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">৩. অডিট</TabsTrigger>
+                  <TabsTrigger value="integrations" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">৪. নেটওয়ার্ক</TabsTrigger>
+                  <TabsTrigger value="treasury" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">৫. ট্রেজারি</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="ops" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
+                  <div className="lg:col-span-8 space-y-6">
+                    {isAutoMode && !isLockedDown && (
+                      <Alert className="bg-accent/10 border-accent/20 py-2">
+                        <Zap className="h-3 w-3 text-accent" />
+                        <AlertTitle className="text-[10px] font-bold uppercase text-accent">Autonomous Active</AlertTitle>
+                      </Alert>
+                    )}
+                    <div className="h-auto md:h-[calc(100vh-450px)] min-h-[400px]">
+                      <DispatcherConsole />
+                    </div>
+                    <div className="h-auto md:h-[350px]">
+                      <RiverTelemetry />
+                    </div>
+                  </div>
+                  <div className="lg:col-span-4 space-y-6 h-full">
+                    <ResourceMap />
+                    <EmergencyDirectory />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="analytics" className="space-y-6 mt-0">
+                  <SystemHealth />
+                </TabsContent>
+
+                <TabsContent value="audits" className="space-y-6 mt-0">
+                  <AuditPanel />
+                </TabsContent>
+
+                <TabsContent value="integrations" className="space-y-6 mt-0">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div className="lg:col-span-12">
+                      <SovereignNetworkMap />
+                    </div>
+                    <div className="lg:col-span-12">
+                      <SovereignDomainManager />
+                    </div>
+                    <div className="lg:col-span-7">
+                      <IntegrationPanel />
+                    </div>
+                    <div className="lg:col-span-5">
+                      <NetworkStatusBoard />
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="treasury" className="space-y-6 mt-0">
+                  <BankDirectory />
+                </TabsContent>
+              </Tabs>
             </div>
-            <div className="lg:col-span-3 space-y-6 order-3">
-              <IncidentReport />
-              <EmergencyDirectory />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="authority" className="w-full">
-            <Tabs defaultValue="ops" className="w-full">
-              <TabsList className="mb-6 bg-muted/20 border border-white/5 p-1 h-auto flex flex-wrap md:flex-nowrap justify-start overflow-x-auto no-scrollbar">
-                <TabsTrigger value="ops" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">১. ডিসপ্যাচ</TabsTrigger>
-                <TabsTrigger value="analytics" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">২. হেলথ</TabsTrigger>
-                <TabsTrigger value="audits" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">৩. অডিট</TabsTrigger>
-                <TabsTrigger value="integrations" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">৪. নেটওয়ার্ক</TabsTrigger>
-                <TabsTrigger value="treasury" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">৫. ট্রেজারি</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="ops" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
-                <div className="lg:col-span-8 space-y-6">
-                  {isAutoMode && !isLockedDown && (
-                    <Alert className="bg-accent/10 border-accent/20 py-2">
-                      <Zap className="h-3 w-3 text-accent" />
-                      <AlertTitle className="text-[10px] font-bold uppercase text-accent">Autonomous Active</AlertTitle>
-                    </Alert>
-                  )}
-                  <div className="h-auto md:h-[calc(100vh-450px)] min-h-[400px]">
-                    <DispatcherConsole />
-                  </div>
-                  <div className="h-auto md:h-[350px]">
-                    <RiverTelemetry />
-                  </div>
-                </div>
-                <div className="lg:col-span-4 space-y-6 h-full">
-                  <ResourceMap />
-                  <EmergencyDirectory />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="analytics" className="space-y-6 mt-0">
-                <SystemHealth />
-              </TabsContent>
-
-              <TabsContent value="audits" className="space-y-6 mt-0">
-                <AuditPanel />
-              </TabsContent>
-
-              <TabsContent value="integrations" className="space-y-6 mt-0">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                  <div className="lg:col-span-12">
-                    <SovereignNetworkMap />
-                  </div>
-                  <div className="lg:col-span-12">
-                    <SovereignDomainManager />
-                  </div>
-                  <div className="lg:col-span-7">
-                    <IntegrationPanel />
-                  </div>
-                  <div className="lg:col-span-5">
-                    <NetworkStatusBoard />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="treasury" className="space-y-6 mt-0">
-                <BankDirectory />
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
+          )}
         </Tabs>
       </main>
 
