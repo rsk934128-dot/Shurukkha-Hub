@@ -26,6 +26,7 @@ import { IncidentReviewBoard } from '@/components/dashboard/incident-review-boar
 import { CommunicationConsole } from '@/components/dashboard/communication-console'
 import { SovereignLens } from '@/components/dashboard/sovereign-lens'
 import { CallOverlay } from '@/components/dashboard/call-overlay'
+import { SovereignAssistantChat } from '@/components/intelligence/sovereign-assistant-chat'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -308,6 +309,7 @@ export default function ShurukkhaDashboard() {
       </div>
       <SovereignLens isOpen={isLensOpen} onClose={() => setIsLensOpen(false)} />
       <CallOverlay callData={activeCall} onClose={() => setActiveCall(null)} />
+      <SovereignAssistantChat />
       <AlertCenter />
       <Toaster />
     </SidebarProvider>
