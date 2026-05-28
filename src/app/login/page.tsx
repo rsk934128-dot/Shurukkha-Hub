@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Globe, Lock, LogIn, Loader2, Key, Fingerprint } from 'lucide-react'
+import { Shield, Globe, Lock, LogIn, Loader2, Key, Fingerprint, Star, Zap } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth, useUser, useFirestore } from '@/firebase'
@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { TOTPVerificationDialog } from '@/components/auth/totp-verification-dialog'
 import { AppLogo } from '@/components/ui/app-logo'
+import { Badge } from '@/components/ui/badge'
 
 export default function LoginPage() {
   const { auth } = useAuth()
@@ -94,7 +95,7 @@ export default function LoginPage() {
       const response = await fetch('/api/v1/auth/verify-2fa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: code, secret: pendingSecret })
+        body: JSON.stringify({ token: code, secret: pendingSecret, userEmail: user?.email })
       });
       
       const data = await response.json();
@@ -130,8 +131,10 @@ export default function LoginPage() {
         <AppLogo size={500} />
       </div>
 
-      <Card className="max-w-md w-full border-primary/20 bg-card/60 backdrop-blur-xl shadow-2xl z-10">
-        <CardHeader className="text-center space-y-4">
+      <Card className="max-w-md w-full border-primary/20 bg-card/60 backdrop-blur-xl shadow-2xl z-10 overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary animate-pulse" />
+        
+        <CardHeader className="text-center space-y-4 pt-10">
           <div className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto border border-primary/20 relative group">
             <div className="absolute inset-0 bg-primary/10 blur-xl rounded-full scale-0 group-hover:scale-100 transition-transform duration-700" />
             {isHandshaking ? (
@@ -141,50 +144,75 @@ export default function LoginPage() {
             )}
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-headline font-bold tracking-tight uppercase">SHURUKKHA HUB</CardTitle>
-            <CardDescription className="text-[10px] uppercase tracking-[0.2em] font-bold text-primary/60">
+            <CardTitle className="text-3xl font-headline font-bold tracking-tight uppercase">SHURUKKHA HUB</CardTitle>
+            <CardDescription className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/60">
               {isHandshaking ? "Establishing Sovereign Handshake..." : "Sovereign Identity Access"}
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-8 pb-10">
           {isHandshaking ? (
-            <div className="py-8 text-center space-y-4">
-              <div className="flex justify-center gap-1">
-                <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
-                <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
-                <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
+            <div className="py-8 text-center space-y-6">
+              <div className="flex justify-center items-center gap-3">
+                <div className="w-2 h-2 bg-primary rounded-full animate-ping" />
+                <div className="w-2 h-2 bg-accent rounded-full animate-ping [animation-delay:0.2s]" />
+                <div className="w-2 h-2 bg-primary rounded-full animate-ping [animation-delay:0.4s]" />
               </div>
-              <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest animate-pulse">Encrypting_Session_Keys...</p>
+              <div className="space-y-2">
+                <p className="text-[11px] text-primary font-mono uppercase tracking-[0.4em] animate-pulse">Encrypting_Sovereign_Keys...</p>
+                <p className="text-[9px] text-muted-foreground font-mono">NODE_IDENTITY: core.sheikh.primary</p>
+              </div>
             </div>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground text-center leading-relaxed px-4">
-                সিরাজগঞ্জ সুরক্ষা পোর্টালে আপনার রাজকীয় পরিচয় নিশ্চিত করুন। নিরাপদ এক্সেস পেতে নিচের মাধ্যমটি ব্যবহার করুন।
-              </p>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground text-center leading-relaxed px-4">
+                  সিরাজগঞ্জ সুরক্ষা পোর্টালে আপনার রাজকীয় পরিচয় নিশ্চিত করুন। নিরাপদ এক্সেস পেতে নিচের মাধ্যমটি ব্যবহার করুন।
+                </p>
+                
+                <div className="flex justify-center">
+                  <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5 py-1 px-4 gap-2 text-[10px] font-bold uppercase tracking-widest">
+                    <Star size={12} fill="currentColor" /> PHASE 31.0 SECURED
+                  </Badge>
+                </div>
+              </div>
               
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <Button 
                   onClick={handleGoogleLogin}
-                  className="w-full h-14 bg-white text-black hover:bg-white/90 font-bold gap-3 rounded-2xl shadow-xl transition-all hover:scale-[1.02] active:scale-95"
+                  className="w-full h-16 bg-white text-black hover:bg-white/90 font-bold gap-4 rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all hover:scale-[1.02] active:scale-95 group relative overflow-hidden"
                 >
-                  <Globe size={18} /> Google দিয়ে রাজকীয় প্রবেশ
+                  <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
+                  <Globe size={22} className="relative z-10 group-hover:rotate-12 transition-transform" /> 
+                  <span className="text-lg relative z-10 tracking-tight">Google দিয়ে রাজকীয় প্রবেশ</span>
                 </Button>
                 
-                <Button 
-                  variant="outline"
-                  disabled
-                  className="w-full h-14 border-white/10 font-bold gap-3 opacity-50 rounded-2xl"
-                >
-                  <Fingerprint size={18} /> বায়োমেট্রিক লগইন (শীঘ্রই)
-                </Button>
+                <div className="grid grid-cols-2 gap-3">
+                   <Button 
+                    variant="outline"
+                    disabled
+                    className="h-12 border-white/5 font-bold gap-2 opacity-50 rounded-xl text-[10px] uppercase tracking-wider"
+                  >
+                    <Fingerprint size={16} /> বায়োমেট্রিক
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    disabled
+                    className="h-12 border-white/5 font-bold gap-2 opacity-50 rounded-xl text-[10px] uppercase tracking-wider"
+                  >
+                    <Key size={16} /> সিকিউরিটি কী
+                  </Button>
+                </div>
               </div>
             </>
           )}
 
           <div className="pt-6 border-t border-white/5 text-center">
-            <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground uppercase tracking-[0.3em] font-bold">
-              <Lock size={12} className="text-primary" /> SHA256withRSA SECURED
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground uppercase tracking-[0.3em] font-bold">
+                <Lock size={12} className="text-primary" /> SHA256withRSA V2
+              </div>
+              <p className="text-[8px] font-mono text-muted-foreground/40">PROJECT_ID: 42ND_ARCHIVE | v31.0_SOVEREIGN</p>
             </div>
           </div>
         </CardContent>
