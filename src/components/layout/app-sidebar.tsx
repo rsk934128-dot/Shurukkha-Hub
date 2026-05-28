@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -19,7 +20,8 @@ import {
   LogOut,
   UserCircle,
   SearchCode,
-  Eye
+  Eye,
+  Share2
 } from "lucide-react"
 
 import {
@@ -37,6 +39,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Badge } from "@/components/ui/badge"
 import { AppLogo } from "@/components/ui/app-logo"
+import { useToast } from "@/hooks/use-toast"
 
 interface AppSidebarProps {
   userRole: 'citizen' | 'authority' | 'admin'
@@ -47,6 +50,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSidebarProps) {
   const { setOpenMobile } = useSidebar()
+  const { toast } = useToast()
 
   const handleNav = (tab: string) => {
     onNavigate(tab)
@@ -58,6 +62,26 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
     if (onLogout) {
       onLogout()
       setOpenMobile(false)
+    }
+  }
+
+  const handleShareApp = async () => {
+    const shareData = {
+      title: 'Shurukkha Hub | সিরাজগঞ্জ সুরক্ষা 🛡️',
+      text: 'সিরাজগঞ্জ জেলা প্রশাসনের সার্বভৌম এআই-চালিত জরুরি ও আর্থিক পরিকাঠামো। জয়েন করুন আমাদের ডিজিটাল বর্মে।',
+      url: window.location.origin
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(`${shareData.text} \nলিঙ্ক: ${shareData.url}`);
+        toast({ title: "লিঙ্ক কপি করা হয়েছে", description: "আপনি এখন এটি সবার সাথে শেয়ার করতে পারেন।" });
+      }
+      setOpenMobile(false);
+    } catch (err) {
+      console.error('Error sharing:', err);
     }
   }
 
@@ -190,40 +214,20 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
             </SidebarGroupContent>
           </SidebarGroup>
         )}
-
-        {/* Advanced Modules for Admin only */}
-        {userRole === 'admin' && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-[10px] uppercase font-bold text-accent/40 px-4">অ্যাডভান্সড ভল্ট</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    onClick={() => setOpenMobile(false)}
-                    className="px-4 h-10 gap-3 text-muted-foreground opacity-60"
-                  >
-                    <Database size={18} />
-                    <span className="font-medium">ডেটা ইন্টেলিজেন্স</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    onClick={() => setOpenMobile(false)}
-                    className="px-4 h-10 gap-3 text-muted-foreground opacity-60"
-                  >
-                    <Lock size={18} />
-                    <span className="font-medium">ক্রিপ্টো কি-রোটেশন</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-white/5 space-y-4">
-        {onLogout && (
-          <SidebarMenu>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton 
+              onClick={handleShareApp}
+              className="px-4 h-10 gap-3 text-muted-foreground hover:text-accent hover:bg-accent/10 transition-all"
+            >
+              <Share2 size={18} />
+              <span className="font-medium">সাম্রাজ্য শেয়ার করুন</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          {onLogout && (
             <SidebarMenuItem>
               <SidebarMenuButton 
                 onClick={handleLogoutClick}
@@ -233,8 +237,8 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                 <span className="font-medium">লগআউট করুন</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-          </SidebarMenu>
-        )}
+          )}
+        </SidebarMenu>
         <div className="p-3 bg-primary/5 rounded-xl border border-primary/20">
           <div className="flex items-center gap-2 mb-1">
             <Zap size={12} className="text-primary fill-primary" />

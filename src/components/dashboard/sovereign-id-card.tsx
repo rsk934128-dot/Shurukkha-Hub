@@ -1,3 +1,4 @@
+
 "use client"
 
 import React from 'react'
@@ -7,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { AppLogo } from '@/components/ui/app-logo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/hooks/use-toast'
 
 interface SovereignIDCardProps {
   user: any;
@@ -14,10 +16,44 @@ interface SovereignIDCardProps {
 }
 
 export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
+  const { toast } = useToast();
   if (!user) return null;
 
   const fingerprint = user.uid?.substring(0, 12).toUpperCase() || 'EST_XXXX_XXXX';
   const signature = 'SIG_SHA256_' + btoa(user.email || '').substring(0, 16).toUpperCase();
+
+  const handleShare = async () => {
+    const shareData = {
+      title: 'Shurukkha Hub Sovereign ID',
+      text: `আমি সিরাজগঞ্জ সুরক্ষা পোর্টালে আমার সার্বভৌম পরিচয়পত্র (Sovereign ID) নিশ্চিত করেছি। পদবী: ${role === 'admin' ? 'Supreme Admin' : role.toUpperCase()}, ফিঙ্গারপ্রিন্ট: ${fingerprint}`,
+      url: window.location.origin
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(`${shareData.text} \nলিঙ্ক: ${shareData.url}`);
+        toast({
+          title: "লিঙ্ক কপি করা হয়েছে",
+          description: "আপনার ক্লিপবোর্ডে শেয়ার করার জন্য তথ্য সংরক্ষিত হয়েছে।",
+        });
+      }
+    } catch (err) {
+      console.error('Error sharing:', err);
+    }
+  };
+
+  const handleDownload = () => {
+    toast({
+      title: "ডাউনলোড শুরু হচ্ছে",
+      description: "আপনার সার্বভৌম পরিচয়পত্রটি PDF ফরম্যাটে জেনারেট করা হচ্ছে।",
+    });
+    // In a real scenario, we could use html2canvas or similar to generate a real PDF
+    setTimeout(() => {
+      window.print();
+    }, 1000);
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in zoom-in-95 duration-700">
@@ -118,10 +154,10 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
 
       {/* Action Buttons */}
       <div className="flex justify-center gap-4">
-        <Button variant="outline" className="rounded-full border-primary/20 bg-primary/5 text-primary gap-2 h-11 px-6 font-bold text-xs uppercase tracking-widest hover:bg-primary/10 transition-all">
+        <Button onClick={handleDownload} variant="outline" className="rounded-full border-primary/20 bg-primary/5 text-primary gap-2 h-11 px-6 font-bold text-xs uppercase tracking-widest hover:bg-primary/10 transition-all">
           <Download size={16} /> ডাউনলোড আইডি
         </Button>
-        <Button variant="outline" className="rounded-full border-accent/20 bg-accent/5 text-accent gap-2 h-11 px-6 font-bold text-xs uppercase tracking-widest hover:bg-accent/10 transition-all">
+        <Button onClick={handleShare} variant="outline" className="rounded-full border-accent/20 bg-accent/5 text-accent gap-2 h-11 px-6 font-bold text-xs uppercase tracking-widest hover:bg-accent/10 transition-all">
           <Share2 size={16} /> শেয়ার করুন
         </Button>
       </div>

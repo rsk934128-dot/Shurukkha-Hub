@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Eye, MapPin, Clock, ShieldCheck, Image as ImageIcon, Trash2, ExternalLink, Filter, Search, SearchCode, Camera, Signal, Loader2, Sparkles, Navigation, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Eye, MapPin, Clock, ShieldCheck, Image as ImageIcon, Trash2, ExternalLink, Filter, Search, SearchCode, Camera, Signal, Loader2, Sparkles, Navigation, CheckCircle2, AlertCircle, Share2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -45,6 +46,26 @@ export function IncidentReviewBoard() {
       toast({ title: "রিপোর্ট মুছে ফেলা হয়েছে" });
     } catch (e) {
       toast({ title: "ত্রুটি", variant: "destructive" });
+    }
+  }
+
+  const handleShareIncident = async (incident: any) => {
+    const text = `ইমার্জেন্সি রিপোর্ট: ${getTypeLabel(incident.type)} \nবর্ণনা: ${incident.description} \nলোকেশন: ${incident.coordinates ? `${incident.coordinates.lat}, ${incident.coordinates.lng}` : 'N/A'}`;
+    const url = window.location.origin;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Emergency Intel Report',
+          text: text,
+          url: url
+        });
+      } else {
+        await navigator.clipboard.writeText(text + `\nলিঙ্ক: ${url}`);
+        toast({ title: "রিপোর্ট কপি করা হয়েছে", description: "এখন এটি সংশ্লিষ্ট কর্মকর্তাদের পাঠাতে পারেন।" });
+      }
+    } catch (err) {
+      console.error(err);
     }
   }
 
@@ -143,6 +164,14 @@ export function IncidentReviewBoard() {
                      <Clock size={10} /> {incident.timestamp?.toDate?.()?.toLocaleTimeString('bn-BD') || 'Just Now'}
                    </Badge>
                 </div>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  onClick={() => handleShareIncident(incident)}
+                  className="absolute top-3 right-3 h-8 w-8 bg-black/40 text-white rounded-full border border-white/10 hover:bg-primary/20"
+                >
+                  <Share2 size={14} />
+                </Button>
               </div>
 
               {/* Card Content */}
