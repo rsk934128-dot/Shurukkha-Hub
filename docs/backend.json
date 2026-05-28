@@ -92,6 +92,19 @@
         "status": { "type": "string" },
         "signature": { "type": "string" }
       }
+    },
+    "MerchantPartner": {
+      "title": "Merchant Partner",
+      "description": "Verification data for bKash and local gateway partnership.",
+      "type": "object",
+      "properties": {
+        "merchantName": { "type": "string" },
+        "callbackUrl": { "type": "string" },
+        "merchantId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "verified", "active"] },
+        "rsaSignature": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -121,6 +134,10 @@
     "/local_settlements/{settlementId}": {
       "schema": "LocalSettlement",
       "description": "Records of bKash/Mobile finance settlements."
+    },
+    "/merchants/{merchantId}": {
+      "schema": "MerchantPartner",
+      "description": "Verification registry for bKash merchant partners."
     }
   }
 }

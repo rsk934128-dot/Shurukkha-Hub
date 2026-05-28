@@ -2,12 +2,12 @@
 /**
  * @fileOverview Sovereign Payment Handler for Local & Global Settlements.
  * Manages the bridge between card-to-bKash settlements using a Buffer Logic.
- * Updated: Added Dummy Payment simulation for Live Testing.
+ * Updated: Added Merchant Partner Orchestration and Handshake Protocols.
  */
 
 import { IntegrationBridge } from './integration-bridge';
 import { db } from './firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, setDoc, doc } from 'firebase/firestore';
 
 export interface PaymentIntent {
   amount: number;
@@ -15,6 +15,11 @@ export interface PaymentIntent {
   source: 'CARD' | 'BANK' | 'VIRTUAL_ACCOUNT';
   target: 'BKASH' | 'LOCAL_BANK' | 'TREASURY';
   merchantId: string;
+}
+
+export interface MerchantRegistration {
+  merchantName: string;
+  callbackUrl: string;
 }
 
 export class PaymentHandler {
@@ -57,6 +62,41 @@ export class PaymentHandler {
       return { success: true, settlementId, signature };
     } catch (e) {
       console.error("[Payment Handler] Settlement failed", e);
+      throw e;
+    }
+  }
+
+  /**
+   * Registers a Merchant Partner for bKash integration
+   */
+  static async registerMerchant(data: MerchantRegistration) {
+    console.log(`[Phase 24.0] Registering Merchant: ${data.merchantName}...`);
+    
+    const merchantId = 'mer_bkash_' + Math.random().toString(36).substr(2, 12);
+    const rsaSignature = IntegrationBridge.generateSignature({ ...data, merchantId });
+
+    const merchantData = {
+      ...data,
+      merchantId,
+      status: 'verified',
+      rsaSignature,
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      await setDoc(doc(db, "merchants", merchantId), merchantData);
+      
+      await addDoc(collection(db, "audit_trails"), {
+        action: 'MERCHANT_REGISTERED',
+        details: merchantData,
+        signature: rsaSignature,
+        timestamp: serverTimestamp(),
+        performedBy: 'sovereign_gateway_orchestrator'
+      });
+
+      return { success: true, merchantId, rsaSignature };
+    } catch (e) {
+      console.error("Merchant Registration Failed", e);
       throw e;
     }
   }

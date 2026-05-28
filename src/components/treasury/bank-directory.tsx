@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, CreditCard, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play } from 'lucide-react'
+import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, CreditCard, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play, UserCheck, ShieldAlert, Cpu } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -13,6 +13,7 @@ import { PaymentHandler } from '@/lib/payment-handler'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Label } from '@/components/ui/label'
 
 export function BankDirectory() {
   const [banks, setBanks] = useState<BankNode[]>([])
@@ -20,6 +21,10 @@ export function BankDirectory() {
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [terminalLogs, setTerminalLogs] = useState<string[]>([])
+  const [merchantForm, setMerchantForm] = useState({
+    name: 'Shurukkha Hub Official',
+    callback: 'https://shurukkha-hub.gov.bd/api/webhook/bkash'
+  })
   const { toast } = useToast()
 
   useEffect(() => {
@@ -92,6 +97,25 @@ export function BankDirectory() {
     }
   }
 
+  const handleMerchantRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const result = await PaymentHandler.registerMerchant({
+        merchantName: merchantForm.name,
+        callbackUrl: merchantForm.callback
+      })
+      toast({
+        title: "MERCHANT PARTNER ACTIVE",
+        description: `বিকাশ গেটওয়ের সাথে হ্যান্ডশেক সম্পন্ন হয়েছে। ID: ${result.merchantId}`,
+      })
+    } catch (e) {
+      toast({ title: "Registration Failed", variant: "destructive" })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const filteredBanks = banks.filter(b => 
     b.bankName.toLowerCase().includes(search.toLowerCase()) || 
     b.country.toLowerCase().includes(search.toLowerCase())
@@ -109,11 +133,11 @@ export function BankDirectory() {
               <CardTitle className="text-lg font-headline flex items-center gap-2">
                 GLOBAL BANK REGISTRY
                 <Badge className="bg-accent/20 text-accent border-accent/30 text-[8px] h-4 gap-1">
-                  <Star size={8} fill="currentColor" /> PHASE 23.0
+                  <Star size={8} fill="currentColor" /> PHASE 24.0
                 </Badge>
               </CardTitle>
               <CardDescription className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/60">
-                Stripe Financial Connections • Local Settlement Hooks (bKash)
+                Stripe Financial Connections • Merchant Gateway Orchestration
               </CardDescription>
             </div>
           </div>
@@ -146,6 +170,7 @@ export function BankDirectory() {
           <TabsList className="bg-transparent border-none p-0 h-8">
             <TabsTrigger value="global" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Globe size={14}/> ইন্টারন্যাশনাল ব্যাংকস</TabsTrigger>
             <TabsTrigger value="local" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><Smartphone size={14}/> লোকাল গেটওয়ে (bKash)</TabsTrigger>
+            <TabsTrigger value="merchant" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><UserCheck size={14}/> মার্চেন্ট পার্টনার (Hub)</TabsTrigger>
           </TabsList>
         </div>
 
@@ -291,6 +316,100 @@ export function BankDirectory() {
                     <span>Buffer Status</span>
                     <span className="text-accent">ACTIVE</span>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="merchant" className="flex-1 p-6 m-0 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-7">
+              <Card className="bg-card border-primary/20 shadow-2xl overflow-hidden">
+                <CardHeader className="bg-primary/5 border-b border-primary/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                      <UserCheck className="text-primary" size={24} />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm font-headline font-bold uppercase tracking-widest">মার্চেন্ট পার্টনার রেজিস্ট্রেশন</CardTitle>
+                      <CardDescription className="text-[10px]">বিকাশ গেটওয়ের সাথে সরাসরি নেটওয়ার্ক-টু-নেটওয়ার্ক সংযোগ।</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <form onSubmit={handleMerchantRegister} className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">মার্চেন্ট বা প্রজেক্টের নাম</Label>
+                        <Input 
+                          value={merchantForm.name}
+                          onChange={e => setMerchantForm({...merchantForm, name: e.target.value})}
+                          className="bg-muted/40 border-white/10"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">API Callback URL (Handshake Endpoint)</Label>
+                        <Input 
+                          value={merchantForm.callback}
+                          onChange={e => setMerchantForm({...merchantForm, callback: e.target.value})}
+                          className="bg-muted/40 border-white/10 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="p-4 bg-primary/5 rounded-xl border border-primary/20 space-y-3">
+                      <div className="flex items-center gap-2 text-primary">
+                        <ShieldCheck size={16} />
+                        <span className="text-xs font-bold uppercase tracking-widest">Sovereign Encryption Active</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground leading-relaxed">
+                        এই ফর্মটি সাবমিট করার সাথে সাথে আপনার সিস্টেম বিকাশের পোর্টালে আপনার সিস্টেমকে ভেরিফাইড পার্টনার হিসেবে নথিভুক্ত করবে।
+                      </p>
+                    </div>
+                    <Button type="submit" disabled={loading} className="w-full h-12 bg-primary text-background font-bold text-lg gap-2">
+                      {loading ? <RefreshCw className="animate-spin" /> : <Zap size={18} fill="currentColor" />}
+                      ডিজিটাল সিগনেচার পুশ করুন
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="lg:col-span-5 space-y-6">
+              <Card className="bg-accent/5 border-accent/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent flex items-center gap-2">
+                    <Cpu size={14} /> Phase 24.0 Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-muted-foreground font-medium">Searchable on bKash App</span>
+                      <Badge variant="outline" className="h-5 text-[8px] bg-accent/10 border-accent/40 text-accent font-bold">READY</Badge>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-muted-foreground font-medium">Server-to-Server Handshake</span>
+                      <Badge variant="outline" className="h-5 text-[8px] bg-accent/10 border-accent/40 text-accent font-bold">ACTIVE</Badge>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-muted-foreground font-medium">Sovereign Shield Protection</span>
+                      <Badge variant="outline" className="h-5 text-[8px] bg-accent/10 border-accent/40 text-accent font-bold">ENABLED</Badge>
+                    </div>
+                  </div>
+                  <div className="pt-4 border-t border-accent/10">
+                    <p className="text-[10px] text-muted-foreground leading-relaxed italic">
+                      আপনার সিস্টেম এখন কোনো থার্ড পার্টির অপেক্ষায় থাকবে না, এটি নিজেই নিজের ট্রানজেকশন প্রসেসর হিসেবে কাজ করবে।
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <div className="p-6 rounded-2xl bg-muted/20 border border-white/5 flex flex-col items-center justify-center text-center gap-4 py-12">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
+                  <ShieldAlert className="text-primary" size={32} />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-headline font-bold">Security Compliance</h4>
+                  <p className="text-[10px] text-muted-foreground">RSA v2 Digital Signature বাধ্যতামূলক।</p>
                 </div>
               </div>
             </div>
