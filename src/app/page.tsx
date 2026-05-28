@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect, useState } from 'react'
@@ -331,10 +332,11 @@ export default function WelcomeLanding() {
             <AppLogo size={80} className="opacity-40 hover:opacity-100 transition-opacity cursor-pointer" />
             <div className="space-y-4">
               <p className="text-[10px] md:text-xs uppercase tracking-[0.6em] font-bold text-muted-foreground">Developed with Sovereign Pride for Sirajganj District Administration</p>
-              <div className="flex justify-center gap-8 text-[9px] uppercase font-bold tracking-widest text-primary/40">
+              <div className="flex flex-wrap justify-center gap-6 md:gap-12 text-[9px] uppercase font-bold tracking-widest text-primary/40">
                  <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Protocols</Link>
                  <Link href="/terms" className="hover:text-primary transition-colors">Imperial Terms</Link>
                  <Link href="/audit" className="hover:text-primary transition-colors">Forensic Audit</Link>
+                 <Link href="/partnerships" className="hover:text-primary transition-colors">Partnership Hub</Link>
               </div>
               <p className="text-[8px] font-mono text-primary/20 uppercase tracking-[0.2em] mt-8">PROJECT_ID: 42ND_ARCHIVE_SHEIKH_CODE_EXCHANGE | VERSION: 31.0_SOVEREIGN</p>
             </div>

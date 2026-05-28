@@ -1,3 +1,4 @@
+
 "use client"
 
 import React from 'react'
@@ -89,10 +90,11 @@ export default function PrivacyProtocols() {
         </div>
 
         <footer className="mt-20 pt-12 border-t border-white/5 text-center opacity-40">
-           <div className="flex justify-center gap-8 text-[9px] uppercase font-bold tracking-widest text-primary/40 mb-6">
+           <div className="flex flex-wrap justify-center gap-6 md:gap-12 text-[9px] uppercase font-bold tracking-widest text-primary/40 mb-6">
               <Link href="/privacy" className="hover:text-primary transition-colors text-primary">Privacy Protocols</Link>
               <Link href="/terms" className="hover:text-primary transition-colors">Imperial Terms</Link>
               <Link href="/audit" className="hover:text-primary transition-colors">Forensic Audit</Link>
+              <Link href="/partnerships" className="hover:text-primary transition-colors">Partnership Hub</Link>
            </div>
            <p className="text-[10px] uppercase tracking-[0.5em]">Developed with Pride for Sirajganj District Administration</p>
            <p className="text-[8px] font-mono mt-2 uppercase tracking-widest">Project: 42ND_ARCHIVE | v31.0_SOVEREIGN</p>
