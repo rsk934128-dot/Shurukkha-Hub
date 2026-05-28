@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { CommunicationOrchestrator, Message } from '@/lib/communication-orchestrator'
 import { db } from '@/lib/firebase'
 import { useUser } from '@/firebase'
-import { collection, query, orderBy, limit, onSnapshot, where, getDocs, or } from 'firebase/firestore'
+import { collection, query, orderBy, limit, onSnapshot, where, getDocs } from 'firebase/firestore'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 
 const COMMAND_CENTER_CONTACT = { id: 'command_center', name: "Sovereign Command", role: "Authority", status: 'online', avatar: '' }
@@ -31,20 +31,25 @@ export function CommunicationConsole() {
     if (!user) return;
 
     const fetchUsers = async () => {
-      const q = query(collection(db, "users"), limit(20));
-      const snap = await getDocs(q);
-      const otherUsers = snap.docs
-        .map(doc => ({ 
-          id: doc.id, 
-          name: doc.data().displayName || "Anonymous User", 
-          role: doc.data().role || "Citizen",
-          status: 'online',
-          avatar: doc.data().photoURL || ''
-        }))
-        .filter(u => u.id !== user.uid);
-      
-      setContacts([COMMAND_CENTER_CONTACT, ...otherUsers]);
-      setLoading(false);
+      try {
+        const q = query(collection(db, "users"), limit(50));
+        const snap = await getDocs(q);
+        const otherUsers = snap.docs
+          .map(doc => ({ 
+            id: doc.id, 
+            name: doc.data().displayName || "Anonymous User", 
+            role: doc.data().role || "Citizen",
+            status: 'online',
+            avatar: doc.data().photoURL || ''
+          }))
+          .filter(u => u.id !== user.uid);
+        
+        setContacts([COMMAND_CENTER_CONTACT, ...otherUsers]);
+      } catch (e) {
+        console.warn("[Comm] Failed to fetch contact list.");
+      } finally {
+        setLoading(false);
+      }
     }
 
     fetchUsers();
@@ -53,36 +58,30 @@ export function CommunicationConsole() {
   useEffect(() => {
     if (!user || !selectedContact) return;
 
-    // Fixed Query: Fetch messages where user is sender OR recipient
+    // Fast Track Query: Use chatId for lightning-fast conversation fetching
+    const orchestrator = CommunicationOrchestrator.getInstance();
+    const currentChatId = orchestrator.getChatId(user.uid, selectedContact.id);
+
     const q = query(
       collection(db, "messages"),
-      or(
-        where("senderId", "==", user.uid),
-        where("recipientId", "==", user.uid)
-      ),
+      where("chatId", "==", currentChatId),
       orderBy("timestamp", "asc"),
-      limit(50)
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+      const chatMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
       
-      // Local filtering for specific conversation
-      const filtered = allMsgs.filter(m => 
-        (m.senderId === user.uid && m.recipientId === selectedContact.id) ||
-        (m.senderId === selectedContact.id && m.recipientId === user.uid) ||
-        (selectedContact.id === 'command_center' && m.recipientId === 'command_center' && m.senderId === user.uid)
-      );
-
-      const lastMsg = filtered[filtered.length - 1];
+      const lastMsg = chatMsgs[chatMsgs.length - 1];
+      // Play sound only for incoming messages that are new to the state
       if (lastMsg && lastMsg.senderId !== user.uid && !messages.find(m => m.id === lastMsg.id)) {
         playMessageSound();
       }
 
-      setMessages(filtered);
+      setMessages(chatMsgs);
       setTimeout(scrollToBottom, 100);
     }, (err) => {
-      console.error("[Chat Query] Permission Error:", err);
+      console.error("[Chat Query] Fast Track Error:", err);
     });
 
     return () => unsubscribe();
@@ -110,7 +109,7 @@ export function CommunicationConsole() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     const comm = CommunicationOrchestrator.getInstance();
-    await comm.uploadFile(file, selectedContact.id);
+    await comm.uploadFile(file, selectedContact.id, user.uid);
   }
 
   return (
@@ -126,7 +125,7 @@ export function CommunicationConsole() {
           </div>
           <div>
             <CardTitle className="text-sm font-headline font-bold uppercase tracking-widest">{selectedContact.name}</CardTitle>
-            <p className="text-[9px] text-muted-foreground font-mono uppercase">{selectedContact.role} • SECURE_NODE_V3</p>
+            <p className="text-[9px] text-muted-foreground font-mono uppercase">{selectedContact.role} • SOVEREIGN_CHANNEL_v3</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -177,7 +176,7 @@ export function CommunicationConsole() {
             <div className="space-y-6">
               <div className="flex justify-center">
                 <Badge variant="outline" className="text-[8px] border-white/5 text-muted-foreground uppercase py-1 px-4 gap-2">
-                  <ShieldCheck size={10} /> End-to-End Encrypted Signal Active
+                  <ShieldCheck size={10} /> Fast-Track Delivery Active
                 </Badge>
               </div>
 

@@ -1,7 +1,7 @@
 /**
  * @fileOverview Sovereign Communication Orchestrator.
  * Manages encrypted messaging, file transfers, and status synchronization.
- * Supports Zero-Latency operations and Survival Mode queuing.
+ * Supports Zero-Latency operations and Lightning-Fast delivery via ChatId indexing.
  */
 
 import { db } from './firebase';
@@ -13,6 +13,8 @@ export interface Message {
   id?: string;
   senderId: string;
   recipientId: string;
+  chatId: string; // Composite key for fast indexing
+  participants: string[]; // Array for flexible searching
   content: string;
   type: 'text' | 'file' | 'voice';
   timestamp: any;
@@ -31,11 +33,21 @@ export class CommunicationOrchestrator {
   }
 
   /**
-   * Sends a message with automatic survival mode handling.
+   * Generates a consistent Chat ID between two users.
    */
-  async sendMessage(msg: Omit<Message, 'timestamp' | 'status' | 'isEncrypted'>) {
+  getChatId(uid1: string, uid2: string): string {
+    return [uid1, uid2].sort().join('_');
+  }
+
+  /**
+   * Sends a message with automatic survival mode handling and fast-track indexing.
+   */
+  async sendMessage(msg: Omit<Message, 'timestamp' | 'status' | 'isEncrypted' | 'chatId' | 'participants'>) {
+    const chatId = this.getChatId(msg.senderId, msg.recipientId);
     const messageData: Message = {
       ...msg,
+      chatId,
+      participants: [msg.senderId, msg.recipientId],
       timestamp: new Date().toISOString(),
       status: this.isOnline ? 'sent' : 'queued',
       isEncrypted: true
@@ -50,7 +62,7 @@ export class CommunicationOrchestrator {
         
         IntegrationBridge.broadcastEvent({
           type: 'OUTBOUND_SIGNAL_SENT',
-          payload: { type: 'MESSAGE', recipient: msg.recipientId },
+          payload: { type: 'MESSAGE', recipient: msg.recipientId, chatId },
           timestamp: new Date().toISOString()
         });
       } catch (e) {
@@ -60,7 +72,6 @@ export class CommunicationOrchestrator {
     } else {
       console.warn("[Survival Mode] Network offline. Queuing message locally.");
       DisasterStorage.addToSyncQueue('SEND_MESSAGE', messageData);
-      // Persist to local chat history for immediate UI feedback
       DisasterStorage.saveLocalMessage(messageData);
     }
   }
@@ -68,14 +79,13 @@ export class CommunicationOrchestrator {
   /**
    * Simulates encrypted file upload to Sovereign Storage.
    */
-  async uploadFile(file: File, recipientId: string): Promise<string> {
+  async uploadFile(file: File, recipientId: string, senderId: string): Promise<string> {
     console.log(`[Comm] Encrypting file: ${file.name} for recipient: ${recipientId}`);
-    // Simulated encryption and upload
     await new Promise(resolve => setTimeout(resolve, 1500));
     const simulatedUrl = `https://storage.surukkha.sheikh/vault/${Math.random().toString(36).substring(7)}_${file.name}`;
     
     await this.sendMessage({
-      senderId: 'command_center',
+      senderId,
       recipientId,
       content: `Shared file: ${file.name}`,
       type: 'file',
@@ -105,10 +115,9 @@ export class CommunicationOrchestrator {
           timestamp: serverTimestamp()
         });
       } catch (e) {
-        break; // Stop sync if network fails again
+        break;
       }
     }
-    // Filter and keep only non-message items in queue (or clear if all messages)
-    DisasterStorage.clearSyncQueue(); // Simplified for MVP
+    DisasterStorage.clearSyncQueue();
   }
 }
