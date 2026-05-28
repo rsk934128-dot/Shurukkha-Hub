@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview Enhanced Genkit flow for 'River Intelligence' with automated event triggering.
- * Includes mission-critical risk assessments and personalized evacuation plans.
+ * Includes mission-critical risk assessments and local fallback logic for API failures.
  */
 
 import {ai} from '@/ai/genkit';
@@ -37,6 +37,7 @@ const GenerateFloodSurvivalAdviceOutputSchema = z.object({
   }).optional(),
   safetyMeasures: z.array(z.string()).describe('পালনযোগ্য নিরাপত্তা ব্যবস্থা'),
   automaticAlertTriggered: z.boolean().describe('সিস্টেম থেকে অটোমেটিক এলার্ট ট্রিগার হয়েছে কিনা'),
+  isLocalFallback: z.boolean().optional().describe('এপিআই ত্রুটির কারণে লোকাল মোডে জেনারেট হয়েছে কিনা'),
 });
 export type GenerateFloodSurvivalAdviceOutput = z.infer<
   typeof GenerateFloodSurvivalAdviceOutputSchema
@@ -77,17 +78,50 @@ const generateFloodSurvivalAdviceFlow = ai.defineFlow(
     outputSchema: GenerateFloodSurvivalAdviceOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    if (!output) {
-      throw new Error('Flood Intelligence Engine failed to generate output.');
-    }
+    try {
+      const {output} = await prompt(input);
+      if (!output) {
+        throw new Error('Flood Intelligence Engine failed to generate output.');
+      }
 
-    // Logic: If risk is Extreme, simulate a system-level emergency trigger
-    if (output.riskLevel === 'Extreme') {
-      console.log(`[EMERGENCY TRIGGER] Automated dispatch for ${input.currentLocation} initiated.`);
-      output.automaticAlertTriggered = true;
-    }
+      if (output.riskLevel === 'Extreme') {
+        console.log(`[EMERGENCY TRIGGER] Automated dispatch for ${input.currentLocation} initiated.`);
+        output.automaticAlertTriggered = true;
+      }
 
-    return output;
+      return output;
+    } catch (error) {
+      console.warn(`[Sovereign Fallback] AI Engine offline (Forbidden/Limit). Executing Local Logic...`);
+      
+      // Autonomous Fallback Logic
+      const waterDiff = input.jamunaWaterLevel - input.dangerLevelThreshold;
+      let riskLevel: 'Low' | 'Medium' | 'High' | 'Extreme' = 'Low';
+      
+      if (waterDiff > 0.5) riskLevel = 'Extreme';
+      else if (waterDiff > 0) riskLevel = 'High';
+      else if (waterDiff > -0.5) riskLevel = 'Medium';
+
+      const isEvacuation = riskLevel === 'High' || riskLevel === 'Extreme';
+      const recommendedShelter = input.nearbyShelters[0]?.name || "নিকটস্থ উঁচু স্থান";
+
+      return {
+        riskLevel,
+        advice: `[Sovereign Local Mode] পানির স্তর বর্তমানে ${input.jamunaWaterLevel} মি., যা বিপদসীমার ${waterDiff > 0 ? 'উপরে' : 'নিচে'}। জরুরি ভিত্তিতে প্রস্তুতি নিন।`,
+        isEvacuationRecommended: isEvacuation,
+        evacuationPlan: isEvacuation ? {
+          recommendedShelter: recommendedShelter,
+          safeRoute: "প্রধান সড়ক ব্যবহার করুন, নিচু জমি এড়িয়ে চলুন।",
+          priorityItems: ["শুকনো খাবার", "জরুরি ওষুধ", "নথিপত্র"],
+          urgencyTimeframe: riskLevel === 'Extreme' ? "তৎক্ষণাৎ" : "৪-৬ ঘণ্টা"
+        } : undefined,
+        safetyMeasures: [
+          "গবাদি পশু নিরাপদ স্থানে রাখুন।",
+          "মোবাইল ফোন এবং পাওয়ার ব্যাংক চার্জ দিয়ে রাখুন।",
+          "শুকনো খাবার ও বিশুদ্ধ পানি মজুত করুন।"
+        ],
+        automaticAlertTriggered: riskLevel === 'Extreme',
+        isLocalFallback: true
+      };
+    }
   }
 );

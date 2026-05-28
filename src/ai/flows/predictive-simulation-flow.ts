@@ -2,6 +2,7 @@
 /**
  * @fileOverview Genkit flow for Predictive Disaster Simulation.
  * Analyzes historical patterns to project future resource requirements.
+ * Includes fallback logic for mission-critical projections.
  */
 
 import {ai} from '@/ai/genkit';
@@ -30,6 +31,7 @@ const PredictiveSimulationOutputSchema = z.object({
   priorityZones: z.array(z.string()).describe('List of areas likely to need immediate evacuation'),
   strategicAdvice: z.string().describe('Strategic recommendations for the district administration in Bengali'),
   bottleneckWarnings: z.array(z.string()).describe('Potential operational bottlenecks predicted'),
+  isLocalFallback: z.boolean().optional(),
 });
 export type PredictiveSimulationOutput = z.infer<typeof PredictiveSimulationOutputSchema>;
 
@@ -62,10 +64,32 @@ const predictiveSimulationFlow = ai.defineFlow(
     outputSchema: PredictiveSimulationOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    if (!output) {
-      throw new Error('Predictive Engine failed to simulate scenarios.');
+    try {
+      const {output} = await prompt(input);
+      if (!output) {
+        throw new Error('Predictive Engine failed to simulate scenarios.');
+      }
+      return output;
+    } catch (error) {
+      console.warn(`[Simulation Fallback] AI Offline. Calculating Mathematical Projections...`);
+      
+      // Mathematical fallback based on projection vs historical peak
+      const riskScore = Math.min(100, Math.max(0, 
+        ((input.projectedWaterLevel - 13.0) / (input.historicalContext.previousPeakWaterLevel - 13.0)) * 100
+      ));
+
+      return {
+        estimatedRiskScore: Math.round(riskScore),
+        requiredResponders: {
+          medical: Math.ceil(riskScore / 10),
+          rescue: Math.ceil(riskScore / 8),
+          volunteers: Math.ceil(riskScore / 5),
+        },
+        priorityZones: ["বেলকুচি", "এনায়েতপুর", "কাজীপুর"],
+        strategicAdvice: `[Sovereign Fallback Mode] প্রজেক্টেড পানির স্তর বিপদসীমা অতিক্রম করার প্রবল সম্ভাবনা রয়েছে। সকল রেসপন্ডার টিমকে হাই-অ্যালার্টে রাখুন।`,
+        bottleneckWarnings: ["যোগাযোগ বিচ্ছিন্নতা", "নৌযানের অভাব"],
+        isLocalFallback: true
+      };
     }
-    return output;
   }
 );

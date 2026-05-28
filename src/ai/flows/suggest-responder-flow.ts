@@ -1,8 +1,8 @@
-
 'use server';
 /**
  * @fileOverview Genkit flow for Dispatch Intelligence.
  * Analyzes SOS alerts and recommends the best available responder team.
+ * Includes local fallback logic for high-availability.
  */
 
 import {ai} from '@/ai/genkit';
@@ -28,6 +28,7 @@ const SuggestResponderOutputSchema = z.object({
   reasoning: z.string().describe('Why this responder was chosen (in Bengali)'),
   priority: z.enum(['Low', 'Medium', 'High', 'Critical']).describe('Urgency level'),
   estimatedArrivalTime: z.string().describe('ETA to the location'),
+  isLocalFallback: z.boolean().optional(),
 });
 export type SuggestResponderOutput = z.infer<typeof SuggestResponderOutputSchema>;
 
@@ -65,10 +66,36 @@ const suggestResponderFlow = ai.defineFlow(
     outputSchema: SuggestResponderOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    if (!output) {
-      throw new Error('Responder Dispatch Engine failed to generate output.');
+    try {
+      const {output} = await prompt(input);
+      if (!output) {
+        throw new Error('Responder Dispatch Engine failed to generate output.');
+      }
+      return output;
+    } catch (error) {
+      console.warn(`[Dispatch Fallback] AI Offline. Executing Heuristic Dispatching...`);
+      
+      // Logical fallback: Match SOS type to Responder type
+      let bestResponder = input.availableResponders[0];
+      const type = input.sosType.toLowerCase();
+
+      if (type.includes('fire') || type.includes('আগুন')) {
+        bestResponder = input.availableResponders.find(r => r.type === 'Fire') || bestResponder;
+      } else if (type.includes('medical') || type.includes('অসুস্থ')) {
+        bestResponder = input.availableResponders.find(r => r.type === 'Medical') || bestResponder;
+      } else if (type.includes('theft') || type.includes('পুলিশ')) {
+        bestResponder = input.availableResponders.find(r => r.type === 'Police') || bestResponder;
+      }
+
+      const priority = (type.includes('flood') || type.includes('fire')) ? 'Critical' : 'High';
+
+      return {
+        recommendedResponderId: bestResponder.id,
+        reasoning: `[Sovereign Fallback] ইমার্জেন্সি টাইপ '${input.sosType}' অনুযায়ী ${bestResponder.name} (${bestResponder.type}) টিমকে সবচেয়ে উপযুক্ত মনে করা হয়েছে।`,
+        priority: priority as any,
+        estimatedArrivalTime: "১০-১৫ মিনিট",
+        isLocalFallback: true
+      };
     }
-    return output;
   }
 );
