@@ -36,6 +36,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const webrtcRef = useRef<WebRTCManager | null>(null)
   const timerRef = useRef<any>(null)
   const ringtoneIntervalRef = useRef<any>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const { playAlertSound } = useAudioEngine()
 
   // Control Ringtone with strict logic
@@ -50,6 +51,30 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     stopRingtone()
     playAlertSound()
     ringtoneIntervalRef.current = setInterval(playAlertSound, 3000)
+  }
+
+  // Hardware Kill-Switch Logic
+  const cleanupStreams = () => {
+    // Explicitly stop all local tracks (Mic & Cam)
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log(`[Hardware Kill-Switch] Stopped track: ${track.kind}`);
+      });
+      streamRef.current = null;
+    }
+    if (localStream) {
+      localStream.getTracks().forEach(t => t.stop());
+      setLocalStream(null);
+    }
+    if (remoteStream) {
+      remoteStream.getTracks().forEach(t => t.stop());
+      setRemoteStream(null);
+    }
+    
+    webrtcRef.current?.dispose();
+    stopTimer();
+    stopRingtone();
   }
 
   useEffect(() => {
@@ -84,8 +109,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
       return () => {
         unsubscribe();
-        stopRingtone();
-        stopTimer();
+        cleanupStreams();
       };
     }
   }, [callData?.sessionId]);
@@ -96,7 +120,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     }
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
-      // Ensure the remote stream is not muted
       remoteVideoRef.current.muted = false;
       remoteVideoRef.current.play().catch(e => console.warn("[WebRTC] Autoplay prevented", e));
     }
@@ -109,6 +132,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         video: callData.type === 'video', 
         audio: true 
       });
+      streamRef.current = stream;
       setLocalStream(stream);
       webrtcRef.current = new WebRTCManager(callData.sessionId);
       await webrtcRef.current.createCall(stream, (remote) => {
@@ -122,12 +146,13 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
   const handleAccept = async () => {
     if (!callData) return;
-    stopRingtone(); // Stop ringtone as soon as user clicks accept
+    stopRingtone(); 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: callData.type === 'video', 
         audio: true 
       });
+      streamRef.current = stream;
       setLocalStream(stream);
       webrtcRef.current = new WebRTCManager(callData.sessionId);
       await webrtcRef.current.answerCall(stream, (remote) => {
@@ -159,15 +184,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     cleanupStreams();
     setStatus('ended');
     onClose();
-  }
-
-  const cleanupStreams = () => {
-    localStream?.getTracks().forEach(t => t.stop());
-    remoteStream?.getTracks().forEach(t => t.stop());
-    webrtcRef.current?.dispose();
-    setLocalStream(null);
-    setRemoteStream(null);
-    stopTimer();
   }
 
   const startTimer = () => {
@@ -313,13 +329,19 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             </div>
           </div>
 
-          {/* In-Call Controls (Only show when connected or when outgoing call is ringing) */}
+          {/* In-Call Controls */}
           {(status === 'connected' || (status === 'ringing' && !callData.isIncoming)) && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-6 z-40 bg-black/60 backdrop-blur-xl p-4 px-8 rounded-full border border-white/10 shadow-2xl transition-all hover:scale-105">
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={() => setIsMicMuted(!isMuted)}
+                onClick={() => {
+                  const audioTrack = streamRef.current?.getAudioTracks()[0];
+                  if (audioTrack) {
+                    audioTrack.enabled = !audioTrack.enabled;
+                    setIsMicMuted(!audioTrack.enabled);
+                  }
+                }}
                 className={`h-12 w-12 rounded-full border border-white/10 ${isMuted ? 'bg-destructive/20 text-destructive' : 'text-white hover:bg-white/10'}`}
               >
                 {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
@@ -329,7 +351,13 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  onClick={() => setIsCamOff(!isCamOff)}
+                  onClick={() => {
+                    const videoTrack = streamRef.current?.getVideoTracks()[0];
+                    if (videoTrack) {
+                      videoTrack.enabled = !videoTrack.enabled;
+                      setIsCamOff(!videoTrack.enabled);
+                    }
+                  }}
                   className={`h-12 w-12 rounded-full border border-white/10 ${isCamOff ? 'bg-destructive/20 text-destructive' : 'text-white hover:bg-white/10'}`}
                 >
                   {isCamOff ? <VideoOff size={20} /> : <Video size={20} />}

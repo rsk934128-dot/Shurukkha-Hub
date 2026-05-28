@@ -34,6 +34,7 @@ export function DispatcherConsole() {
   const [activeTab, setActiveTab] = useState<'map' | 'comm'>('map')
   const videoRef = useRef<HTMLVideoElement>(null)
   const webrtcRef = useRef<WebRTCManager | null>(null)
+  const localStreamRef = useRef<MediaStream | null>(null)
   const lastAlertId = useRef<string | null>(null)
   
   const { toast } = useToast()
@@ -44,7 +45,6 @@ export function DispatcherConsole() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const activeAlerts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // Trigger alarm if a new alert is detected
       if (activeAlerts.length > 0 && activeAlerts[0].id !== lastAlertId.current) {
         if (activeAlerts[0].status === 'pending') {
           playAlertSound();
@@ -60,7 +60,10 @@ export function DispatcherConsole() {
         if (updated) setSelectedAlert(updated);
       }
     });
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      endCall();
+    };
   }, [selectedAlert, playAlertSound, toast])
 
   useEffect(() => {
@@ -75,6 +78,7 @@ export function DispatcherConsole() {
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localStreamRef.current = stream;
       webrtcRef.current = new WebRTCManager(selectedAlert.id);
       await webrtcRef.current.answerCall(stream, (remote) => {
         setRemoteStream(remote);
@@ -87,6 +91,11 @@ export function DispatcherConsole() {
   }
 
   const endCall = () => {
+    // Explicitly stop camera and mic tracks
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
+    }
     webrtcRef.current?.dispose();
     setRemoteStream(null);
     setIsCalling(false);

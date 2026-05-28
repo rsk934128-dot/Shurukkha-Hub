@@ -26,6 +26,13 @@ export function SOSButton() {
     }
   }, [localStream])
 
+  // Cleanup on unmount or SOS reset
+  useEffect(() => {
+    return () => {
+      endCall();
+    }
+  }, [])
+
   const handleSOS = async () => {
     setIsActivating(true)
     
@@ -93,9 +100,16 @@ export function SOSButton() {
   }
 
   const endCall = () => {
+    // Explicitly stop hardware tracks
+    if (localStream) {
+      localStream.getTracks().forEach(track => {
+        track.stop();
+        console.log(`[SOS Kill-Switch] Hardware track stopped: ${track.kind}`);
+      });
+      setLocalStream(null);
+    }
+    
     webrtcRef.current?.dispose();
-    localStream?.getTracks().forEach(track => track.stop());
-    setLocalStream(null);
     setIsCalling(false);
   }
 
@@ -108,7 +122,7 @@ export function SOSButton() {
           <div className="relative">
             <div className="absolute inset-0 bg-destructive rounded-full blur-2xl opacity-20 animate-sos-pulse" />
             <Button 
-              onClick={handleSOS}
+              onClick={handleSOS} 
               disabled={isActivating}
               className={`w-32 h-32 rounded-full border-8 border-background bg-destructive hover:bg-destructive/90 transition-all flex flex-col gap-1 items-center justify-center shadow-2xl ${isActivating ? 'scale-95 opacity-80' : 'animate-sos-pulse'}`}
             >
@@ -139,7 +153,7 @@ export function SOSButton() {
               </Button>
             )}
             
-            <Button variant="ghost" onClick={() => setActiveSosId(null)} className="w-full text-[10px] uppercase font-bold text-muted-foreground">
+            <Button variant="ghost" onClick={() => { endCall(); setActiveSosId(null); }} className="w-full text-[10px] uppercase font-bold text-muted-foreground">
               নতুন সংকেত পাঠান
             </Button>
           </div>
