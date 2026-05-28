@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Globe, Activity, ShieldCheck, Zap, Server, Lock, RefreshCw, Facebook, Cloud, CreditCard, Cpu, RotateCcw } from 'lucide-react'
+import { Globe, Activity, ShieldCheck, Zap, Server, Lock, RefreshCw, Facebook, Cloud, CreditCard, Cpu, RotateCcw, CheckCircle2, FileSearch } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,8 +29,8 @@ export function NetworkStatusBoard() {
       const success = await NetworkAuditor.performHandshake(nodeId)
       if (success) {
         toast({
-          title: "HANDSHAKE SUCCESSFUL",
-          description: `নোড ${nodeId} আমাদের RSA v2 সিগনেচার গ্রহণ করেছে।`,
+          title: "IDENTITY RECOGNIZED",
+          description: `নোড ${nodeId} আমাদের সার্বভৌম পরিচয় (Sovereign Identity) নিশ্চিত করেছে।`,
         })
         refreshNodes()
       }
@@ -68,10 +67,10 @@ export function NetworkStatusBoard() {
           <div>
             <CardTitle className="text-lg font-headline flex items-center gap-2">
               <Globe className="text-primary" size={20} />
-              NETWORK-TO-NETWORK ACCESS BOARD
+              GLOBAL ACCESS & IDENTITY BOARD
             </CardTitle>
             <CardDescription className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/60">
-              Global Access Nodes • Smart-Routing & Auto-Repair ACTIVE
+              Trusted Node Protocol • Handshake Auditor • Identity v2.0
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -125,6 +124,7 @@ export function NetworkStatusBoard() {
                   </div>
                 </div>
                 <Badge className={node.status === 'AUTHORIZED' ? 'bg-accent/20 text-accent border-accent/30' : 'bg-destructive/20 text-destructive'}>
+                  {node.status === 'AUTHORIZED' && <CheckCircle2 size={10} className="mr-1" />}
                   {node.status}
                 </Badge>
               </div>
@@ -137,7 +137,7 @@ export function NetworkStatusBoard() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <ShieldCheck size={10} className="text-primary" />
-                    <span className="text-[9px] font-mono text-muted-foreground">RSA_V2_ROT</span>
+                    <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">RSA_v2_Recognized</span>
                   </div>
                 </div>
                 <Button 
@@ -157,17 +157,19 @@ export function NetworkStatusBoard() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Activity size={16} className="text-primary" />
-              <h4 className="text-xs font-headline font-bold uppercase tracking-widest">Handshake Auditor Logs</h4>
+              <h4 className="text-xs font-headline font-bold uppercase tracking-widest">Handshake Auditor: Identity Logs</h4>
             </div>
-            <Badge variant="outline" className="text-[8px] border-primary/20 text-primary">SECURE_TUNNEL_ACTIVE</Badge>
+            <Badge variant="outline" className="text-[8px] border-accent/20 text-accent gap-1">
+              <FileSearch size={10} /> VERIFICATION_LOOP_ACTIVE
+            </Badge>
           </div>
           <div className="space-y-2 max-h-[150px] overflow-y-auto pr-2">
             {nodes.map((node, i) => (
               <div key={i} className={`flex items-center justify-between text-[9px] font-mono p-2 rounded border transition-colors ${node.isOptimal ? 'bg-accent/5 border-accent/10' : 'bg-black/40 border-white/5'}`}>
                 <span className="text-muted-foreground">[{new Date(node.lastHandshake).toLocaleTimeString()}]</span>
-                <span className={node.isOptimal ? "text-accent font-bold" : "text-primary"}>NETWORK_HANDSHAKE</span>
-                <span className="text-muted-foreground truncate max-w-[100px]">{node.id}</span>
-                <span className="text-accent">VERIFIED_RSA</span>
+                <span className={node.isOptimal ? "text-accent font-bold" : "text-primary"}>IDENTITY_RECOGNIZED</span>
+                <span className="text-muted-foreground truncate max-w-[100px]">{node.id.toUpperCase()}</span>
+                <span className="text-accent font-bold">SUCCESS_FIRST_LOOP</span>
                 <span className="text-muted-foreground">LATENCY_{node.latency}ms</span>
               </div>
             ))}
