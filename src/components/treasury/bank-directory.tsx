@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play, UserCheck, ShieldAlert, Cpu, Activity, Signal, Loader2, DollarSign, TrendingUp, Wallet, Target, TrendingDown, ShieldX } from 'lucide-react'
+import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play, UserCheck, ShieldAlert, Cpu, Activity, Signal, Loader2, DollarSign, TrendingUp, Wallet, Target, TrendingDown, ShieldX, Store } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -17,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { MerchantGrowthChart } from '@/components/dashboard/merchant-growth-chart'
 import { AppLogo } from '@/components/ui/app-logo'
+import { MerchantRegistry } from './merchant-registry'
 
 export function BankDirectory() {
   const [banks, setBanks] = useState<BankNode[]>([])
@@ -82,7 +84,7 @@ export function BankDirectory() {
     onLog("[WEBHOOK_SIMULATOR]: Mocking bKash Payload...");
     setTimeout(() => {
       setTerminalLogs(prev => [...prev, "> [WEBHOOK_SENT]: Payload verified with RSA_v2 signature."]);
-      setTerminalLogs(prev => [...prev, "> [SETল্ডSETTLEMENT]: Imperial Tax collected successfully."]);
+      setTerminalLogs(prev => [...prev, "> [SETTLEMENT]: Imperial Tax collected successfully."]);
       toast({ title: "Webhook Handshake Successful" });
       setLoading(false);
     }, 1500);
@@ -118,24 +120,15 @@ export function BankDirectory() {
               <AppLogo size={24} />
             </div>
             <div>
-              <CardTitle className="text-sm md:text-lg font-headline flex items-center gap-2">
-                GLOBAL TREASURY
+              <CardTitle className="text-sm md:text-lg font-headline flex items-center gap-2 uppercase tracking-widest">
+                Sovereign Treasury
               </CardTitle>
               <CardDescription className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] font-bold text-primary/60">
-                Phase 31.0 • Prosperity Protocol
+                Phase 31.0 • Imperial Prosperity Protocol
               </CardDescription>
             </div>
           </div>
           <div className="flex gap-2">
-            <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={12} />
-              <Input 
-                placeholder="খুঁজুন..." 
-                className="pl-8 h-8 md:h-9 bg-background/50 border-white/10 text-[10px] md:text-xs"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
             <Button size="sm" variant="outline" onClick={handleSync} disabled={loading} className="h-8 md:h-9 border-primary/20 text-primary gap-1 md:gap-2 px-2 md:px-3">
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             </Button>
@@ -146,10 +139,11 @@ export function BankDirectory() {
       <Tabs defaultValue="revenue" className="flex-1 flex flex-col relative z-10">
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
-            <TabsTrigger value="revenue" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><TrendingUp size={12}/> রেভিনিউ</TabsTrigger>
-            <TabsTrigger value="fraud" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold"><ShieldX size={12}/> ফ্রড</TabsTrigger>
-            <TabsTrigger value="global" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Globe size={12}/> গ্লোবাল</TabsTrigger>
-            <TabsTrigger value="local" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><Smartphone size={12}/> লোকাল</TabsTrigger>
+            <TabsTrigger value="revenue" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><TrendingUp size={12}/> রেভিনিউ</TabsTrigger>
+            <TabsTrigger value="merchants" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Store size={12}/> মার্চেন্ট</TabsTrigger>
+            <TabsTrigger value="fraud" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold uppercase tracking-widest"><ShieldX size={12}/> ফ্রড</TabsTrigger>
+            <TabsTrigger value="global" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Globe size={12}/> গ্লোবাল</TabsTrigger>
+            <TabsTrigger value="local" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><Smartphone size={12}/> লোকাল</TabsTrigger>
           </TabsList>
         </div>
 
@@ -166,65 +160,102 @@ export function BankDirectory() {
                   <h3 className="text-sm md:text-2xl font-headline font-bold text-accent">৳{revenueStats.totalFees.toLocaleString()}</h3>
                 </Card>
                 <Card className="bg-muted/20 border-white/10 p-3 md:p-6 space-y-1 md:space-y-4 col-span-2 md:col-span-1">
-                  <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Growth Curve</p>
-                  <h3 className="text-sm md:text-2xl font-headline font-bold text-foreground">92/100</h3>
+                  <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Merchant Pulse</p>
+                  <h3 className="text-sm md:text-2xl font-headline font-bold text-foreground">{revenueStats.activeMerchants} <span className="text-xs text-muted-foreground">ACTIVE</span></h3>
                 </Card>
               </div>
-              <div className="overflow-hidden bg-black/20 rounded-2xl p-2 md:p-4">
+              <div className="overflow-hidden bg-black/20 rounded-2xl p-2 md:p-4 border border-white/5 shadow-inner">
                 <MerchantGrowthChart />
               </div>
             </div>
             
             <div className="lg:col-span-4 space-y-4 md:space-y-6">
-              <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl space-y-4">
-                <h4 className="text-[10px] md:text-xs font-headline font-bold uppercase tracking-widest flex items-center gap-2">
-                  <Activity size={16} className="text-primary" /> Market Trends
+              <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl space-y-4 shadow-xl">
+                <h4 className="text-[10px] md:text-xs font-headline font-bold uppercase tracking-widest flex items-center gap-2 text-primary">
+                  <Activity size={16} className="animate-pulse" /> Growth Trends
                 </h4>
                 <div className="space-y-2 md:space-y-3">
                   {marketTrends.map((t, i) => (
-                    <div key={i} className="flex justify-between items-center p-2 md:p-3 bg-black/40 rounded-xl border border-white/5">
-                      <span className="text-[9px] md:text-xs font-bold">{t.sector}</span>
+                    <div key={i} className="flex justify-between items-center p-2 md:p-3 bg-black/40 rounded-xl border border-white/5 group hover:border-primary/40 transition-all">
+                      <span className="text-[9px] md:text-xs font-bold text-foreground/80">{t.sector}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-[9px] md:text-xs text-accent font-bold">{t.growth}</span>
+                        <TrendingUp size={12} className="text-accent" />
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
+
+              <div className="p-4 bg-accent/5 border border-accent/20 rounded-2xl space-y-2">
+                 <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Treasury Status</p>
+                 <div className="flex items-center gap-2">
+                   <ShieldCheck className="text-accent" size={16} />
+                   <p className="text-xs font-bold">LOCKED & VERIFIED</p>
+                 </div>
+                 <p className="text-[8px] text-muted-foreground italic">সবগুলো ট্রানজেকশন SHA256withRSA দ্বারা সুরক্ষিত।</p>
+              </div>
             </div>
           </div>
         </TabsContent>
 
+        <TabsContent value="merchants" className="flex-1 p-4 md:p-6 m-0">
+          <MerchantRegistry />
+        </TabsContent>
+
         <TabsContent value="fraud" className="flex-1 p-4 md:p-6 m-0 space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="bg-destructive/5 border-destructive/20 p-4 md:p-6 space-y-2">
               <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-destructive">Frozen Funds</p>
               <h3 className="text-sm md:text-2xl font-headline font-bold text-destructive">৳{fraudStats.totalFrozen.toLocaleString()}</h3>
+              <p className="text-[8px] text-muted-foreground">High-risk merchant activity detected.</p>
             </Card>
             <Card className="bg-accent/5 border-accent/20 p-4 md:p-6 space-y-2">
-              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-accent">Recovery</p>
+              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-accent">Recovery Success</p>
               <h3 className="text-sm md:text-2xl font-headline font-bold text-accent">{fraudStats.recoveryRate}</h3>
+              <p className="text-[8px] text-muted-foreground">Funds redirected back to the grid.</p>
             </Card>
           </div>
         </TabsContent>
 
         <TabsContent value="global" className="flex-1 p-0 m-0 overflow-hidden">
+          <div className="p-4 border-b border-white/5 bg-muted/10 flex justify-between items-center">
+             <div className="relative w-full max-w-xs">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={12} />
+                <Input 
+                  placeholder="Global Banks..." 
+                  className="pl-8 h-8 bg-background/50 border-white/10 text-xs"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+             </div>
+             <Badge variant="outline" className="text-[8px] border-primary/40 text-primary">STRIPE_CONNECT_V2</Badge>
+          </div>
           <ScrollArea className="h-[400px] md:h-[500px]">
             <div className="overflow-x-auto min-w-full">
               <Table>
                 <TableHeader className="bg-muted/30 sticky top-0 z-10">
                   <TableRow>
                     <TableHead className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Country</TableHead>
-                    <TableHead className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Bank</TableHead>
+                    <TableHead className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Bank Node</TableHead>
                     <TableHead className="text-right text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredBanks.map((bank) => (
                     <TableRow key={bank.id} className="group hover:bg-primary/5 border-white/5">
-                      <TableCell><span className="text-[9px] md:text-xs font-bold">{bank.country}</span></TableCell>
-                      <TableCell><span className="text-[9px] md:text-sm font-medium truncate max-w-[100px] md:max-w-none block">{bank.bankName}</span></TableCell>
-                      <TableCell className="text-right"><Button size="sm" variant="ghost" className="h-7 text-[8px]" disabled={!bank.pushAvailable}>PUSH</Button></TableCell>
+                      <TableCell><span className="text-[9px] md:text-xs font-bold text-foreground/70">{bank.country}</span></TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                           <span className="text-[9px] md:text-sm font-medium truncate max-w-[150px] md:max-w-none block">{bank.bankName}</span>
+                           <span className="text-[7px] font-mono text-muted-foreground uppercase">{bank.handshakeId}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="ghost" className="h-7 text-[8px] uppercase tracking-tighter hover:text-primary" disabled={!bank.pushAvailable}>
+                           Push Funds
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -234,11 +265,12 @@ export function BankDirectory() {
         </TabsContent>
 
         <TabsContent value="local" className="flex-1 p-4 md:p-6 m-0 space-y-4 md:space-y-6">
-          <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 overflow-x-auto no-scrollbar">
+          <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 overflow-x-auto no-scrollbar shadow-lg">
             <div className="flex items-center justify-between mb-4 md:mb-6 min-w-[300px]">
               <h4 className="text-[10px] md:text-sm font-headline font-bold uppercase tracking-widest flex items-center gap-2">
-                <Activity size={16} className="text-primary animate-pulse" /> Settlement Visualizer
+                <Activity size={16} className="text-primary animate-pulse" /> Local Settlement Visualizer
               </h4>
+              <Badge className="bg-accent text-background font-bold text-[7px] uppercase">Anycast Active</Badge>
             </div>
             
             <div className="relative flex justify-between items-center px-2 md:px-4 min-w-[350px] py-4">
@@ -261,24 +293,27 @@ export function BankDirectory() {
             </div>
           </div>
 
-          <Card className="bg-black/40 border-accent/20 overflow-hidden">
+          <Card className="bg-black/40 border-accent/20 overflow-hidden shadow-2xl">
             <CardHeader className="bg-accent/5 border-b border-accent/10 py-2 md:py-3 p-4 flex flex-row items-center justify-between">
               <CardTitle className="text-[8px] md:text-[10px] font-headline font-bold text-accent uppercase tracking-widest flex items-center gap-2">
-                <Terminal size={12} /> ENGINE Terminal
+                <Terminal size={12} /> REVENUE_ENGINE Terminal
               </CardTitle>
               <div className="flex gap-1 md:gap-2">
-                <Button size="sm" onClick={handleWebhookTest} disabled={loading} className="h-6 md:h-7 text-[7px] md:text-[8px] bg-primary text-background font-bold px-2">
-                  WEBHOOK
+                <Button size="sm" onClick={handleWebhookTest} disabled={loading} className="h-6 md:h-7 text-[7px] md:text-[8px] bg-primary text-background font-bold px-2 rounded-lg">
+                  SIM_HOOK
                 </Button>
-                <Button size="sm" onClick={handleDummyTest} disabled={loading} className="h-6 md:h-7 text-[7px] md:text-[8px] bg-accent text-background font-bold px-2">
-                  RUN TEST
+                <Button size="sm" onClick={handleDummyTest} disabled={loading} className="h-6 md:h-7 text-[7px] md:text-[8px] bg-accent text-background font-bold px-2 rounded-lg">
+                  SETTLE_TEST
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="p-0">
               <ScrollArea className="h-[150px] md:h-[250px] bg-black/60 p-3 md:p-4">
                 {terminalLogs.length === 0 ? (
-                  <p className="text-[8px] md:text-[9px] font-mono text-muted-foreground italic">Waiting for command...</p>
+                  <div className="flex flex-col items-center justify-center h-full opacity-20">
+                     <Signal size={32} className="mb-2" />
+                     <p className="text-[8px] md:text-[9px] font-mono uppercase tracking-widest">Awaiting Command...</p>
+                  </div>
                 ) : (
                   <div className="space-y-1">
                     {terminalLogs.map((log, i) => (

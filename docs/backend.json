@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -21,6 +22,23 @@
         "deviceFingerprint": { "type": "string" }
       },
       "required": ["role"]
+    },
+    "MerchantProfile": {
+      "title": "Sovereign Merchant",
+      "description": "Registered businesses integrated with SovereignPay.",
+      "type": "object",
+      "properties": {
+        "businessName": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "category": { "type": "string", "enum": ["Textile", "Grocery", "Service", "Emergency", "Other"] },
+        "merchantId": { "type": "string", "description": "SMID-XXXX format" },
+        "apiKey": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "pending", "suspended"] },
+        "totalRevenue": { "type": "number", "default": 0 },
+        "taxCollected": { "type": "number", "default": 0 },
+        "onboardedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["businessName", "merchantId", "status"]
     },
     "SOSAlert": {
       "title": "SOS Alert",
@@ -50,22 +68,6 @@
         }
       },
       "required": ["status", "timestamp", "location"]
-    },
-    "Message": {
-      "title": "Secure Message",
-      "description": "Encrypted communication between nodes.",
-      "type": "object",
-      "properties": {
-        "senderId": { "type": "string" },
-        "recipientId": { "type": "string" },
-        "content": { "type": "string" },
-        "type": { "type": "string", "enum": ["text", "file", "voice"] },
-        "timestamp": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["sent", "delivered", "read", "queued"] },
-        "fileUrl": { "type": "string" },
-        "isEncrypted": { "type": "boolean" }
-      },
-      "required": ["senderId", "recipientId", "content", "timestamp"]
     }
   },
   "auth": {
@@ -76,21 +78,13 @@
       "schema": "UserProfile",
       "description": "Storage for user identity and role data."
     },
+    "/merchants/{merchantId}": {
+      "schema": "MerchantProfile",
+      "description": "Registry for onboarded businesses."
+    },
     "/sos_alerts/{alertId}": {
       "schema": "SOSAlert",
       "description": "Active emergency distress signals with forensic timeline."
-    },
-    "/messages/{messageId}": {
-      "schema": "Message",
-      "description": "Secure account-to-account communication logs."
-    },
-    "/incidents/{incidentId}": {
-      "schema": "object",
-      "description": "Public and private incident reports with forensic evidence."
-    },
-    "/audit_trails/{logId}": {
-      "schema": "object",
-      "description": "Immutable registry of security and system events."
     }
   }
 }
