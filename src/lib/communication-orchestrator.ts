@@ -3,6 +3,7 @@
  * @fileOverview Sovereign Communication Orchestrator.
  * Manages encrypted messaging, file transfers, and status synchronization.
  * Supports Zero-Latency operations and Lightning-Fast delivery via ChatId indexing.
+ * Phase 31.4: Fixed DNS Resolve error by using Imperial Data URIs for simulation.
  */
 
 import { db } from './firebase';
@@ -80,11 +81,17 @@ export class CommunicationOrchestrator {
   }
 
   /**
-   * Simulates encrypted file upload.
+   * Simulates encrypted file upload using Imperial Data URIs.
+   * This avoids DNS resolution errors for non-existent domains.
    */
   async uploadFile(file: File, recipientId: string, senderId: string): Promise<string> {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    const simulatedUrl = `https://storage.surukkha.sheikh/vault/${Math.random().toString(36).substring(7)}_${file.name}`;
+    
+    // Using a base64 data URI to simulate the "Vault" content
+    // In a real app, this would be a URL from Firebase Storage
+    const simulatedContent = `Imperial Sovereign Document: ${file.name}\n\nThis file is protected by RSA v2.0 Encryption within the Shurukkha Hub Vault.`;
+    const b64 = typeof window !== 'undefined' ? btoa(unescape(encodeURIComponent(simulatedContent))) : '';
+    const simulatedUrl = `data:text/plain;base64,${b64}`;
     
     await this.sendMessage({
       senderId,
