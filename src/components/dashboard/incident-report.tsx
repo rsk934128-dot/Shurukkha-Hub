@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef } from 'react'
@@ -265,6 +264,11 @@ export function IncidentReport() {
       {/* Camera Dialog */}
       <Dialog open={isCameraOpen} onOpenChange={(open) => !open && stopCamera()}>
         <DialogContent className="max-w-md bg-card border-primary/20 p-0 overflow-hidden rounded-[2rem]">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Incident Recon Lens</DialogTitle>
+            <DialogDescription>Capture visual evidence for the sovereign registry.</DialogDescription>
+          </DialogHeader>
+
           <div className="relative aspect-video bg-black flex items-center justify-center">
             {isCapturing ? (
               <div className="flex flex-col items-center gap-3">

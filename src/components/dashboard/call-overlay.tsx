@@ -1,9 +1,8 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, ShieldCheck, Loader2, User, Volume2, Activity, Zap } from 'lucide-react'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { WebRTCManager } from '@/lib/webrtc-signaling'
@@ -154,6 +153,11 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   return (
     <Dialog open={!!callData} onOpenChange={(open) => !open && handleEndCall()}>
       <DialogContent className="max-w-4xl bg-[#05070a] border-primary/20 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Sovereign Call Link</DialogTitle>
+          <DialogDescription>Secure encrypted communication session.</DialogDescription>
+        </DialogHeader>
+        
         <div className="relative aspect-video bg-slate-950 flex items-center justify-center group">
           {/* Main Video View (Remote) */}
           {callData.type === 'video' && status === 'connected' ? (

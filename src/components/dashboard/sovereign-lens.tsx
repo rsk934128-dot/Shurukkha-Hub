@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react'
@@ -92,6 +91,11 @@ export function SovereignLens({ isOpen, onClose }: SovereignLensProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl bg-[#05070a] border-primary/20 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Sovereign Lens Scanner</DialogTitle>
+          <DialogDescription>Identity recognition and biometric verification scanner.</DialogDescription>
+        </DialogHeader>
+        
         <div className="relative aspect-video bg-black flex items-center justify-center">
           {scannedProfile ? (
             <div className="absolute inset-0 bg-background/95 z-50 flex flex-col items-center justify-center p-8 animate-in zoom-in-95 duration-500">
