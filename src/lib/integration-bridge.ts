@@ -3,13 +3,14 @@
  * @fileOverview Universal Bridge for Shurukkha Hub Partnership.
  * Implements RSA v2 Bridge, SHA256withRSA signing, and Webhook Engine.
  * Now includes Sovereign Lockdown, Forensic Snapshots, and Key Rotation.
+ * Added: Local Payment Hooks for bKash & Mobile Finance.
  */
 
 import { db } from './firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 
 export interface IntegrationEvent {
-  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT' | 'SOVEREIGN_HANDSHAKE' | 'NETWORK_HEARTBEAT';
+  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT' | 'SOVEREIGN_HANDSHAKE' | 'NETWORK_HEARTBEAT' | 'LOCAL_PAYMENT_INITIATED' | 'SETTLEMENT_COMPLETED';
   payload: any;
   timestamp: string;
 }

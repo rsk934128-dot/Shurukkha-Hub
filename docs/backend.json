@@ -79,6 +79,19 @@
         "handshakeId": { "type": "string" },
         "pushAvailable": { "type": "boolean" }
       }
+    },
+    "LocalSettlement": {
+      "title": "Local Payment Settlement",
+      "description": "Records of mobile finance settlements (bKash, Nagad).",
+      "type": "object",
+      "properties": {
+        "settlementId": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "target": { "type": "string" },
+        "status": { "type": "string" },
+        "signature": { "type": "string" }
+      }
     }
   },
   "auth": {
@@ -104,6 +117,10 @@
     "/bank_registry/{bankId}": {
       "schema": "BankRegistry",
       "description": "Directory of global banking nodes."
+    },
+    "/local_settlements/{settlementId}": {
+      "schema": "LocalSettlement",
+      "description": "Records of bKash/Mobile finance settlements."
     }
   }
 }

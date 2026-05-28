@@ -2,24 +2,28 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, CreditCard, Landmark, CheckCircle2, Star } from 'lucide-react'
+import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, CreditCard, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { StripeBankSync, BankNode } from '@/lib/stripe-bank-sync'
+import { PaymentHandler } from '@/lib/payment-handler'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export function BankDirectory() {
   const [banks, setBanks] = useState<BankNode[]>([])
+  const [localGateways, setLocalGateways] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const { toast } = useToast()
 
   useEffect(() => {
     handleSync()
+    setLocalGateways(PaymentHandler.getLocalGatewayStatus())
   }, [])
 
   const handleSync = async () => {
@@ -49,6 +53,29 @@ export function BankDirectory() {
     }
   }
 
+  const handleLocalSettlement = async (gw: any) => {
+    setLoading(true)
+    try {
+      const result = await PaymentHandler.initiateLocalSettlement({
+        amount: 5000,
+        currency: 'BDT',
+        source: 'CARD',
+        target: 'BKASH',
+        merchantId: 'SIRAJGANJ_GOV_HUB'
+      })
+      if (result.success) {
+        toast({
+          title: "SETTLEMENT SUCCESSFUL",
+          description: `Transaction ID: ${result.settlementId} | bKash এ ফান্ড পাঠানো হয়েছে।`,
+        })
+      }
+    } catch (e) {
+      toast({ title: "SETTLEMENT FAILED", variant: "destructive" })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const filteredBanks = banks.filter(b => 
     b.bankName.toLowerCase().includes(search.toLowerCase()) || 
     b.country.toLowerCase().includes(search.toLowerCase())
@@ -70,7 +97,7 @@ export function BankDirectory() {
                 </Badge>
               </CardTitle>
               <CardDescription className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/60">
-                Stripe Financial Connections • Network-to-Network Locked
+                Stripe Financial Connections • Local Settlement Hooks (bKash)
               </CardDescription>
             </div>
           </div>
@@ -98,80 +125,123 @@ export function BankDirectory() {
         </div>
       </CardHeader>
       
-      <CardContent className="p-0 flex-1 overflow-hidden">
-        <ScrollArea className="h-full">
-          <Table>
-            <TableHeader className="bg-muted/30 sticky top-0 z-10">
-              <TableRow>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest">Country</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest">Bank Name</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest">Status</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest">Handshake ID</TableHead>
-                <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredBanks.map((bank) => (
-                <TableRow key={bank.id} className="group hover:bg-primary/5 border-white/5">
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Globe size={14} className="text-muted-foreground" />
-                      <span className="text-xs font-bold">{bank.country}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Building2 size={14} className="text-primary/60 group-hover:text-primary" />
-                      <span className="text-sm font-headline font-medium">{bank.bankName}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={
-                      bank.status === 'CONNECTED' ? 'bg-accent/20 text-accent border-accent/30' : 
-                      bank.status === 'READY' ? 'bg-primary/20 text-primary border-primary/30' : 
-                      'bg-destructive/20 text-destructive'
-                    }>
-                      {bank.status === 'CONNECTED' && <CheckCircle2 size={10} className="mr-1" />}
-                      {bank.status === 'LOCKED' && <Lock size={10} className="mr-1" />}
-                      {bank.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <code className="text-[10px] font-mono text-muted-foreground bg-black/40 px-2 py-0.5 rounded">
-                      {bank.handshakeId}
-                    </code>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      disabled={!bank.pushAvailable}
-                      onClick={() => handlePush(bank.id)}
-                      className="h-8 text-[10px] uppercase font-bold tracking-widest text-primary hover:bg-primary/10 gap-2"
-                    >
-                      <Zap size={12} fill="currentColor" /> PUSH
-                    </Button>
-                  </TableCell>
+      <Tabs defaultValue="global" className="flex-1 flex flex-col">
+        <div className="px-6 py-2 bg-muted/20 border-b border-white/5">
+          <TabsList className="bg-transparent border-none p-0 h-8">
+            <TabsTrigger value="global" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Globe size={14}/> ইন্টারন্যাশনাল ব্যাংকস</TabsTrigger>
+            <TabsTrigger value="local" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><Smartphone size={14}/> লোকাল গেটওয়ে (bKash)</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="global" className="flex-1 p-0 m-0 overflow-hidden">
+          <ScrollArea className="h-[500px]">
+            <Table>
+              <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                <TableRow>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Country</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Bank Name</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Status</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Handshake ID</TableHead>
+                  <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">Action</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          
-          {filteredBanks.length === 0 && (
-            <div className="py-20 text-center opacity-20">
-              <Landmark size={48} className="mx-auto mb-4" />
-              <p className="font-headline font-bold uppercase tracking-widest">No Banking Nodes Found</p>
-            </div>
-          )}
-        </ScrollArea>
-      </CardContent>
+              </TableHeader>
+              <TableBody>
+                {filteredBanks.map((bank) => (
+                  <TableRow key={bank.id} className="group hover:bg-primary/5 border-white/5">
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Globe size={14} className="text-muted-foreground" />
+                        <span className="text-xs font-bold">{bank.country}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Building2 size={14} className="text-primary/60 group-hover:text-primary" />
+                        <span className="text-sm font-headline font-medium">{bank.bankName}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={
+                        bank.status === 'CONNECTED' ? 'bg-accent/20 text-accent border-accent/30' : 
+                        bank.status === 'READY' ? 'bg-primary/20 text-primary border-primary/30' : 
+                        'bg-destructive/20 text-destructive'
+                      }>
+                        {bank.status === 'CONNECTED' && <CheckCircle2 size={10} className="mr-1" />}
+                        {bank.status === 'LOCKED' && <Lock size={10} className="mr-1" />}
+                        {bank.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <code className="text-[10px] font-mono text-muted-foreground bg-black/40 px-2 py-0.5 rounded">
+                        {bank.handshakeId}
+                      </code>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        disabled={!bank.pushAvailable}
+                        onClick={() => handlePush(bank.id)}
+                        className="h-8 text-[10px] uppercase font-bold tracking-widest text-primary hover:bg-primary/10 gap-2"
+                      >
+                        <Zap size={12} fill="currentColor" /> PUSH
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="local" className="flex-1 p-6 m-0 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {localGateways.map(gw => (
+              <div key={gw.id} className="p-4 bg-muted/30 border border-white/5 rounded-2xl space-y-4 group hover:border-accent/30 transition-all">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center border border-accent/20">
+                      <Smartphone className="text-accent" size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-headline font-bold">{gw.name}</h3>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{gw.type} GATEWAY</p>
+                    </div>
+                  </div>
+                  <Badge className="bg-accent/20 text-accent border-accent/30">{gw.status}</Badge>
+                </div>
+                
+                <div className="flex items-center justify-between text-[9px] font-mono">
+                  <span className="text-muted-foreground">LATENCY: {gw.latency}</span>
+                  <span className="text-accent">RSA_V2_READY</span>
+                </div>
+
+                <Button 
+                  onClick={() => handleLocalSettlement(gw)}
+                  disabled={loading}
+                  className="w-full h-8 text-[10px] font-bold bg-accent text-background gap-2"
+                >
+                  <ArrowRightLeft size={12} /> INITIATE SETTLEMENT
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-4 bg-accent/5 border border-accent/20 rounded-xl">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-accent mb-2">Settlement Buffer Protocol:</h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              কার্ড থেকে প্রাপ্ত ফান্ড সরাসরি বিকাশে সেটেল করার জন্য **Sovereign Settlement Buffer** ব্যবহৃত হচ্ছে। প্রতিটি ট্রানজেকশন **SHA256withRSA v2** সিগনেচার দ্বারা সুরক্ষিত।
+            </p>
+          </div>
+        </TabsContent>
+      </Tabs>
       
       <div className="p-4 bg-primary/5 border-t border-primary/10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-              <span className="text-[9px] font-bold uppercase tracking-widest text-accent">Sovereign Connection: LOCKED</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-accent">Local Hook Status: ACTIVE</span>
             </div>
             <div className="flex items-center gap-2">
               <ShieldCheck size={12} className="text-primary" />
@@ -179,7 +249,7 @@ export function BankDirectory() {
             </div>
           </div>
           <p className="text-[9px] text-muted-foreground italic font-body">
-            * প্রতিটি ট্রানজেকশন Sovereign অডিট রেজিস্ট্রিতে (42nd Archive) সিগনেচার সহ সংরক্ষিত হয়।
+            * প্রতিটি লোকাল পেমেন্ট Sovereign অডিট রেজিস্ট্রিতে সিগনেচার সহ সংরক্ষিত হয়।
           </p>
         </div>
       </div>
