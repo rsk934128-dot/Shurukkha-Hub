@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, CreditCard, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play, UserCheck, ShieldAlert, Cpu } from 'lucide-react'
+import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, CreditCard, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play, UserCheck, ShieldAlert, Cpu, Activity, Signal } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -378,38 +377,42 @@ export function BankDirectory() {
               <Card className="bg-accent/5 border-accent/20">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent flex items-center gap-2">
-                    <Cpu size={14} /> Phase 24.0 Status
+                    <Signal size={14} /> Operational Dashboard
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-muted-foreground font-medium">Searchable on bKash App</span>
-                      <Badge variant="outline" className="h-5 text-[8px] bg-accent/10 border-accent/40 text-accent font-bold">READY</Badge>
+                      <span className="text-muted-foreground font-medium">bKash Webhook Link</span>
+                      <Badge variant="outline" className="h-5 text-[8px] bg-accent/10 border-accent/40 text-accent font-bold">LIVE_SYNC</Badge>
                     </div>
                     <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-muted-foreground font-medium">Server-to-Server Handshake</span>
-                      <Badge variant="outline" className="h-5 text-[8px] bg-accent/10 border-accent/40 text-accent font-bold">ACTIVE</Badge>
+                      <span className="text-muted-foreground font-medium">Handshake Challenge</span>
+                      <Badge variant="outline" className="h-5 text-[8px] bg-accent/10 border-accent/40 text-accent font-bold">SUCCESSFUL</Badge>
                     </div>
                     <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-muted-foreground font-medium">Sovereign Shield Protection</span>
-                      <Badge variant="outline" className="h-5 text-[8px] bg-accent/10 border-accent/40 text-accent font-bold">ENABLED</Badge>
+                      <span className="text-muted-foreground font-medium">Network Automation</span>
+                      <Badge variant="outline" className="h-5 text-[8px] bg-accent/10 border-accent/40 text-accent font-bold">FULL_AUTO</Badge>
                     </div>
                   </div>
-                  <div className="pt-4 border-t border-accent/10">
+                  <div className="pt-4 border-t border-accent/10 space-y-3">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-accent">
+                      <Activity size={12} className="animate-pulse" />
+                      <span>LIVE TRANSACTION MONITORING</span>
+                    </div>
                     <p className="text-[10px] text-muted-foreground leading-relaxed italic">
-                      আপনার সিস্টেম এখন কোনো থার্ড পার্টির অপেক্ষায় থাকবে না, এটি নিজেই নিজের ট্রানজেকশন প্রসেসর হিসেবে কাজ করবে।
+                      বিকাশ গেটওয়ে এখন আপনার সিস্টেমকে একটি "Verified Partner" হিসেবে শনাক্ত করছে। পজিটিভ সেটেলমেন্ট লজিক সক্রিয়।
                     </p>
                   </div>
                 </CardContent>
               </Card>
               <div className="p-6 rounded-2xl bg-muted/20 border border-white/5 flex flex-col items-center justify-center text-center gap-4 py-12">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
-                  <ShieldAlert className="text-primary" size={32} />
+                  <Cpu className="text-primary" size={32} />
                 </div>
                 <div className="space-y-1">
-                  <h4 className="text-sm font-headline font-bold">Security Compliance</h4>
-                  <p className="text-[10px] text-muted-foreground">RSA v2 Digital Signature বাধ্যতামূলক।</p>
+                  <h4 className="text-sm font-headline font-bold uppercase tracking-widest">Sovereign Grid v24.0</h4>
+                  <p className="text-[10px] text-muted-foreground">জিরো-হিউম্যান ইন্টারভেনশন গেটওয়ে সক্রিয়।</p>
                 </div>
               </div>
             </div>

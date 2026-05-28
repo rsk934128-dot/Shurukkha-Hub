@@ -1,8 +1,8 @@
-
 /**
  * @fileOverview Sovereign Payment Handler for Local & Global Settlements.
  * Manages the bridge between card-to-bKash settlements using a Buffer Logic.
  * Updated: Added Merchant Partner Orchestration and Handshake Protocols.
+ * Now includes mock webhook handshake simulation logic.
  */
 
 import { IntegrationBridge } from './integration-bridge';
@@ -85,6 +85,9 @@ export class PaymentHandler {
 
     try {
       await setDoc(doc(db, "merchants", merchantId), merchantData);
+      
+      // Simulate Webhook Handshake Challenge
+      console.log(`[Gateway Orchestrator] Pushing Callback Handshake to ${data.callbackUrl}`);
       
       await addDoc(collection(db, "audit_trails"), {
         action: 'MERCHANT_REGISTERED',
