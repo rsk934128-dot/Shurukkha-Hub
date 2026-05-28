@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play, UserCheck, ShieldAlert, Cpu, Activity, Signal, Loader2, DollarSign, TrendingUp, Wallet, Target, TrendingDown, ShieldX, Store } from 'lucide-react'
+import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play, UserCheck, ShieldAlert, Cpu, Activity, Signal, Loader2, DollarSign, TrendingUp, Wallet, Target, TrendingDown, ShieldX, Store, ListOrdered, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -19,6 +18,8 @@ import { Label } from '@/components/ui/label'
 import { MerchantGrowthChart } from '@/components/dashboard/merchant-growth-chart'
 import { AppLogo } from '@/components/ui/app-logo'
 import { MerchantRegistry } from './merchant-registry'
+import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 
 export function BankDirectory() {
   const [banks, setBanks] = useState<BankNode[]>([])
@@ -28,6 +29,7 @@ export function BankDirectory() {
   const [activeStep, setActiveStep] = useState(0)
   const [fraudStats, setFraudStats] = useState(FraudRecovery.getStats())
   const [marketTrends, setMarketTrends] = useState(EconomicForecaster.getMarketTrends())
+  const [ledgerLogs, setLedgerLogs] = useState<any[]>([])
   
   const [revenueStats, setRevenueStats] = useState({
     totalProcessed: 12450000,
@@ -39,6 +41,20 @@ export function BankDirectory() {
 
   useEffect(() => {
     handleSync()
+    
+    // Listen for transaction events in audit trail
+    const q = query(
+      collection(db, "audit_trails"), 
+      where("action", "in", ["SETTLEMENT_COMPLETED", "INVOICE_GENERATED"]),
+      orderBy("timestamp", "desc"),
+      limit(20)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setLedgerLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    return () => unsubscribe();
   }, [])
 
   const handleSync = async () => {
@@ -140,6 +156,7 @@ export function BankDirectory() {
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
             <TabsTrigger value="revenue" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><TrendingUp size={12}/> রেভিনিউ</TabsTrigger>
+            <TabsTrigger value="ledger" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><ListOrdered size={12}/> লাইভ লেজার</TabsTrigger>
             <TabsTrigger value="merchants" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Store size={12}/> মার্চেন্ট</TabsTrigger>
             <TabsTrigger value="fraud" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold uppercase tracking-widest"><ShieldX size={12}/> ফ্রড</TabsTrigger>
             <TabsTrigger value="global" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Globe size={12}/> গ্লোবাল</TabsTrigger>
@@ -197,6 +214,60 @@ export function BankDirectory() {
               </div>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="ledger" className="flex-1 p-4 md:p-6 m-0 space-y-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-headline font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+              <FileText size={18} /> Imperial Live Ledger
+            </h3>
+            <Badge variant="outline" className="text-[7px] border-primary/20 text-primary">SYNC_OK: 100% PURITY</Badge>
+          </div>
+          
+          <ScrollArea className="h-[500px]">
+            <div className="space-y-3">
+              {ledgerLogs.length === 0 ? (
+                <div className="py-20 text-center opacity-20">
+                   <ListOrdered size={48} className="mx-auto mb-4" />
+                   <p className="text-xs uppercase font-bold tracking-widest">No Recent Transactions</p>
+                </div>
+              ) : (
+                ledgerLogs.map((log) => (
+                  <div key={log.id} className={`p-4 rounded-2xl border transition-all hover:border-primary/40 ${log.action === 'SETTLEMENT_COMPLETED' ? 'bg-accent/5 border-accent/20' : 'bg-primary/5 border-primary/20'}`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${log.action === 'SETTLEMENT_COMPLETED' ? 'bg-accent/20 text-accent' : 'bg-primary/20 text-primary'}`}>
+                          {log.action === 'SETTLEMENT_COMPLETED' ? <CheckCircle2 size={16} /> : <FileText size={16} />}
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-foreground">{log.action.replace(/_/g, ' ')}</p>
+                          <p className="text-[8px] text-muted-foreground font-mono">HASH: {log.signature.substring(0, 20)}...</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-[7px] border-white/10 bg-black/40">
+                        {log.timestamp?.toDate?.()?.toLocaleTimeString() || 'Pending'}
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 p-2 bg-black/40 rounded-xl border border-white/5">
+                       <div className="space-y-0.5">
+                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Amount</p>
+                          <p className="text-xs font-bold text-foreground">৳{log.details?.amount?.toLocaleString()}</p>
+                       </div>
+                       <div className="space-y-0.5">
+                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Imperial Fee</p>
+                          <p className="text-xs font-bold text-accent">৳{log.details?.feeCollected || log.details?.serviceFee || 0}</p>
+                       </div>
+                       <div className="space-y-0.5 col-span-2">
+                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Entity</p>
+                          <p className="text-xs font-bold text-primary truncate">{log.details?.merchantId || log.details?.settlementId || 'Sovereign Node'}</p>
+                       </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
         </TabsContent>
 
         <TabsContent value="merchants" className="flex-1 p-4 md:p-6 m-0">

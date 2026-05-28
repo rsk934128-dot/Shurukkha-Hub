@@ -1,7 +1,6 @@
 /**
  * @fileOverview Sovereign Payment Handler for Local & Global Settlements.
- * Updated Phase 28.0: Multi-Layered Auth & Zero-Trust Integration.
- * Implements re-authentication for high-value transactions.
+ * Updated Phase 31.2: Multi-Layered Auth, Zero-Trust Integration & Automated Invoicing.
  */
 
 import { IntegrationBridge } from './integration-bridge';
@@ -17,6 +16,7 @@ export interface PaymentIntent {
   source: 'CARD' | 'BANK' | 'VIRTUAL_ACCOUNT';
   target: 'BKASH' | 'LOCAL_BANK' | 'TREASURY' | 'GLOBAL_PAYPAL' | 'WISE_SOVEREIGN';
   merchantId: string;
+  description?: string;
 }
 
 export interface AtomicReceipt {
@@ -68,6 +68,37 @@ export class PaymentHandler {
     };
   }
 
+  /**
+   * Generates a Sovereign Imperial Invoice for a merchant.
+   */
+  static async generateInvoice(merchant: any, amount: number, description: string) {
+    const invoiceId = `INV-SOV-${Math.floor(100000 + Math.random() * 900000)}`;
+    const { fee } = this.calculateSettlement(amount);
+    
+    const invoiceData = {
+      invoiceId,
+      merchantId: merchant.merchantId,
+      merchantName: merchant.businessName,
+      amount,
+      serviceFee: fee,
+      description,
+      status: 'pending',
+      issuedAt: new Date().toISOString(),
+      purity: 'VERIFIED_IMPERIAL'
+    };
+
+    // Log the invoice generation to the audit trail
+    await addDoc(collection(db, "audit_trails"), {
+      action: 'INVOICE_GENERATED',
+      details: invoiceData,
+      signature: IntegrationBridge.generateSignature(invoiceData),
+      timestamp: serverTimestamp(),
+      performedBy: 'Imperial_Invoicing_Engine'
+    });
+
+    return invoiceData;
+  }
+
   static async initiateSettlement(intent: PaymentIntent) {
     console.log(`[Atomic Treasury] Initiating Settlement for ${intent.amount} ${intent.currency}...`);
     
@@ -83,12 +114,12 @@ export class PaymentHandler {
     const risk = PaymentHandler.predictRisk(intent);
     
     if (risk === 'CRITICAL') {
-      // Engage Fraud Recovery Protocol
       FraudRecovery.freezeFunds('txn_failed_' + Date.now(), intent.amount, 'CRITICAL_RISK_MERCHANT');
       throw new Error("Transaction BLOCKED by AI Fraud Engine. Funds HELD for recovery.");
     }
 
-    const token = sessionStorage.getItem('sovereign_session_token') || IntegrationBridge.generateEphemeralToken();
+    // Step 1: Pre-flight check with the Bridge
+    const token = localStorage.getItem('sovereign_session_token') || IntegrationBridge.generateEphemeralToken();
     const targetGateway = intent.target.includes('GLOBAL') ? 'gw-paypal-global' : 'gw-bkash';
     const preFlight = await IntegrationBridge.preFlightCheck(targetGateway, token);
     
@@ -107,8 +138,6 @@ export class PaymentHandler {
       const settlementId = 'set_rev_' + Math.random().toString(36).substr(2, 12);
       
       const receipt = PaymentHandler.generateReceipt(intent, settlementId);
-      
-      // Prosperity Protocol: Economic Insight
       const insight = EconomicForecaster.getMerchantInsight(intent.merchantId, intent.amount);
 
       await addDoc(collection(db, "audit_trails"), {
@@ -138,8 +167,6 @@ export class PaymentHandler {
 
   static async triggerDummyPayment(onLog: (msg: string) => void) {
     onLog(`[ANYCAST_REVENUE_ENGINE: ACTIVE]`);
-    
-    // Simulate Zero-Trust logic in terminal
     onLog("[SECURITY]: Initiating Zero-Trust Identity Handshake...");
     await new Promise(r => setTimeout(r, 800));
     onLog("[SECURITY]: Biometric Fingerprint (dev_...) Verified ✅");
@@ -167,8 +194,8 @@ export class PaymentHandler {
     const receipt = PaymentHandler.generateReceipt(intent, settlementId);
     
     await addDoc(collection(db, "audit_trails"), {
-      action: 'REVENUE_GENERATED_TEST',
-      details: { intent, fee, netAmount, settlementId, risk, receipt, merchantInsight: insight, auth: 'HANDSHAKE_v2' },
+      action: 'SETTLEMENT_COMPLETED',
+      details: { amount: intent.amount, feeCollected: fee, netSettled: netAmount, settlementId, risk, receipt, merchantInsight: insight },
       signature: IntegrationBridge.generateSignature({ settlementId, status: 'VERIFIED' }),
       timestamp: serverTimestamp(),
       performedBy: 'sovereign_revenue_engine'

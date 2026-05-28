@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Store, User, Plus, Search, ShieldCheck, Key, CreditCard, Activity, Trash2, CheckCircle2, Loader2, Globe, TrendingUp, Landmark, FileText, Download, Share2, Sparkles, MessageSquare, Zap, Target } from 'lucide-react'
+import { Store, User, Plus, Search, ShieldCheck, Key, CreditCard, Activity, Trash2, CheckCircle2, Loader2, Globe, TrendingUp, Landmark, FileText, Download, Share2, Sparkles, MessageSquare, Zap, Target, FilePlus } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,7 @@ import { collection, onSnapshot, query, addDoc, serverTimestamp, deleteDoc, doc,
 import { useToast } from '@/hooks/use-toast'
 import { IntegrationBridge } from '@/lib/integration-bridge'
 import { AppLogo } from '@/components/ui/app-logo'
+import { PaymentHandler } from '@/lib/payment-handler'
 
 const SECTOR_TEMPLATES = [
   { label: 'Textile (Handloom)', value: 'Textile', desc: 'সিরাজগঞ্জ হ্যান্ডলুম প্রোডাকশন হাউস' },
@@ -29,6 +30,7 @@ export function MerchantRegistry() {
   const [showPitch, setShowPitch] = useState(false)
   const [search, setSearch] = useState('')
   const [lastOnboarded, setLastOnboarded] = useState<any>(null)
+  const [isInvoicing, setIsInvoicing] = useState<string | null>(null)
   const { toast } = useToast()
 
   const [form, setForm] = useState({
@@ -66,7 +68,6 @@ export function MerchantRegistry() {
       const docRef = await addDoc(collection(db, "merchants"), merchantData);
       setLastOnboarded({ ...merchantData, id: docRef.id });
 
-      // Log to Audit Trail
       await addDoc(collection(db, "audit_trails"), {
         action: 'MERCHANT_ONBOARDED',
         details: { businessName: form.businessName, merchantId },
@@ -82,6 +83,19 @@ export function MerchantRegistry() {
       toast({ title: "ব্যর্থ!", variant: "destructive" });
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleIssueInvoice = async (merchant: any) => {
+    setIsInvoicing(merchant.id);
+    try {
+      const amount = 5000; // Mock invoice amount
+      await PaymentHandler.generateInvoice(merchant, amount, "Imperial Service Fee - Phase 31 Verification");
+      toast({ title: "ইনভয়েস জেনারেটেড", description: `${merchant.businessName} এর জন্য ইনভয়েস পাঠানো হয়েছে।` });
+    } catch (e) {
+      toast({ title: "ইনভয়েস জেনারেশন ব্যর্থ", variant: "destructive" });
+    } finally {
+      setIsInvoicing(null);
     }
   }
 
@@ -109,7 +123,6 @@ export function MerchantRegistry() {
 
   return (
     <div className="space-y-6">
-      {/* Smart Assistant Header */}
       <div className="p-4 bg-primary/5 border border-primary/20 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4">
            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
@@ -162,7 +175,6 @@ export function MerchantRegistry() {
         </Card>
       )}
 
-      {/* Onboarding Form with Sector Templates */}
       {isAdding && (
         <div className="space-y-6">
            <div className="flex flex-wrap gap-2">
@@ -238,7 +250,6 @@ export function MerchantRegistry() {
         </div>
       )}
 
-      {/* Success Certificate Screen */}
       {lastOnboarded && !isAdding && (
         <Card className="bg-accent/5 border-accent/20 rounded-[2.5rem] overflow-hidden animate-in zoom-in-95">
            <div className="p-8 flex flex-col md:flex-row items-center gap-8 relative">
@@ -271,7 +282,6 @@ export function MerchantRegistry() {
         </Card>
       )}
 
-      {/* Merchant Registry List */}
       {!isAdding && (
         <div className="space-y-6">
           <div className="relative max-w-md">
@@ -329,15 +339,17 @@ export function MerchantRegistry() {
                            <span className="text-[10px] font-bold text-primary">৳{merchant.taxCollected?.toLocaleString() || 0}</span>
                         </div>
                      </div>
-
-                     <div className="pt-2 flex flex-col gap-2">
-                        <div className="flex items-center gap-2 text-[8px] text-muted-foreground font-mono bg-muted/20 p-1.5 rounded truncate">
-                           <Key size={10} className="text-primary" /> API: {merchant.apiKey}
-                        </div>
-                     </div>
                   </CardContent>
                   <div className="px-5 py-3 bg-muted/20 border-t border-white/5 flex gap-2">
-                     <Button variant="outline" className="flex-1 h-8 text-[9px] font-bold uppercase border-primary/20 hover:bg-primary/10 text-primary rounded-lg">
+                     <Button 
+                      onClick={() => handleIssueInvoice(merchant)}
+                      disabled={isInvoicing === merchant.id}
+                      variant="outline" 
+                      className="flex-1 h-8 text-[9px] font-bold uppercase border-primary/20 hover:bg-primary/10 text-primary rounded-lg"
+                     >
+                        {isInvoicing === merchant.id ? <Loader2 size={12} className="animate-spin mr-1" /> : <FilePlus size={12} className="mr-1" />} Invoice
+                     </Button>
+                     <Button variant="outline" className="flex-1 h-8 text-[9px] font-bold uppercase border-accent/20 hover:bg-accent/10 text-accent rounded-lg">
                         <TrendingUp size={12} className="mr-1" /> Analytics
                      </Button>
                      <Button size="icon" variant="ghost" onClick={() => handleDelete(merchant.id)} className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
