@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Radio, MapPin, ShieldAlert, CheckCircle2, Navigation, Loader2, BrainCircuit, Video, Clock, History, Send, ClipboardList, Zap, Phone, PhoneOff, Maximize2, Minimize2, Activity, Target, LayoutDashboard, Database, ShieldCheck, MessageSquare, Globe } from 'lucide-react'
+import { Radio, MapPin, ShieldAlert, CheckCircle2, Navigation, Loader2, BrainCircuit, Video, Clock, History, Send, ClipboardList, Zap, Phone, PhoneOff, Maximize2, Minimize2, Activity, Target, LayoutDashboard, Database, ShieldCheck, MessageSquare, Globe, Volume2, Mic, Settings } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +16,8 @@ import { WebRTCManager } from '@/lib/webrtc-signaling'
 import { ResourceMap } from './resource-map'
 import { CommunicationConsole } from './communication-console'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { MediaControls } from './media-controls'
+import { useAudioEngine } from '@/hooks/use-audio-engine'
 
 const MOCK_RESPONDERS = [
   { id: 'r1', name: "সদর থানা টিম এ", type: "Police", location: "সিরাজগঞ্জ বাজার", status: "available" },
@@ -34,11 +37,17 @@ export function DispatcherConsole() {
   const webrtcRef = useRef<WebRTCManager | null>(null)
   
   const { toast } = useToast()
+  const { playAlertSound } = useAudioEngine()
 
   useEffect(() => {
     const q = query(collection(db, "sos_alerts"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const activeAlerts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Check for new pending alerts to trigger sound
+      const hasNewPending = activeAlerts.some(a => a.status === 'pending' && !alerts.find(old => old.id === a.id));
+      if (hasNewPending) playAlertSound();
+
       setAlerts(activeAlerts);
       
       if (selectedAlert) {
@@ -47,7 +56,7 @@ export function DispatcherConsole() {
       }
     });
     return () => unsubscribe();
-  }, [selectedAlert])
+  }, [selectedAlert, alerts, playAlertSound])
 
   useEffect(() => {
     if (videoRef.current && remoteStream) {
@@ -58,6 +67,7 @@ export function DispatcherConsole() {
   const handleCall = async () => {
     if (!selectedAlert) return;
     setIsCalling(true);
+    playAlertSound();
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -129,7 +139,7 @@ export function DispatcherConsole() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-6 animate-in fade-in duration-1000">
+    <div className={`h-full flex flex-col gap-6 transition-all duration-1000 ${isCalling ? 'call-active-glow' : 'animate-in fade-in'}`}>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-0">
         {/* Left: Emergency Feed */}
         <div className="lg:col-span-3 space-y-6 flex flex-col min-h-0">
@@ -174,14 +184,16 @@ export function DispatcherConsole() {
                     <span className="text-accent font-bold">RSA_v2_ACTIVE</span>
                  </div>
                  <div className="flex justify-between items-center text-[9px] font-mono">
-                    <span className="text-white/60">AI_CONFIDENCE</span>
-                    <span className="text-accent font-bold">OPTIMAL</span>
+                    <span className="text-white/60">AUDIO_LINK</span>
+                    <span className={isCalling ? "text-accent font-bold animate-pulse" : "text-muted-foreground"}>
+                      {isCalling ? 'HD_ACTIVE' : 'IDLE'}
+                    </span>
                  </div>
               </div>
            </Card>
         </div>
 
-        {/* Center: Dynamic Pannel (Map / Communication) */}
+        {/* Center: Dynamic Panel (Map / Communication) */}
         <div className="lg:col-span-6 flex flex-col min-h-0">
           <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-2">
@@ -199,14 +211,22 @@ export function DispatcherConsole() {
             <TabsContent value="map" className="flex-1 mt-0 relative min-h-0">
                <ResourceMap />
                {isCalling && (
-                 <div className="absolute top-4 right-4 w-48 aspect-video bg-black rounded-2xl border-2 border-accent shadow-2xl overflow-hidden z-[60] animate-in zoom-in-95">
+                 <div className="absolute inset-x-0 bottom-8 flex justify-center z-[70] animate-in slide-in-from-bottom-5">
+                   <MediaControls onHangUp={endCall} />
+                 </div>
+               )}
+               {isCalling && remoteStream && (
+                 <div className="absolute top-4 right-4 w-64 aspect-video bg-black rounded-3xl border-2 border-accent shadow-2xl overflow-hidden z-[60] animate-in zoom-in-95 group">
                     <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                    <div className="absolute bottom-2 right-2 flex gap-1">
-                       <Button size="icon" variant="destructive" onClick={endCall} className="h-6 w-6 rounded-lg">
-                          <PhoneOff size={10} />
-                       </Button>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                    <div className="absolute top-3 left-3 flex gap-2">
+                      <Badge className="bg-red-600 animate-pulse text-[7px] border-none">LIVE_HUD</Badge>
+                      <Badge variant="outline" className="text-[7px] border-white/20 bg-black/40 text-white">4K_ULTRA</Badge>
                     </div>
-                    <Badge className="absolute top-1 left-1 text-[6px] bg-red-600/80 animate-pulse">LIVE_HUD</Badge>
+                    <div className="absolute bottom-3 left-3">
+                       <p className="text-[10px] font-headline font-bold text-white uppercase tracking-widest">{selectedAlert?.location}</p>
+                       <p className="text-[7px] text-accent font-mono">LATENCY: 0.002ms</p>
+                    </div>
                  </div>
                )}
             </TabsContent>
@@ -230,9 +250,12 @@ export function DispatcherConsole() {
                   <div className="flex-1 flex flex-col min-h-0">
                     <div className="aspect-video bg-black/60 relative m-4 rounded-3xl border border-white/5 overflow-hidden group">
                        {isCalling ? (
-                         <div className="w-full h-full flex flex-col items-center justify-center space-y-3 bg-accent/10">
-                            <Signal className="text-accent animate-bounce" size={32} />
-                            <p className="text-[9px] font-mono text-accent uppercase tracking-[0.3em]">Secure WebRTC active</p>
+                         <div className="w-full h-full flex flex-col items-center justify-center space-y-3 bg-accent/5">
+                            <div className="relative">
+                               <div className="absolute -inset-4 bg-accent/20 rounded-full blur-xl animate-pulse" />
+                               <Volume2 className="text-accent animate-bounce relative z-10" size={32} />
+                            </div>
+                            <p className="text-[9px] font-mono text-accent uppercase tracking-[0.3em] animate-pulse">Sovereign Link Stable</p>
                          </div>
                        ) : (
                          <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3">
@@ -251,11 +274,16 @@ export function DispatcherConsole() {
                           </div>
 
                           <div className="flex gap-2">
-                             <Button onClick={handleCall} disabled={isCalling} size="sm" className="bg-accent text-background font-bold gap-2 flex-1 rounded-xl h-10 shadow-lg shadow-accent/20">
-                               <Phone size={14} /> Establish Video Link
+                             <Button 
+                               onClick={handleCall} 
+                               disabled={isCalling} 
+                               size="sm" 
+                               className={`bg-accent text-background font-bold gap-2 flex-1 rounded-xl h-10 shadow-lg shadow-accent/20 transition-all ${isCalling ? 'opacity-50 scale-95' : 'hover:scale-105'}`}
+                             >
+                               <Phone size={14} /> {isCalling ? 'LINK_ACTIVE' : 'Establish Video Link'}
                              </Button>
                              {isCalling && (
-                               <Button variant="destructive" size="icon" onClick={endCall} className="h-10 w-10 rounded-xl">
+                               <Button variant="destructive" size="icon" onClick={endCall} className="h-10 w-10 rounded-xl animate-pulse">
                                   <PhoneOff size={16} />
                                </Button>
                              )}

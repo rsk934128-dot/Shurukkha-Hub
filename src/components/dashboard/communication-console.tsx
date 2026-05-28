@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -11,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { CommunicationOrchestrator, Message } from '@/lib/communication-orchestrator'
 import { db } from '@/lib/firebase'
 import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore'
+import { useAudioEngine } from '@/hooks/use-audio-engine'
 
 const RESPONDERS = [
   { id: 'r1', name: "Sadar Team A", role: "Police", status: 'online', avatar: 'https://picsum.photos/seed/r1/40/40' },
@@ -25,6 +27,7 @@ export function CommunicationConsole() {
   const [isUploading, setIsOnline] = useState(true)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { playMessageSound } = useAudioEngine()
 
   useEffect(() => {
     const q = query(
@@ -36,12 +39,19 @@ export function CommunicationConsole() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const newMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+      
+      // Trigger sound if last message is incoming and new
+      const lastMsg = newMessages[newMessages.length - 1];
+      if (lastMsg && lastMsg.senderId !== 'command_center' && !messages.find(m => m.id === lastMsg.id)) {
+        playMessageSound();
+      }
+
       setMessages(newMessages);
       scrollToBottom();
     });
 
     return () => unsubscribe();
-  }, [selectedContact])
+  }, [selectedContact, messages, playMessageSound])
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
