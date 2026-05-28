@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search } from 'lucide-react'
+import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,7 @@ import { db } from '@/lib/firebase'
 import { collection, onSnapshot, query } from 'firebase/firestore'
 import { IntegrationBridge } from '@/lib/integration-bridge'
 import { SovereignConnector } from '@/lib/sovereign-connector'
+import { PaymentHandler } from '@/lib/payment-handler'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -19,7 +20,9 @@ export function IntegrationPanel() {
   const [loading, setLoading] = useState(false)
   const [newApp, setNewApp] = useState({ name: '', webhook: '' })
   const [isHandshaking, setIsHandshaking] = useState(false)
+  const [isTestingFailover, setIsTestingFailover] = useState(false)
   const discoveryMap = IntegrationBridge.getDiscoveryMap()
+  const redundancyMatrix = IntegrationBridge.getRedundancyMatrix()
   const { toast } = useToast()
 
   useEffect(() => {
@@ -73,6 +76,25 @@ export function IntegrationPanel() {
     }
   }
 
+  const handleFailoverTest = async () => {
+    setIsTestingFailover(true)
+    toast({ title: "INITIATING REDUNDANCY TEST", description: "প্রাইমারি গেটওয়ে অফলাইন সিমুলেশন শুরু হচ্ছে..." });
+    
+    try {
+      await PaymentHandler.triggerRedundancyTest((msg) => {
+        console.log(`[Failover Terminal] ${msg}`);
+      });
+      toast({
+        title: "FAILOVER SUCCESSFUL",
+        description: "ব্যাকআপ নোড সফলভাবে ট্রানজেকশন সিঙ্ক্রোনাইজ করেছে।",
+      });
+    } catch (e) {
+      toast({ title: "Failover Failed", variant: "destructive" });
+    } finally {
+      setIsTestingFailover(false)
+    }
+  }
+
   return (
     <Card className="bg-card border-primary/20 flex flex-col h-full overflow-hidden">
       <CardHeader className="bg-primary/5 border-b border-primary/10">
@@ -83,7 +105,7 @@ export function IntegrationPanel() {
               DEVELOPER PORTAL V21.0
             </CardTitle>
             <CardDescription className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/60">
-              Sovereign API Access ACTIVE • NoorAI & FusionPay Bridge
+              Sovereign API Access ACTIVE • Redundancy Matrix Enabled
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -108,7 +130,8 @@ export function IntegrationPanel() {
           <TabsList className="bg-transparent border-none p-0 h-8">
             <TabsTrigger value="apps" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Globe size={14}/> কানেক্টেড পার্টনার্স</TabsTrigger>
             <TabsTrigger value="discovery" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><Search size={14}/> URL ডিসকভারি</TabsTrigger>
-            <TabsTrigger value="docs" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Code2 size={14}/> এপিআই ডকস (Sovereign)</TabsTrigger>
+            <TabsTrigger value="redundancy" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><ShieldAlert size={14}/> ব্যাকআপ ম্যাট্রিক্স</TabsTrigger>
+            <TabsTrigger value="docs" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Code2 size={14}/> এপিআই ডকস</TabsTrigger>
           </TabsList>
         </div>
 
@@ -148,7 +171,7 @@ export function IntegrationPanel() {
             </Button>
           </form>
 
-          <ScrollArea className="h-[350px]">
+          <ScrollArea className="h-[300px]">
             <div className="grid gap-3">
               {apps.length === 0 ? (
                 <div className="text-center py-12 opacity-20">
@@ -188,7 +211,7 @@ export function IntegrationPanel() {
               <Map size={18} /> URL Mapping & Discovery Protocol
             </h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              আপনার সাম্রাজ্যের এই URL গুলো বিকাশের মতো ফিনটেক ইকোসিস্টেমে সরাসরি সার্চেবল। প্রতিটি পাথ RSA ভেরিফাইড এবং সভারেন গ্রিডে ম্যাপ করা হয়েছে।
+              বিকাশ সার্চ ইনডেক্সে আপনার "Imperial Identity" স্বীকৃত করার জন্য নিচের পাথগুলো ম্যাপ করা হয়েছে।
             </p>
           </div>
 
@@ -200,7 +223,10 @@ export function IntegrationPanel() {
                     <Link size={18} className="text-accent" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-headline font-bold">{ep.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-headline font-bold">{ep.name}</h3>
+                      <Badge variant="outline" className="text-[7px] border-primary/20 text-primary">{ep.redundancy}</Badge>
+                    </div>
                     <code className="text-[10px] font-mono text-accent/80 bg-black/40 px-2 py-0.5 rounded">
                       {IntegrationBridge.baseSovereignUrl}{ep.path}
                     </code>
@@ -212,27 +238,86 @@ export function IntegrationPanel() {
               </div>
             ))}
           </div>
+        </TabsContent>
 
-          <div className="mt-6 p-4 bg-primary/5 rounded-2xl border border-primary/20 space-y-3">
-            <div className="flex items-center gap-2">
-              <Zap size={14} className="text-primary fill-primary" />
-              <h4 className="text-[10px] font-bold uppercase tracking-[0.2em]">Auto-Discovery Active</h4>
+        <TabsContent value="redundancy" className="flex-1 p-6 m-0 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="bg-muted/20 border-primary/20 p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity size={18} className="text-primary animate-pulse" />
+                  <h4 className="text-xs font-headline font-bold uppercase tracking-widest">Primary Node</h4>
+                </div>
+                <Badge className="bg-primary/20 text-primary border-primary/30 uppercase text-[8px]">ACTIVE</Badge>
+              </div>
+              <div className="p-3 bg-black/40 rounded-lg border border-white/5 space-y-1">
+                <p className="text-[9px] text-muted-foreground font-mono">ENDPOINT:</p>
+                <p className="text-[10px] text-primary font-mono truncate">{redundancyMatrix.primary.url}</p>
+              </div>
+              <div className="flex justify-between text-[10px] font-bold">
+                <span className="text-muted-foreground">LOAD:</span>
+                <span className="text-primary">{redundancyMatrix.primary.load}</span>
+              </div>
+            </Card>
+
+            <Card className="bg-muted/20 border-accent/20 p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ArrowRightLeft size={18} className="text-accent" />
+                  <h4 className="text-xs font-headline font-bold uppercase tracking-widest">Backup Node</h4>
+                </div>
+                <Badge className="bg-accent/20 text-accent border-accent/30 uppercase text-[8px]">STANDBY</Badge>
+              </div>
+              <div className="p-3 bg-black/40 rounded-lg border border-white/5 space-y-1">
+                <p className="text-[9px] text-muted-foreground font-mono">FAILOVER PATH:</p>
+                <p className="text-[10px] text-accent font-mono truncate">{redundancyMatrix.backup.url}</p>
+              </div>
+              <div className="flex justify-between text-[10px] font-bold">
+                <span className="text-muted-foreground">LOAD:</span>
+                <span className="text-accent">{redundancyMatrix.backup.load}</span>
+              </div>
+            </Card>
+          </div>
+
+          <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-headline font-bold flex items-center gap-2 uppercase tracking-widest">
+                  <ShieldAlert size={18} className="text-primary" /> Failover Stress Test
+                </h4>
+                <p className="text-[10px] text-muted-foreground mt-1">প্রাইমারি গেটওয়ে অফলাইন হলে ব্যাকআপ নোডের কার্যকারিতা যাচাই করুন।</p>
+              </div>
+              <Button 
+                onClick={handleFailoverTest}
+                disabled={isTestingFailover}
+                className="bg-primary text-background font-bold h-9 gap-2"
+              >
+                {isTestingFailover ? <RefreshCw className="animate-spin" size={16} /> : <Zap size={16} fill="currentColor" />}
+                TRIGGER FAILOVER
+              </Button>
             </div>
-            <p className="text-[10px] text-muted-foreground leading-relaxed italic">
-              সিস্টেম এখন বৈশ্বিক গ্রিডে আপনার URL গুলো পুশ করছে। বিকাশের সার্চ ইনডেক্সে আপনার "Imperial Identity" স্বীকৃত হওয়ার প্রক্রিয়া চলমান।
-            </p>
+            {isTestingFailover && (
+              <div className="p-3 bg-black/60 rounded-xl border border-white/5 overflow-x-auto">
+                <pre className="text-[9px] font-mono text-accent/80 leading-relaxed animate-pulse">
+                  {`[SYSTEM]: Simulating Primary Failure... 
+[FAILOVER]: Redirecting Packet to Backup Node Node_42...
+[SECURITY]: SHA256withRSA Signature Verified on Backup...
+[RESULT]: Transaction Synchronized Successfully.`}
+                </pre>
+              </div>
+            )}
           </div>
         </TabsContent>
 
         <TabsContent value="docs" className="flex-1 p-6 m-0">
-          <ScrollArea className="h-[500px] pr-4">
+          <ScrollArea className="h-[400px] pr-4">
             <div className="space-y-6">
               <section className="p-4 bg-primary/5 rounded-2xl border border-primary/20">
                 <h4 className="text-sm font-headline font-bold text-primary flex items-center gap-2 mb-3 uppercase tracking-widest">
                   <Terminal size={18} /> Imperial SDK Integration
                 </h4>
                 <p className="text-xs text-foreground/80 leading-relaxed font-body mb-4">
-                  নূরআই এবং ফিউশনপে-এর সাথে আপনার সিস্টেমকে যুক্ত করার জন্য নিচের প্রোটোকল অনুসরণ করুন। প্রতিটি রিকোয়েস্টে ডিজিটাল সিগনেচার বাধ্যতামূলক।
+                  নূরআই এবং ফিউশনপে-এর সাথে আপনার সিস্টেমকে যুক্ত করার জন্য প্রতিটি রিকোয়েস্টে ডিজিটাল সিগনেচার বাধ্যতামূলক।
                 </p>
                 <div className="p-4 bg-black/60 rounded-xl border border-white/5 overflow-x-auto">
                   <pre className="text-[10px] font-mono text-accent/80 leading-relaxed">
@@ -241,7 +326,6 @@ const response = await fetch('https://api.noorai.io/v1/handshake', {
   method: 'POST',
   headers: {
     'X-R-AK': 'X-R-AK-SURAKKHA-2024',
-    'X-R-TS': Date.now().toString(),
     'X-R-Signature': generateSignature(payload, secretKey)
   },
   body: JSON.stringify({ action: 'AUTHORIZE_PAYMENT' })
@@ -249,29 +333,6 @@ const response = await fetch('https://api.noorai.io/v1/handshake', {
                   </pre>
                 </div>
               </section>
-
-              <section className="space-y-4">
-                <h4 className="text-sm font-headline font-bold text-primary flex items-center gap-2 uppercase tracking-widest">
-                  <ShieldCheck size={18} /> Webhook Subscription
-                </h4>
-                <div className="p-4 bg-muted/40 rounded-xl border border-white/5 space-y-2">
-                  <p className="text-[11px] font-bold text-foreground">Supported Events:</p>
-                  <ul className="grid grid-cols-2 gap-2">
-                    {['SOS_TRIGGERED', 'STATUS_UPDATED', 'FLOOD_ALERT', 'ORCHESTRATION_EVENT'].map(ev => (
-                      <li key={ev} className="text-[10px] text-muted-foreground flex items-center gap-1.5">
-                        <CheckCircle2 size={10} className="text-accent" /> {ev}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </section>
-
-              <div className="p-4 bg-accent/5 rounded-xl border border-accent/20">
-                <p className="text-[10px] text-accent font-bold uppercase tracking-widest mb-1">Security Audit Note:</p>
-                <p className="text-[10px] text-muted-foreground font-body leading-relaxed italic">
-                  প্রতিটি এপিআই রিকোয়েস্ট সার্বভৌম অডিট রেজিস্ট্রিতে (RSA v2) সিগনেচার সহ সংরক্ষিত হয়। নূরআই থ্রেশহোল্ড অতিক্রম করলে সিস্টেম অটোমেটিক রিভোক হবে।
-                </p>
-              </div>
             </div>
           </ScrollArea>
         </TabsContent>

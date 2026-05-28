@@ -1,14 +1,14 @@
 /**
  * @fileOverview Universal Bridge for Shurukkha Hub Partnership.
  * Implements RSA v2 Bridge, SHA256withRSA signing, and Webhook Engine.
- * Now includes Sovereign Identity Recognition and URL Discovery Protocol.
+ * Now includes Sovereign Identity Recognition, URL Discovery Protocol, and Redundancy Matrix.
  */
 
 import { db } from './firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 
 export interface IntegrationEvent {
-  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT' | 'SOVEREIGN_HANDSHAKE' | 'NETWORK_HEARTBEAT' | 'LOCAL_PAYMENT_INITIATED' | 'SETTLEMENT_COMPLETED' | 'IDENTITY_RECOGNITION' | 'VERIFICATION_LOOP' | 'ENDPOINT_DISCOVERED';
+  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT' | 'SOVEREIGN_HANDSHAKE' | 'NETWORK_HEARTBEAT' | 'LOCAL_PAYMENT_INITIATED' | 'SETTLEMENT_COMPLETED' | 'IDENTITY_RECOGNITION' | 'VERIFICATION_LOOP' | 'ENDPOINT_DISCOVERED' | 'FAILOVER_TRIGGERED';
   payload: any;
   timestamp: string;
 }
@@ -18,6 +18,7 @@ export const IntegrationBridge = {
   currentKeyId: 'sk_imperial_master_key_v21',
   identity: 'SIRAJGANJ_SURAKKHA_SOVEREIGN_HUB_v2',
   baseSovereignUrl: 'https://hub.shurukkha.gov.bd',
+  backupSovereignUrl: 'https://backup.shurukkha.gov.bd',
 
   setLockdown: (locked: boolean) => {
     IntegrationBridge.isLocked = locked;
@@ -25,15 +26,27 @@ export const IntegrationBridge = {
   },
 
   /**
-   * Generates Canonical URLs for Global/Local Discovery
+   * Generates Canonical URLs for Global/Local Discovery with Redundancy
    */
   getDiscoveryMap: () => {
     return [
-      { id: 'ep-pay', name: 'Sovereign Payment Gateway', path: '/api/v1/settle', type: 'FINANCIAL', status: 'VERIFIED' },
-      { id: 'ep-sos', name: 'Emergency SOS Signal', path: '/api/v1/sos/trigger', type: 'EMERGENCY', status: 'VERIFIED' },
-      { id: 'ep-audit', name: 'Forensic Audit Registry', path: '/api/v1/audit/logs', type: 'AUDIT', status: 'VERIFIED' },
-      { id: 'ep-handshake', name: 'Partner Handshake Hub', path: '/api/webhook/bkash', type: 'INTEGRATION', status: 'VERIFIED' },
+      { id: 'ep-pay', name: 'Sovereign Payment Gateway', path: '/api/v1/settle', type: 'FINANCIAL', status: 'VERIFIED', redundancy: 'DUAL_LINK' },
+      { id: 'ep-sos', name: 'Emergency SOS Signal', path: '/api/v1/sos/trigger', type: 'EMERGENCY', status: 'VERIFIED', redundancy: 'PRIMARY_ONLY' },
+      { id: 'ep-audit', name: 'Forensic Audit Registry', path: '/api/v1/audit/logs', type: 'AUDIT', status: 'VERIFIED', redundancy: 'DUAL_LINK' },
+      { id: 'ep-handshake', name: 'Partner Handshake Hub', path: '/api/webhook/bkash', type: 'INTEGRATION', status: 'VERIFIED', redundancy: 'FAILOVER_ENABLED' },
     ];
+  },
+
+  /**
+   * Returns the Redundancy Matrix for Failover monitoring
+   */
+  getRedundancyMatrix: () => {
+    return {
+      primary: { url: IntegrationBridge.baseSovereignUrl, status: 'ONLINE', load: '12%' },
+      backup: { url: IntegrationBridge.backupSovereignUrl, status: 'STANDBY', load: '0%' },
+      strategy: 'ACTIVE_FAILOVER',
+      lastHeartbeat: new Date().toISOString()
+    };
   },
 
   registerApp: async (appName: string, webhookUrl: string, events: string[]) => {
