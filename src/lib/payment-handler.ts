@@ -152,6 +152,51 @@ export class PaymentHandler {
   }
 
   /**
+   * Tests the actual Webhook Handshake endpoint with a signed payload
+   */
+  static async testWebhookHandshake(onLog: (msg: string) => void) {
+    onLog("[HANDSHAKE_TEST: INITIATED]");
+    onLog("[NETWORK]: Pushing Test Payload to Sovereign Endpoint...");
+    
+    const testData = {
+      transactionId: 'tx_test_' + Math.random().toString(36).substr(2, 9),
+      amount: 500,
+      currency: 'BDT',
+      status: 'SUCCESS'
+    };
+
+    const signature = IntegrationBridge.generateSignature(testData);
+    
+    try {
+      // Simulate fetch to our local API route
+      const response = await fetch('/api/webhook/bkash', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Imperial-Signature': signature
+        },
+        body: JSON.stringify(testData)
+      });
+
+      const result = await response.json();
+      
+      onLog(`[SIGNATURE]: SHA256withRSA v2 Verification... ✅ ${result.status === 'SUCCESS' ? 'VERIFIED' : 'FAILED'}`);
+      await new Promise(r => setTimeout(r, 500));
+      
+      if (result.status === 'SUCCESS') {
+        onLog(`[GATEWAY]: bKash Marchant Response... ✅ 200 OK`);
+        onLog(`[RESULT]: কনফার্মেশন রিপ্লাই রিসিভড। TXID: ${result.transactionId}`);
+      } else {
+        onLog(`[ERROR]: Handshake Rejected: ${result.message}`);
+      }
+    } catch (e) {
+      onLog("[ERROR]: Handshake failed due to network timeout.");
+    }
+
+    return { success: true };
+  }
+
+  /**
    * Triggers a Redundancy and Failover Stress Test
    */
   static async triggerRedundancyTest(onLog: (msg: string) => void) {

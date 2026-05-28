@@ -1,7 +1,7 @@
-'use client';
 /**
  * @fileOverview Sovereign Webhook Endpoint for bKash Merchant Handshake.
  * Handles challenge/response and payment notifications with RSA v2 verification.
+ * This is a server-side route handler.
  */
 
 import { NextResponse } from 'next/server';
@@ -40,15 +40,15 @@ export async function POST(request: Request) {
 
     if (!isValid) {
       console.error("[Merchant Hook] Invalid Signature Detected");
-      return new NextResponse('Unauthorized', { status: 401 });
+      return new NextResponse(JSON.stringify({ status: 'UNAUTHORIZED', message: 'Invalid Signature' }), { status: 401 });
     }
 
     // Process payment logic here...
     console.log(`[Merchant Hook] Payment Processed: ${body.amount} BDT`);
 
-    return new NextResponse('OK', { status: 200 });
+    return new NextResponse(JSON.stringify({ status: 'SUCCESS', transactionId: body.transactionId || 'tx_mock_123' }), { status: 200 });
   } catch (error) {
     console.error("[Merchant Hook] Error processing webhook", error);
-    return new NextResponse('Error', { status: 500 });
+    return new NextResponse(JSON.stringify({ status: 'ERROR', message: 'Internal Server Error' }), { status: 500 });
   }
 }

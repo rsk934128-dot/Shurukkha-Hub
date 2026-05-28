@@ -96,6 +96,21 @@ export function BankDirectory() {
     }
   }
 
+  const handleWebhookTest = async () => {
+    setLoading(true)
+    setTerminalLogs([])
+    try {
+      await PaymentHandler.testWebhookHandshake((msg) => {
+        setTerminalLogs(prev => [...prev, msg])
+      })
+      toast({ title: "Webhook Test Complete", description: "বিকাশ গেটওয়ে কনফার্মেশন রিসিভ করা হয়েছে।" })
+    } catch (e) {
+      toast({ title: "Webhook Test Failed", variant: "destructive" })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleMerchantRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -274,14 +289,24 @@ export function BankDirectory() {
                   <CardTitle className="text-xs font-headline font-bold text-accent uppercase tracking-widest flex items-center gap-2">
                     <Terminal size={14} /> Live Transaction Terminal
                   </CardTitle>
-                  <Button 
-                    size="sm" 
-                    onClick={handleDummyTest} 
-                    disabled={loading}
-                    className="h-7 text-[9px] bg-accent text-background font-bold gap-2"
-                  >
-                    <Play size={10} fill="currentColor" /> RUN DUMMY TEST
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      onClick={handleWebhookTest} 
+                      disabled={loading}
+                      className="h-7 text-[9px] bg-primary text-background font-bold gap-2"
+                    >
+                      <Zap size={10} fill="currentColor" /> TEST WEBHOOK
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={handleDummyTest} 
+                      disabled={loading}
+                      className="h-7 text-[9px] bg-accent text-background font-bold gap-2"
+                    >
+                      <Play size={10} fill="currentColor" /> RUN DUMMY TEST
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <ScrollArea className="h-[200px] bg-black/60 p-4">
