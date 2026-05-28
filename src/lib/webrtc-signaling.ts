@@ -3,7 +3,7 @@
 /**
  * @fileOverview WebRTC Signaling Service for Shurukkha Hub.
  * Manages the exchange of offers, answers, and ICE candidates via Firestore.
- * Updated: Uses merge:true to prevent metadata erasure during signaling.
+ * Updated: Implements candidate buffering and owner tagging to prevent "remote description null" errors.
  */
 
 import { db } from './firebase';
@@ -21,6 +21,7 @@ import {
 export class WebRTCManager {
   private sessionId: string;
   private peerConnection: RTCPeerConnection | null = null;
+  private candidateQueue: RTCIceCandidateInit[] = [];
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
@@ -33,6 +34,38 @@ export class WebRTCManager {
       { urls: 'stun:stun1.l.google.com:19302' },
     ],
   };
+
+  /**
+   * Buffers candidates until remote description is available.
+   */
+  private async addCandidate(candidate: RTCIceCandidateInit) {
+    if (this.peerConnection?.remoteDescription) {
+      try {
+        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (e) {
+        console.warn("[WebRTC] Error adding candidate", e);
+      }
+    } else {
+      this.candidateQueue.push(candidate);
+    }
+  }
+
+  /**
+   * Processes all buffered candidates once connection is ready.
+   */
+  private async flushCandidates() {
+    if (!this.peerConnection?.remoteDescription) return;
+    while (this.candidateQueue.length > 0) {
+      const candidate = this.candidateQueue.shift();
+      if (candidate) {
+        try {
+          await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {
+          console.warn("[WebRTC] Error flushing candidate", e);
+        }
+      }
+    }
+  }
 
   /**
    * Initialize a new call (Offer side)
@@ -53,10 +86,10 @@ export class WebRTCManager {
     const sessionRef = doc(db, 'webrtc_sessions', this.sessionId);
     const candidatesCollection = collection(sessionRef, 'ice_candidates');
 
-    // Collect ICE Candidates
+    // Collect ICE Candidates and tag as 'caller'
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
-        addDoc(candidatesCollection, event.candidate.toJSON());
+        addDoc(candidatesCollection, { ...event.candidate.toJSON(), owner: 'caller' });
       }
     };
 
@@ -69,15 +102,15 @@ export class WebRTCManager {
       type: offerDescription.type,
     };
 
-    // Use setDoc with merge: true to avoid wiping metadata (callerId, recipientId)
     await setDoc(sessionRef, { offer }, { merge: true });
 
     // Listen for Answer
-    onSnapshot(sessionRef, (snapshot) => {
+    onSnapshot(sessionRef, async (snapshot) => {
       const data = snapshot.data();
-      if (!this.peerConnection?.currentRemoteDescription && data?.answer) {
+      if (!this.peerConnection?.remoteDescription && data?.answer) {
         const answerDescription = new RTCSessionDescription(data.answer);
-        this.peerConnection?.setRemoteDescription(answerDescription);
+        await this.peerConnection?.setRemoteDescription(answerDescription);
+        await this.flushCandidates();
       }
     });
 
@@ -86,7 +119,10 @@ export class WebRTCManager {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const data = change.doc.data();
-          this.peerConnection?.addIceCandidate(new RTCIceCandidate(data));
+          // Only add candidates sent by the recipient
+          if (data.owner !== 'caller') {
+            this.addCandidate(data as RTCIceCandidateInit);
+          }
         }
       });
     });
@@ -111,9 +147,10 @@ export class WebRTCManager {
     const sessionRef = doc(db, 'webrtc_sessions', this.sessionId);
     const candidatesCollection = collection(sessionRef, 'ice_candidates');
 
+    // Collect ICE Candidates and tag as 'recipient'
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
-        addDoc(candidatesCollection, event.candidate.toJSON());
+        addDoc(candidatesCollection, { ...event.candidate.toJSON(), owner: 'recipient' });
       }
     };
 
@@ -132,14 +169,18 @@ export class WebRTCManager {
       };
 
       await updateDoc(sessionRef, { answer });
+      await this.flushCandidates();
     }
 
-    // Listen for ICE candidates
+    // Listen for remote ICE candidates
     onSnapshot(candidatesCollection, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const data = change.doc.data();
-          this.peerConnection?.addIceCandidate(new RTCIceCandidate(data));
+          // Only add candidates sent by the caller
+          if (data.owner !== 'recipient') {
+            this.addCandidate(data as RTCIceCandidateInit);
+          }
         }
       });
     });
@@ -150,5 +191,6 @@ export class WebRTCManager {
       this.peerConnection.close();
       this.peerConnection = null;
     }
+    this.candidateQueue = [];
   }
 }
