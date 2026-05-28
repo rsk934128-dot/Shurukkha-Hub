@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -25,14 +26,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { DisasterStorage } from '@/lib/disaster-storage'
-import { db } from '@/lib/firebase'
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { useFirestore, useUser, useAuth } from '@/firebase'
+import { collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
 import { AutonomousOrchestrator } from '@/lib/orchestrator'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { IntegrationBridge } from '@/lib/integration-bridge'
 import { SovereignAudit } from '@/lib/sovereign-audit'
 import Link from 'next/link'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { signOut } from 'firebase/auth'
 
 export default function ShurukkhaDashboard() {
   const [isOffline, setIsOffline] = useState(false)
@@ -40,7 +43,24 @@ export default function ShurukkhaDashboard() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [isAutoMode, setIsAutoMode] = useState(false)
   const [isLockedDown, setIsLockedDown] = useState(false)
+  
+  const { firestore } = useFirestore()
+  const { auth } = useAuth()
+  const { user, loading: authLoading } = useUser()
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (user && firestore) {
+      // Sync user profile to Firestore
+      const userRef = doc(firestore, "users", user.uid);
+      setDoc(userRef, {
+        displayName: user.displayName,
+        email: user.email,
+        photoURL: user.photoURL,
+        lastLogin: new Date().toISOString()
+      }, { merge: true });
+    }
+  }, [user, firestore])
 
   useEffect(() => {
     const handleOnline = () => {
@@ -96,12 +116,12 @@ export default function ShurukkhaDashboard() {
 
   const syncOfflineData = async () => {
     const reports = DisasterStorage.getReports()
-    if (reports.length === 0) return
+    if (reports.length === 0 || !firestore) return
 
     setIsSyncing(true)
     try {
       for (const report of reports) {
-        await addDoc(collection(db, "incidents"), {
+        await addDoc(collection(firestore, "incidents"), {
           ...report,
           timestamp: serverTimestamp(),
           syncedFromOffline: true
@@ -114,6 +134,23 @@ export default function ShurukkhaDashboard() {
     } finally {
       setIsSyncing(false)
     }
+  }
+
+  const handleLogout = () => {
+    if (auth) {
+      signOut(auth).then(() => {
+        toast({ title: "সফলভাবে লগআউট করা হয়েছে" })
+      })
+    }
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <Loader2 className="animate-spin text-primary" size={48} />
+        <p className="text-xs uppercase tracking-[0.3em] font-bold text-primary/60 animate-pulse">Initializing Sovereign Hub...</p>
+      </div>
+    )
   }
 
   return (
@@ -141,11 +178,33 @@ export default function ShurukkhaDashboard() {
           <div className="flex items-center gap-2 md:gap-6">
             <SovereignStatusWidget />
             
-            <Link href="/partnerships" className="hidden sm:block">
+            <Link href="/partnerships" className="hidden lg:block">
               <Button variant="ghost" size="sm" className={`h-8 text-[10px] font-bold gap-2 ${isLockedDown ? 'text-destructive' : 'text-primary/60 hover:text-primary'}`}>
                 <Globe size={14} /> PARTNERSHIP
               </Button>
             </Link>
+
+            {user ? (
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:block text-right">
+                  <p className="text-[10px] font-bold leading-none">{user.displayName}</p>
+                  <p className="text-[8px] text-muted-foreground uppercase tracking-widest">{userRole}</p>
+                </div>
+                <Avatar className="h-8 w-8 border border-primary/20">
+                  <AvatarImage src={user.photoURL || ''} />
+                  <AvatarFallback className="bg-primary/10 text-[10px]">{user.displayName?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <Button variant="ghost" size="icon" onClick={handleLogout} className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                  <LogOut size={16} />
+                </Button>
+              </div>
+            ) : (
+              <Link href="/login">
+                <Button size="sm" className="h-8 text-[10px] font-bold gap-2 bg-primary text-background">
+                  <LogIn size={14} /> প্রবেশ করুন
+                </Button>
+              </Link>
+            )}
 
             {userRole === 'authority' && (
               <div className="flex items-center gap-2 md:gap-4">
@@ -159,28 +218,8 @@ export default function ShurukkhaDashboard() {
                     className="scale-75 data-[state=checked]:bg-accent" 
                   />
                 </div>
-                {(isAutoMode || !isLockedDown) && (
-                  <Button 
-                    variant="destructive" 
-                    size="sm" 
-                    className="h-7 md:h-8 px-2 md:px-3 text-[8px] md:text-[10px] font-bold gap-1"
-                    onClick={handleEmergencyKillSwitch}
-                  >
-                    <PowerOff size={10} /> <span className="hidden xs:inline">STOP</span>
-                  </Button>
-                )}
               </div>
             )}
-            
-            <div className="flex items-center gap-1 md:gap-3">
-              {isLockedDown ? (
-                <Badge variant="destructive" className="h-6 gap-1 px-2"><Lock size={10} /> <span className="hidden xs:inline text-[8px]">SECURE</span></Badge>
-              ) : (
-                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-primary">
-                  {isOffline ? <WifiOff size={18} className="text-destructive" /> : <Wifi size={18} className="text-accent" />}
-                </Button>
-              )}
-            </div>
           </div>
         </div>
       </header>

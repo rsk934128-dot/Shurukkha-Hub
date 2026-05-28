@@ -1,10 +1,9 @@
-import type {Metadata} from 'next';
+
+'use client';
+import { initializeFirebase, FirebaseClientProvider } from '@/firebase';
 import './globals.css';
 
-export const metadata: Metadata = {
-  title: 'Shurukkha Hub | সিরাজগঞ্জ সুরক্ষা',
-  description: 'Public Safety and Disaster Management for Sirajganj',
-};
+const { firebaseApp, firestore, auth } = initializeFirebase();
 
 export default function RootLayout({
   children,
@@ -19,7 +18,9 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased selection:bg-primary/30">
-        {children}
+        <FirebaseClientProvider firebaseApp={firebaseApp} firestore={firestore} auth={auth}>
+          {children}
+        </FirebaseClientProvider>
       </body>
     </html>
   );
