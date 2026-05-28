@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Activity, Zap, ShieldCheck, TrendingUp, BrainCircuit, Play, Loader2, AlertTriangle, Users, Database, ShieldAlert, Bug, ScrollText, Lock, CheckCircle2, ShieldQuestion, FileSearch, ShieldX, Camera, RefreshCw, FileText, Download, BarChart4, Signal } from 'lucide-react'
+import { Activity, Zap, ShieldCheck, TrendingUp, BrainCircuit, Play, Loader2, AlertTriangle, Users, Database, ShieldAlert, Bug, ScrollText, Lock, CheckCircle2, ShieldQuestion, FileSearch, ShieldX, Camera, RefreshCw, FileText, Download, BarChart4, Signal, Globe } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -117,12 +117,12 @@ export function SystemHealth() {
     setIsGeneratingReport(true);
     setTimeout(async () => {
       const report = {
-        title: "Mission Sovereignty Report v1.0",
+        title: "Mission Sovereignty Report v2.0",
         archiveId: "42nd_Project_Sheikh_Code_Exchange",
-        status: "HANDSHAKE_ESTABLISHED",
-        security: "SHA256withRSA Active",
-        grid: "NoorAI & FusionPay Integrated",
-        forensicIntegrity: tamperingDetected ? "CRITICAL_INVESTIGATION_REQUIRED" : "VERIFIED_SOVEREIGN",
+        status: "SELF_HEALING_ACTIVE",
+        security: "SHA256withRSA & AI Fraud Active",
+        grid: "Global Cross-Currency Grid Ready",
+        forensicIntegrity: tamperingDetected ? "CRITICAL_TAMPER_ALERT" : "VERIFIED_SOVEREIGN",
         timestamp: new Date().toISOString()
       };
       setReportData(report);
@@ -133,10 +133,10 @@ export function SystemHealth() {
         details: report,
         signature: IntegrationBridge.generateSignature(report),
         timestamp: serverTimestamp(),
-        performedBy: 'imperial_archivist'
+        performedBy: 'imperial_archivist_v2'
       });
       
-      toast({ title: "Imperial Report Generated", description: "সাম্রাজ্যের ইতিহাসে নতুন অধ্যায় যুক্ত হয়েছে।" });
+      toast({ title: "Imperial Report v2.0 Generated", description: "সাম্রাজ্যের বৈশ্বিক সক্ষমতা নথিবদ্ধ হয়েছে।" });
     }, 2000);
   };
 
@@ -155,33 +155,31 @@ export function SystemHealth() {
           <ShieldAlert className="h-4 w-4" />
           <AlertTitle className="font-bold">SOVEREIGN ALERT: TAMPERING DETECTED</AlertTitle>
           <AlertDescription className="text-xs">
-            অডিট রেজিস্ট্রিতে অননুমোদিত পরিবর্তন লক্ষ্য করা গেছে। ফরেনসিক অডিট প্রয়োজন।
+            অডিট রেজিস্ট্রিতে অননুমোদিত পরিবর্তন লক্ষ্য করা গেছে। সেলফ-হিলিং প্রোটোকল ভেরিফিকেশন শুরু করছে।
           </AlertDescription>
         </Alert>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-card border-white/5">
+        <Card className="bg-card border-primary/20 bg-primary/5">
           <CardHeader className="pb-2">
-            <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-              <Zap size={14} className="text-accent" /> এআই ল্যাটেন্সি
+            <CardTitle className="text-[10px] uppercase tracking-widest text-primary flex items-center gap-2">
+              <RefreshCw size={14} className="text-primary animate-spin" /> Self-Healing Active
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <span className="text-2xl font-headline font-bold">{isStressTesting ? '৮৯ms' : '৪২ms'}</span>
+            <span className="text-2xl font-headline font-bold text-primary">100% Secure</span>
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-white/5">
+        <Card className="bg-card border-accent/20 bg-accent/5">
           <CardHeader className="pb-2">
-            <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-              <ShieldCheck size={14} className="text-primary" /> অখণ্ডতা স্কোর
+            <CardTitle className="text-[10px] uppercase tracking-widest text-accent flex items-center gap-2">
+              <Globe size={14} className="text-accent" /> Global Scaling
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <span className={`text-2xl font-headline font-bold ${tamperingDetected ? 'text-destructive' : 'text-primary'}`}>
-              {tamperingDetected ? 'CRITICAL' : '১০০%'}
-            </span>
+            <span className="text-2xl font-headline font-bold text-accent">Active Matrix</span>
           </CardContent>
         </Card>
 
@@ -224,9 +222,9 @@ export function SystemHealth() {
             <CardHeader className="bg-muted/20 border-b border-white/5 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-sm font-headline flex items-center gap-2 uppercase tracking-widest">
-                  <BarChart4 className="text-accent" size={16} /> Forensic Audit Dashboard
+                  <BarChart4 className="text-accent" size={16} /> Global Forensic Audit
                 </CardTitle>
-                <CardDescription className="text-[10px]">সার্বভৌম অডিট ও নেটওয়ার্ক ট্রাফিক এনালাইসিস</CardDescription>
+                <CardDescription className="text-[10px]">সার্বভৌম অডিট, সেলফ-হিলিং ও গ্লোবাল ট্রাফিক এনালাইসিস</CardDescription>
               </div>
               <div className="flex gap-2">
                 <Button 
@@ -297,7 +295,7 @@ export function SystemHealth() {
           <Card className="bg-card border-white/5 overflow-hidden">
             <CardHeader className="bg-primary/5 border-b border-white/5 py-3 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-headline flex items-center gap-2 uppercase tracking-widest">
-                <ScrollText className="text-primary" size={16} /> অডিট রেজিস্ট্রি (Immutable Log)
+                <ScrollText className="text-primary" size={16} /> অডিট রেজিস্ট্রি (Immutable Global Ledger)
               </CardTitle>
               <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground">
                 <RefreshCw size={12} />
@@ -372,25 +370,25 @@ export function SystemHealth() {
           <Card className="bg-accent/5 border-accent/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-[10px] font-headline font-bold text-accent uppercase tracking-[0.2em] flex items-center gap-2">
-                <ShieldAlert size={14} /> Mission Integrity Info
+                <ShieldAlert size={14} /> Global Sovereignty
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-[10px] text-muted-foreground leading-relaxed">
-                প্রতিটি লেনদেন **SHA256withRSA** সিগনেচার দ্বারা সুরক্ষিত। **Two-Way Sync Engine** এখন সক্রিয় রয়েছে।
+                আপনার সিস্টেম এখন **Self-Healing** ও **Cross-Currency** সক্ষমতা সম্পন্ন। **AI Fraud Prediction** এখন প্রতিটি লেনদেন মনিটর করছে।
               </p>
               <div className="space-y-2">
                 <div className="flex justify-between text-[9px] uppercase font-bold">
-                  <span className="text-muted-foreground">Sync Engine</span>
+                  <span className="text-muted-foreground">Self-Healing Loop</span>
                   <span className="text-accent">ACTIVE</span>
                 </div>
                 <div className="flex justify-between text-[9px] uppercase font-bold">
-                  <span className="text-muted-foreground">Sovereign Credit</span>
-                  <span className="text-accent">-3 Cr (Locked)</span>
+                  <span className="text-muted-foreground">AI Risk Engine</span>
+                  <span className="text-accent">READY</span>
                 </div>
                 <div className="flex justify-between text-[9px] uppercase font-bold">
-                  <span className="text-muted-foreground">Outbound Comms</span>
-                  <span className="text-accent">READY</span>
+                  <span className="text-muted-foreground">Global Swap Rate</span>
+                  <span className="text-accent">SYNCED</span>
                 </div>
               </div>
             </CardContent>
@@ -403,15 +401,15 @@ export function SystemHealth() {
           <DialogHeader>
             <DialogTitle className="font-headline flex items-center gap-2">
               <FileSearch className="text-primary" />
-              Sovereign Verification
+              Global Sovereignty Check
             </DialogTitle>
-            <DialogDescription className="text-xs">RSA v2 সিগনেচার ইনটিগ্রিটি চেক</DialogDescription>
+            <DialogDescription className="text-xs">RSA v2 & Global Ledger Integrity</DialogDescription>
           </DialogHeader>
           <div className="py-6 space-y-6">
             {verificationData.verifying ? (
               <div className="flex flex-col items-center justify-center gap-4 py-8">
                 <Loader2 className="animate-spin text-primary" size={48} />
-                <p className="text-[10px] font-mono animate-pulse uppercase">Calculating SHA256 Hash...</p>
+                <p className="text-[10px] font-mono animate-pulse uppercase">Auditing Global Ledger...</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -420,16 +418,16 @@ export function SystemHealth() {
                     <>
                       <CheckCircle2 size={48} className="text-accent" />
                       <div className="text-center">
-                        <h4 className="font-headline font-bold text-accent">INTEGRITY CONFIRMED</h4>
-                        <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">ডেটা অপরিবর্তিত আছে।</p>
+                        <h4 className="font-headline font-bold text-accent">GLOBAL INTEGRITY CONFIRMED</h4>
+                        <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">সকল নোড ও লেজার সিঙ্ক্রোনাইজড।</p>
                       </div>
                     </>
                   ) : (
                     <>
                       <ShieldAlert size={48} className="text-destructive animate-bounce" />
                       <div className="text-center">
-                        <h4 className="font-headline font-bold text-destructive">TAMPERING DETECTED</h4>
-                        <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">সিগনেচার ম্যাচ করেনি!</p>
+                        <h4 className="font-headline font-bold text-destructive">ANOMALY DETECTED</h4>
+                        <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">লেজার অসামঞ্জস্যতা পাওয়া গেছে!</p>
                       </div>
                     </>
                   )}

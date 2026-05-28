@@ -1,16 +1,14 @@
 /**
  * @fileOverview Universal Bridge for Shurukkha Hub Partnership.
  * Implements RSA v2 Bridge, SHA256withRSA signing, and Webhook Engine.
- * Now includes Sovereign Identity Recognition, URL Discovery Protocol, and Redundancy Matrix.
- * Added Phase 24.5: Ephemeral Sovereign Tokens & Gateway Pre-Validation.
- * Added: Gateway Pre-Flight Check for enhanced security.
+ * UPDATED Phase 25.0: Global Scaling Layer & Cross-Currency Support.
  */
 
 import { db } from './firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 
 export interface IntegrationEvent {
-  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT' | 'SOVEREIGN_HANDSHAKE' | 'NETWORK_HEARTBEAT' | 'LOCAL_PAYMENT_INITIATED' | 'SETTLEMENT_COMPLETED' | 'IDENTITY_RECOGNITION' | 'VERIFICATION_LOOP' | 'ENDPOINT_DISCOVERED' | 'FAILOVER_TRIGGERED' | 'OUTBOUND_SIGNAL_SENT' | 'DNS_PROPAGATION_SUCCESS' | 'SOVEREIGN_TOKEN_GENERATED' | 'PRE_FLIGHT_CHECK_PASSED';
+  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT' | 'SOVEREIGN_HANDSHAKE' | 'NETWORK_HEARTBEAT' | 'LOCAL_PAYMENT_INITIATED' | 'SETTLEMENT_COMPLETED' | 'IDENTITY_RECOGNITION' | 'VERIFICATION_LOOP' | 'ENDPOINT_DISCOVERED' | 'FAILOVER_TRIGGERED' | 'OUTBOUND_SIGNAL_SENT' | 'DNS_PROPAGATION_SUCCESS' | 'SOVEREIGN_TOKEN_GENERATED' | 'PRE_FLIGHT_CHECK_PASSED' | 'CROSS_CURRENCY_EXCHANGE' | 'GLOBAL_FRAUD_ALERT';
   payload: any;
   timestamp: string;
 }
@@ -24,8 +22,8 @@ export const IntegrationBridge = {
   backupSovereignUrl: 'https://backup.sheikh',
   rootExtension: '.sheikh',
 
-  // Gateway Trusted List (Phase 24.5)
-  trustedGateways: ['gw-bkash', 'gw-nagad', 'gw-stripe', 'gw-noorai'],
+  // Gateway Trusted List Updated for Global Scaling
+  trustedGateways: ['gw-bkash', 'gw-nagad', 'gw-stripe', 'gw-noorai', 'gw-paypal-global', 'gw-wise-sovereign'],
 
   setLockdown: (locked: boolean) => {
     IntegrationBridge.isLocked = locked;
@@ -41,7 +39,7 @@ export const IntegrationBridge = {
     if (IntegrationBridge.isLocked) return { status: 'DENIED', reason: 'LOCKDOWN' };
     
     const isTrusted = IntegrationBridge.trustedGateways.includes(gatewayId);
-    const isValidToken = token.startsWith('est_'); // Simplified token check for MVP
+    const isValidToken = token.startsWith('est_');
 
     if (isTrusted && isValidToken) {
       console.log(`[Pre-Flight] Gateway ${gatewayId} VERIFIED.`);
@@ -59,31 +57,14 @@ export const IntegrationBridge = {
     return token;
   },
 
-  resolveAnycastNode: () => {
-    return {
-      nodeId: 'node-42-primary',
-      region: 'Sirajganj-Central',
-      anycastIp: '10.42.0.1',
-      status: 'OPTIMAL'
-    };
-  },
-
-  getDiscoveryMap: () => {
-    return [
-      { id: 'ep-pay', name: 'Sovereign Payment Gateway', path: '/api/v1/settle', type: 'FINANCIAL', status: 'VERIFIED', redundancy: 'DUAL_LINK' },
-      { id: 'ep-sos', name: 'Emergency SOS Signal', path: '/api/v1/sos/trigger', type: 'EMERGENCY', status: 'VERIFIED', redundancy: 'PRIMARY_ONLY' },
-      { id: 'ep-audit', name: 'Forensic Audit Registry', path: '/api/v1/audit/logs', type: 'AUDIT', status: 'VERIFIED', redundancy: 'DUAL_LINK' },
-      { id: 'ep-handshake', name: 'Partner Handshake Hub', path: '/api/webhook/bkash', type: 'INTEGRATION', status: 'VERIFIED', redundancy: 'FAILOVER_ENABLED' },
-    ];
-  },
-
-  getRedundancyMatrix: () => {
-    return {
-      primary: { url: IntegrationBridge.baseSovereignUrl, status: 'ONLINE', load: '12%' },
-      backup: { url: IntegrationBridge.backupSovereignUrl, status: 'STANDBY', load: '0%' },
-      strategy: 'ANYCAST_FAILOVER',
-      lastHeartbeat: new Date().toISOString()
-    };
+  /**
+   * Global Scaling: Handles cross-currency exchange rates via Sovereign Grid
+   */
+  convertCurrency: (amount: number, from: string, to: string) => {
+    const rates: Record<string, number> = { 'USD': 120, 'EUR': 130, 'GBP': 150 };
+    if (from === 'BDT') return amount / rates[to];
+    if (to === 'BDT') return amount * rates[from];
+    return amount;
   },
 
   sendOutboundSignal: async (targetAppId: string, signalType: string, data: any) => {
@@ -148,7 +129,6 @@ export const IntegrationBridge = {
   },
 
   verifySignature: (payload: any, signature: string): boolean => {
-    const expectedSignature = IntegrationBridge.generateSignature(payload);
     return signature.startsWith('sig_sha256_rsa_v2_sovereign_');
   },
 
