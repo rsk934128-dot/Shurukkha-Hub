@@ -76,15 +76,23 @@ export function CommunicationConsole() {
 
     const currentChatId = CommunicationOrchestrator.getChatId(user.uid, selectedContact.id);
 
+    // FIXED: Removed server-side orderBy to avoid missing index error.
+    // We will sort client-side in the onSnapshot callback.
     const q = query(
       collection(db, "messages"),
       where("chatId", "==", currentChatId),
-      orderBy("timestamp", "asc"),
       limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const chatMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+      // Sort messages client-side to bypass index requirements
+      const chatMsgs = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Message))
+        .sort((a, b) => {
+          const timeA = a.timestamp?.seconds || 0;
+          const timeB = b.timestamp?.seconds || 0;
+          return timeA - timeB;
+        });
       
       const lastMsg = chatMsgs[chatMsgs.length - 1];
       
@@ -97,10 +105,17 @@ export function CommunicationConsole() {
 
       setMessages(chatMsgs);
       setTimeout(scrollToBottom, 300);
+    }, async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/messages',
+          operation: 'list'
+        }));
+      }
     });
 
     return () => unsubscribe();
-  }, [selectedContact, user])
+  }, [selectedContact, user, playMessageSound]);
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
@@ -117,11 +132,17 @@ export function CommunicationConsole() {
     const content = input;
     setInput(''); 
     
-    await comm.sendMessage({
+    comm.sendMessage({
       senderId: user.uid,
       recipientId: selectedContact.id,
       content: content,
       type: 'text'
+    }).catch(async (err) => {
+       errorEmitter.emit('permission-error', new FirestorePermissionError({
+         path: '/messages',
+         operation: 'create',
+         requestResourceData: { content }
+       }));
     });
   }
 
@@ -129,7 +150,8 @@ export function CommunicationConsole() {
     if (!user || !selectedContact) return;
     const callSessionId = `call_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const sessionRef = doc(db, 'webrtc_sessions', callSessionId);
-    await setDoc(sessionRef, {
+    
+    setDoc(sessionRef, {
       callerId: user.uid,
       callerName: user.displayName || 'Sovereign Node',
       callerAvatar: user.photoURL || '',
@@ -139,6 +161,11 @@ export function CommunicationConsole() {
       status: 'ringing',
       type: type,
       timestamp: serverTimestamp()
+    }).catch(async (err) => {
+       errorEmitter.emit('permission-error', new FirestorePermissionError({
+         path: `/webrtc_sessions/${callSessionId}`,
+         operation: 'create'
+       }));
     });
   }
 
@@ -175,7 +202,7 @@ export function CommunicationConsole() {
                   <CardTitle className="text-[11px] md:text-sm font-headline font-bold uppercase tracking-widest truncate max-w-[100px] md:max-w-none">
                     {selectedContact.name}
                   </CardTitle>
-                  {selectedContact.role === 'admin' && <Badge variant="outline" className="text-[6px] md:text-[7px] h-3 border-accent/40 text-accent uppercase font-bold bg-accent/5">Admin</Badge>}
+                  {selectedContact.role === 'admin' && <Badge variant="outline" className="text-[6px] md:text-[7px] h-3 border-accent/20 text-accent uppercase font-bold bg-accent/5">Admin</Badge>}
                 </div>
                 <p className="text-[7px] md:text-[9px] text-muted-foreground font-mono uppercase tracking-tighter">SECURE_LINK</p>
               </div>
