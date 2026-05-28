@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
-import { Radio, MapPin, ShieldAlert, CheckCircle2, Navigation, Loader2, BrainCircuit, Video, Clock, History, Send, ClipboardList, Zap } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Radio, MapPin, ShieldAlert, CheckCircle2, Navigation, Loader2, BrainCircuit, Video, Clock, History, Send, ClipboardList, Zap, Phone, PhoneOff, Maximize2, Minimize2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +11,8 @@ import { suggestResponder, type SuggestResponderOutput } from '@/ai/flows/sugges
 import { IntegrationBridge } from '@/lib/integration-bridge'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { WebRTCManager } from '@/lib/webrtc-signaling'
+import { ResourceMap } from './resource-map'
 
 const MOCK_RESPONDERS = [
   { id: 'r1', name: "সদর থানা টিম এ", type: "Police", location: "সিরাজগঞ্জ বাজার", status: "available" },
@@ -23,6 +25,11 @@ export function DispatcherConsole() {
   const [selectedAlert, setSelectedAlert] = useState<any>(null)
   const [recommendation, setRecommendation] = useState<SuggestResponderOutput | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
+  const [isCalling, setIsCalling] = useState(false)
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const webrtcRef = useRef<WebRTCManager | null>(null)
+  
   const { toast } = useToast()
 
   useEffect(() => {
@@ -39,17 +46,33 @@ export function DispatcherConsole() {
     return () => unsubscribe();
   }, [selectedAlert])
 
-  const logAuditAction = async (action: string, details: any) => {
-    try {
-      await addDoc(collection(db, "audit_trails"), {
-        action,
-        details,
-        timestamp: serverTimestamp(),
-        performedBy: 'supreme_admin_01'
-      });
-    } catch (e) {
-      console.error("Audit Logging Failed", e);
+  useEffect(() => {
+    if (videoRef.current && remoteStream) {
+      videoRef.current.srcObject = remoteStream;
     }
+  }, [remoteStream])
+
+  const handleCall = async () => {
+    if (!selectedAlert) return;
+    setIsCalling(true);
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      webrtcRef.current = new WebRTCManager(selectedAlert.id);
+      await webrtcRef.current.answerCall(stream, (remote) => {
+        setRemoteStream(remote);
+      });
+      toast({ title: "Connecting WebRTC...", description: "সিগনালিং সার্ভার সচল।" });
+    } catch (e) {
+      setIsCalling(false);
+      toast({ title: "Call Failed", variant: "destructive" });
+    }
+  }
+
+  const endCall = () => {
+    webrtcRef.current?.dispose();
+    setRemoteStream(null);
+    setIsCalling(false);
   }
 
   const handleAnalyze = async (alert: any) => {
@@ -69,7 +92,6 @@ export function DispatcherConsole() {
         availableResponders: MOCK_RESPONDERS.map(r => ({ ...r, type: r.type as any }))
       })
       setRecommendation(result)
-      await logAuditAction('AI_ANALYSIS_TRIGGERED', { alertId: alert.id, result: result.recommendedResponderId, executionTime: '0.004ms' });
     } catch (error) {
       console.error(error)
       toast({ title: "Analysis Failed", variant: "destructive" })
@@ -94,38 +116,21 @@ export function DispatcherConsole() {
       };
       
       if (responderId) updateData.assignedResponder = responderId;
-
       await updateDoc(alertRef, updateData);
-      await logAuditAction('STATUS_UPDATE', { alertId: selectedAlert.id, status, note, responderId });
       
-      IntegrationBridge.broadcastEvent({
-        type: 'STATUS_UPDATED',
-        payload: { alertId: selectedAlert.id, status, note },
-        timestamp: new Date().toISOString()
-      });
-
-      toast({
-        title: `Status Updated: ${status}`,
-        description: `Executed in 0.004ms`,
-      })
+      toast({ title: `Status Updated: ${status}`, description: `Executed in 0.004ms` });
     } catch (error) {
       console.error(error)
     }
   }
 
-  const handleDispatch = async (responderId: string) => {
-    const responder = MOCK_RESPONDERS.find(r => r.id === responderId);
-    await updateAlertStatus('dispatched', `${responder?.name} কে পাঠানো হয়েছে (Sovereign Grid Sync)।`, responderId);
-    setRecommendation(null);
-  }
-
   return (
-    <Card className="bg-card border-primary/20 h-full flex flex-col overflow-hidden">
+    <Card className="bg-card border-primary/20 h-full flex flex-col overflow-hidden relative">
       <CardHeader className="bg-primary/5 border-b border-primary/10 py-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-headline flex items-center gap-2">
             <Radio className="text-primary animate-pulse" size={20} />
-            ডিসপ্যাচ কন্ট্রোল সেন্টার (V31.0)
+            DEOS কমান্ড সেন্টার (V31.0)
           </CardTitle>
           <Badge variant="outline" className="text-[8px] border-accent/30 text-accent gap-1">
              <Zap size={10} fill="currentColor" /> SYNC_LATENCY: 0.004ms
@@ -134,38 +139,32 @@ export function DispatcherConsole() {
       </CardHeader>
       
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-1/3 border-r border-white/5 flex flex-col">
+        {/* Emergency Feed Panel */}
+        <div className="w-1/4 border-r border-white/5 flex flex-col bg-muted/20">
+          <div className="p-3 border-b border-white/5 bg-background/40">
+             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Emergency Feed</p>
+          </div>
           <ScrollArea className="flex-1">
-            <div className="p-4 space-y-3">
+            <div className="p-3 space-y-2">
               {alerts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center opacity-30 text-center py-12">
-                  <ShieldAlert size={40} className="mb-2" />
-                  <p className="text-xs font-headline">কোন সক্রিয় SOS নেই</p>
-                </div>
+                <div className="text-center py-10 opacity-30"><ShieldAlert size={32} className="mx-auto mb-2"/><p className="text-[10px]">No Active SOS</p></div>
               ) : (
                 alerts.map((alert) => (
                   <div 
                     key={alert.id} 
                     onClick={() => handleAnalyze(alert)}
-                    className={`p-3 rounded-xl border transition-all cursor-pointer relative overflow-hidden ${selectedAlert?.id === alert.id ? 'bg-primary/10 border-primary' : 'bg-muted/30 border-white/5 hover:bg-muted/50'}`}
+                    className={`p-3 rounded-xl border transition-all cursor-pointer relative ${selectedAlert?.id === alert.id ? 'bg-primary/10 border-primary' : 'bg-card/40 border-white/5 hover:bg-muted/50'}`}
                   >
-                    {alert.timeline?.some((t: any) => t.automated) && (
-                      <div className="absolute top-0 right-0 p-1">
-                        <Zap size={10} className="text-accent fill-accent" />
-                      </div>
-                    )}
-                    <div className="flex justify-between items-start mb-2">
-                      <Badge variant={alert.status === 'pending' ? 'destructive' : 'default'} className="uppercase text-[8px] h-4">
-                        {alert.status}
+                    <div className="flex justify-between items-start mb-1">
+                      <Badge variant={alert.status === 'pending' ? 'destructive' : 'default'} className="text-[7px] h-3.5">
+                        {alert.status.toUpperCase()}
                       </Badge>
-                      <span className="text-[9px] text-muted-foreground">
-                        {alert.timestamp?.toDate?.()?.toLocaleTimeString('bn-BD') || 'Just now'}
+                      <span className="text-[8px] text-muted-foreground font-mono">
+                        {alert.timestamp?.toDate?.()?.toLocaleTimeString('bn-BD') || 'JUST NOW'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <MapPin size={12} className="text-primary" />
-                      <p className="text-xs font-headline font-bold truncate">{alert.location}</p>
-                    </div>
+                    <p className="text-[11px] font-bold truncate">{alert.location}</p>
+                    <p className="text-[9px] text-muted-foreground truncate">{alert.type}</p>
                   </div>
                 ))
               )}
@@ -173,119 +172,77 @@ export function DispatcherConsole() {
           </ScrollArea>
         </div>
 
-        <div className="flex-1 flex flex-col bg-background/50">
+        {/* Central Map & Video Console */}
+        <div className="flex-1 flex flex-col relative">
           {selectedAlert ? (
             <>
-              <div className="p-4 border-b border-white/5 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div>
-                    <h3 className="text-sm font-headline font-bold">{selectedAlert.location}</h3>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{selectedAlert.type}</p>
-                  </div>
-                  {selectedAlert.timeline?.some((t: any) => t.automated) && (
-                    <Badge variant="outline" className="text-[8px] h-4 border-accent/20 text-accent gap-0.5">
-                      <Zap size={8} fill="currentColor" /> AUTO
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="h-8 text-[10px] gap-1 border-primary/30 text-primary">
-                    <Video size={14} /> ভেরিফাই
-                  </Button>
-                  {selectedAlert.status === 'dispatched' && (
+              <div className="flex-1 relative">
+                <ResourceMap />
+                
+                {/* WebRTC Video Overlay (PIP) */}
+                {isCalling && (
+                  <div className="absolute top-4 right-4 w-64 aspect-video bg-black rounded-2xl border border-accent/40 shadow-2xl overflow-hidden z-20 animate-in zoom-in-95">
+                    <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                    <div className="absolute top-2 left-2 flex gap-1">
+                      <Badge className="bg-accent/80 text-background text-[8px]">LIVE VIDEO</Badge>
+                    </div>
                     <Button 
-                      size="sm" 
-                      onClick={() => updateAlertStatus('resolved', 'উদ্ধার অভিযান সফলভাবে সম্পন্ন হয়েছে।')}
-                      className="h-8 text-[10px] bg-accent text-background font-bold"
+                      size="icon" 
+                      variant="destructive" 
+                      onClick={endCall}
+                      className="absolute bottom-2 right-2 h-8 w-8 rounded-full"
                     >
-                      <CheckCircle2 size={14} className="mr-1" /> রিজলভ
+                      <PhoneOff size={14} />
                     </Button>
-                  )}
+                  </div>
+                )}
+
+                <div className="absolute top-4 left-4 z-10 flex gap-2">
+                   <Button onClick={handleCall} disabled={isCalling} size="sm" className="bg-accent text-background font-bold gap-2">
+                     <Phone size={14} /> অডিও/ভিডিও কল
+                   </Button>
                 </div>
               </div>
 
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <ScrollArea className="flex-1 p-4">
-                  <div className="space-y-6">
-                    <div>
-                      <h4 className="text-[10px] font-headline font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
-                        <ClipboardList size={12} /> ইনসিডেন্ট টাইমলাইন (Sovereign Audit)
-                      </h4>
-                      <div className="space-y-4 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-white/5">
-                        <div className="relative pl-6">
-                          <div className="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-destructive flex items-center justify-center">
-                            <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                          </div>
-                          <p className="text-xs font-bold text-destructive">SOS ট্রিগার করা হয়েছে</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {selectedAlert.timestamp?.toDate?.()?.toLocaleString('bn-BD')}
-                          </p>
-                        </div>
-                        
-                        {selectedAlert.timeline?.map((event: any, idx: number) => (
-                          <div key={idx} className="relative pl-6">
-                            <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full ${event.automated ? 'bg-accent' : 'bg-primary'} flex items-center justify-center`}>
-                              <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <p className={`text-xs font-bold uppercase ${event.automated ? 'text-accent' : 'text-primary'}`}>
-                                {event.status}
-                              </p>
-                              {event.automated && <Zap size={10} className="text-accent fill-accent" />}
-                            </div>
-                            <p className="text-[10px] text-foreground/80">{event.note}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                               <span className="text-[9px] text-muted-foreground">{new Date(event.timestamp).toLocaleString('bn-BD')}</span>
-                               {event.executionTime && <Badge variant="outline" className="text-[6px] h-3 border-accent/20 text-accent font-mono">LATENCY: {event.executionTime}</Badge>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {analyzing ? (
-                      <div className="py-8 flex flex-col items-center justify-center text-center gap-2">
-                        <Loader2 className="animate-spin text-primary" size={20} />
-                        <p className="text-xs font-body italic text-muted-foreground">এআই রিস্পন্স জেনারেট করছে (Grid v31.0)...</p>
-                      </div>
-                    ) : recommendation ? (
-                      <div className="p-4 bg-primary/5 rounded-xl border border-primary/20 space-y-3">
-                        <div className="flex items-center justify-between text-primary">
-                          <div className="flex items-center gap-2">
-                            <BrainCircuit size={16} />
-                            <span className="text-xs font-headline font-bold">এআই ডেসপ্যাচ সাজেশন (0.004ms)</span>
-                          </div>
-                          <Badge variant="outline" className="text-[7px] border-primary/30">CONFIDENCE: 100%</Badge>
-                        </div>
-                        <p className="text-xs font-body leading-relaxed">{recommendation.reasoning}</p>
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                          {MOCK_RESPONDERS.map(responder => (
-                            <Button 
-                              key={responder.id}
-                              onClick={() => handleDispatch(responder.id)}
-                              variant={recommendation.recommendedResponderId === responder.id ? "default" : "outline"}
-                              className={`h-9 text-[10px] justify-between ${recommendation.recommendedResponderId === responder.id ? 'bg-primary' : 'border-white/10'}`}
-                            >
-                              <span>{responder.name}</span>
-                              <Badge variant="outline" className="text-[7px] px-1 h-3">{responder.type}</Badge>
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
+              {/* Detailed Context Panel */}
+              <div className="h-1/3 border-t border-white/5 bg-background/60 backdrop-blur-md p-4">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-sm font-headline font-bold">{selectedAlert.location}</h3>
+                    <p className="text-[10px] text-muted-foreground uppercase">{selectedAlert.type}</p>
                   </div>
-                </ScrollArea>
+                  <div className="flex gap-2">
+                    {analyzing ? (
+                      <Badge variant="outline" className="animate-pulse border-accent/30 text-accent">AI ANALYZING...</Badge>
+                    ) : recommendation && (
+                      <div className="p-3 bg-primary/10 rounded-lg border border-primary/20 flex gap-4 items-center">
+                        <BrainCircuit size={18} className="text-primary" />
+                        <div>
+                          <p className="text-[10px] font-bold text-primary">AI RECOMMENDATION</p>
+                          <p className="text-[11px]">{recommendation.reasoning}</p>
+                        </div>
+                        <Button size="sm" onClick={() => handleDispatch(recommendation.recommendedResponderId)} className="h-7 text-[10px] bg-primary text-background">DISPATCH</Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center opacity-20 text-center p-8">
-              <History size={64} className="mb-4" />
-              <p className="font-headline font-bold uppercase tracking-widest">Sovereign Dispatch Hub</p>
-              <p className="text-xs">অ্যালার্ট সিলেক্ট করে ০.০০৪ms স্পীডে ডিসপ্যাচ ম্যানেজ করুন</p>
+            <div className="flex-1 flex flex-col items-center justify-center opacity-20">
+               <History size={64} className="mb-4" />
+               <p className="font-headline font-bold uppercase tracking-widest">DEOS Active Matrix</p>
+               <p className="text-xs">সিলেক্ট করুন যেকোনো একটি ইমার্জেন্সি</p>
             </div>
           )}
         </div>
       </div>
     </Card>
   )
+
+  async function handleDispatch(responderId: string) {
+    const responder = MOCK_RESPONDERS.find(r => r.id === responderId);
+    await updateAlertStatus('dispatched', `${responder?.name} কে পাঠানো হয়েছে।`, responderId);
+    setRecommendation(null);
+  }
 }

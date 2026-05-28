@@ -1,7 +1,6 @@
-
 /**
- * @fileOverview Offline-first storage utility for disaster intelligence and reports.
- * Uses localStorage to persist data during network outages.
+ * @fileOverview Offline-first storage utility with DEOS Survival Queue.
+ * Persists critical data and manages an outgoing sync queue for network recovery.
  */
 
 import { GenerateFloodSurvivalAdviceOutput } from "@/ai/flows/generate-flood-survival-advice";
@@ -9,7 +8,8 @@ import { GenerateFloodSurvivalAdviceOutput } from "@/ai/flows/generate-flood-sur
 const STORAGE_KEYS = {
   ADVICE_HISTORY: 'shurukkha_advice_history',
   INCIDENT_REPORTS: 'shurukkha_reports',
-  SOS_STATUS: 'shurukkha_sos_active'
+  SOS_STATUS: 'shurukkha_sos_active',
+  SYNC_QUEUE: 'shurukkha_sync_queue'
 };
 
 export const DisasterStorage = {
@@ -31,11 +31,36 @@ export const DisasterStorage = {
     return stored ? JSON.parse(stored) : [];
   },
 
-  // Save incident reports locally
+  // Survival Mode Queue Management
+  addToSyncQueue: (action: string, payload: any) => {
+    if (typeof window === 'undefined') return;
+    const queue = DisasterStorage.getSyncQueue();
+    const entry = {
+      id: 'q_' + Date.now(),
+      action,
+      payload,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify([...queue, entry]));
+  },
+
+  getSyncQueue: (): any[] => {
+    if (typeof window === 'undefined') return [];
+    const stored = localStorage.getItem(STORAGE_KEYS.SYNC_QUEUE);
+    return stored ? JSON.parse(stored) : [];
+  },
+
+  clearSyncQueue: () => {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(STORAGE_KEYS.SYNC_QUEUE);
+  },
+
+  // Legacy report storage (maintained for compatibility)
   saveReport: (report: any) => {
     if (typeof window === 'undefined') return;
     const reports = DisasterStorage.getReports();
     localStorage.setItem(STORAGE_KEYS.INCIDENT_REPORTS, JSON.stringify([...reports, report]));
+    DisasterStorage.addToSyncQueue('REPORT_INCIDENT', report);
   },
 
   getReports: (): any[] => {
@@ -52,6 +77,7 @@ export const DisasterStorage = {
   setSOS: (active: boolean) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem(STORAGE_KEYS.SOS_STATUS, JSON.stringify(active));
+    if (active) DisasterStorage.addToSyncQueue('SOS_TRIGGER', { status: 'pending' });
   },
 
   getSOS: (): boolean => {

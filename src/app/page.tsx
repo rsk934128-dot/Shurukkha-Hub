@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -54,6 +54,7 @@ export default function ShurukkhaDashboard() {
   const [sessionValid, setSessionValid] = useState(true)
   const [activeView, setActiveView] = useState('citizen')
   const [activeSubTab, setActiveSubTab] = useState('ops')
+  const [survivalMode, setSurvivalMode] = useState(false)
   
   const firestore = useFirestore()
   const auth = useAuth()
@@ -77,7 +78,6 @@ export default function ShurukkhaDashboard() {
       router.push('/login')
     }
 
-    // Check device integrity
     const storedFp = localStorage.getItem('sovereign_device_id')
     if (storedFp && !DeviceValidator.validateIntegrity(storedFp)) {
       handleEmergencyKillSwitch()
@@ -125,26 +125,36 @@ export default function ShurukkhaDashboard() {
   }, [user, firestore])
 
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOffline(false)
-      syncOfflineData()
-    }
-    const handleOffline = () => setIsOffline(true)
+    const handleConnectivityChange = () => {
+      const online = navigator.onLine;
+      setIsOffline(!online);
+      if (online) {
+        setSurvivalMode(false);
+        syncOfflineData();
+      } else {
+        setSurvivalMode(true);
+        toast({
+          title: "SURVIVAL MODE ACTIVE",
+          description: "ইন্টারনেট নেই। অফলাইন কিউয়িং শুরু হয়েছে।",
+          variant: "destructive"
+        });
+      }
+    };
     
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-    setIsOffline(!navigator.onLine)
+    window.addEventListener('online', handleConnectivityChange)
+    window.addEventListener('offline', handleConnectivityChange)
+    handleConnectivityChange();
     
     const interval = setInterval(() => {
       setIsLockedDown(IntegrationBridge.isLocked);
     }, 1000);
 
     const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
-    SovereignAudit.logMilestone('Phase_31.0', 'Admin Decree: rubels1k994@gmail.com Elevated to Sovereign Admin');
+    SovereignAudit.logMilestone('Phase_31.0', 'Engineering Milestone: DEOS Command Center Active');
 
     return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('online', handleConnectivityChange)
+      window.removeEventListener('offline', handleConnectivityChange)
       unsubscribeOrchestrator()
       clearInterval(interval);
     }
@@ -195,7 +205,7 @@ export default function ShurukkhaDashboard() {
         sessionStorage.clear()
         localStorage.removeItem('sovereign_session_token')
         await signOut(auth)
-        toast({ title: "সফলভাবে লগআউট করা হয়েছে", description: "আবার শীঘ্রই দেখা হবে।" })
+        toast({ title: "সফলভাবে লগআউট করা হয়েছে" })
         router.push('/login')
       } catch (e) {
         toast({ title: "লগআউট ব্যর্থ হয়েছে", variant: "destructive" })
@@ -254,17 +264,18 @@ export default function ShurukkhaDashboard() {
               </div>
               
               <div className="flex items-center gap-2 md:gap-6 flex-1 justify-end">
+                {survivalMode && (
+                  <Badge variant="destructive" className="animate-pulse gap-1 text-[8px] h-6 px-2">
+                    <SignalLow size={10} /> SURVIVAL_MODE
+                  </Badge>
+                )}
                 <Link href="/welcome" className="hidden lg:block">
                   <Button variant="outline" size="sm" className="h-8 border-accent/20 text-accent gap-2 text-[10px] font-bold uppercase tracking-widest bg-accent/5 hover:bg-accent/10">
                     <Sparkles size={14} /> ফিচার ট্যুর
                   </Button>
                 </Link>
-                <div className="hidden xl:flex items-center gap-2 px-3 py-1 bg-accent/5 border border-accent/20 rounded-full">
-                  <Lock size={12} className="text-accent" />
-                  <span className="text-[9px] font-mono text-accent uppercase tracking-tighter">Sovereign_Active_Grid</span>
-                </div>
                 <SovereignStatusWidget />
-                {user ? (
+                {user && (
                   <div className="flex items-center gap-3">
                     <div className="hidden sm:block text-right cursor-pointer" onClick={() => handleSidebarNavigate('profile')}>
                       <p className="text-[10px] font-bold leading-none">{user.displayName}</p>
@@ -274,22 +285,6 @@ export default function ShurukkhaDashboard() {
                       <AvatarImage src={user.photoURL || ''} />
                       <AvatarFallback className="bg-primary/10 text-[10px]">{user.displayName?.substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
-                    <Button variant="ghost" size="icon" onClick={handleLogout} className="h-8 w-8 text-muted-foreground hover:text-destructive group transition-all">
-                      <LogOut size={16} className="group-hover:rotate-12 transition-transform" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Link href="/login">
-                    <Button size="sm" className="h-8 text-[10px] font-bold gap-2 bg-primary text-background">
-                      <LogIn size={14} /> প্রবেশ করুন
-                    </Button>
-                  </Link>
-                )}
-                {(userRole === 'authority' || userRole === 'admin') && (
-                  <div className="hidden md:flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-full border border-white/5">
-                    <BrainCircuit size={14} className={isAutoMode ? "text-accent animate-pulse" : "text-muted-foreground"} />
-                    <Label htmlFor="auto-mode" className="text-[10px] uppercase font-bold tracking-widest cursor-pointer">Auto</Label>
-                    <Switch id="auto-mode" checked={isAutoMode} onCheckedChange={handleAutoModeToggle} className="scale-75 data-[state=checked]:bg-accent" />
                   </div>
                 )}
               </div>
@@ -305,14 +300,9 @@ export default function ShurukkhaDashboard() {
                   <h2 className="text-xl md:text-3xl font-headline font-bold tracking-tight">
                     {activeView === 'citizen' ? 'সুরক্ষা ড্যাশবোর্ড' : activeView === 'profile' ? 'সার্বভৌম পরিচয়পত্র' : 'কমান্ড সেন্টার'}
                   </h2>
-                  {(isLockedDown || userRole === 'admin') && (
-                    <Badge variant="outline" className={`${userRole === 'admin' ? 'border-accent/40 text-accent' : 'border-destructive/30 text-destructive'} gap-1 text-[8px] h-5`}>
-                      <Lock size={8} /> {userRole === 'admin' ? 'SUPREME ADMIN' : 'SOVEREIGN'}
-                    </Badge>
-                  )}
                 </div>
                 <p className="text-muted-foreground text-xs md:text-sm font-body">
-                  {activeView === 'citizen' ? 'সিরাজগঞ্জ পাবলিক সেফটি পোর্টাল' : activeView === 'profile' ? 'আপনার রাজকীয় পরিচয় ও ফরেনসিক তথ্য' : 'মনিটরিং ও ডিসপ্যাচ ম্যানেজমেন্ট (Grid v31.0)'}
+                  {activeView === 'citizen' ? 'সিরাজগঞ্জ পাবলিক সেফটি পোর্টাল' : activeView === 'profile' ? 'আপনার রাজকীয় পরিচয় ও ফরেনসিক তথ্য' : 'DEOS অটোনোমাস ডিসপ্যাচ গ্রিড'}
                 </p>
               </div>
             </div>
@@ -345,23 +335,8 @@ export default function ShurukkhaDashboard() {
               <div className="w-full">
                 <Tabs value={activeSubTab} onValueChange={handleSidebarNavigate} className="w-full">
                   <TabsContent value="ops" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
-                    <div className="lg:col-span-8 space-y-6">
-                      {isAutoMode && !isLockedDown && (
-                        <Alert className="bg-accent/10 border-accent/20 py-2">
-                          <Zap className="h-3 w-3 text-accent" />
-                          <AlertTitle className="text-[10px] font-bold uppercase text-accent">Autonomous Active (0.004ms Sync)</AlertTitle>
-                        </Alert>
-                      )}
-                      <div className="h-auto md:h-[calc(100vh-450px)] min-h-[400px]">
-                        <DispatcherConsole />
-                      </div>
-                      <div className="h-auto md:h-[350px]">
-                        <RiverTelemetry />
-                      </div>
-                    </div>
-                    <div className="lg:col-span-4 space-y-6 h-full">
-                      <ResourceMap />
-                      <EmergencyDirectory />
+                    <div className="lg:col-span-12 space-y-6 h-[calc(100vh-250px)]">
+                      <DispatcherConsole />
                     </div>
                   </TabsContent>
                   <TabsContent value="analytics" className="space-y-6 mt-0">
@@ -378,12 +353,6 @@ export default function ShurukkhaDashboard() {
                       <div className="lg:col-span-12">
                         <SovereignDomainManager />
                       </div>
-                      <div className="lg:col-span-7">
-                        <IntegrationPanel />
-                      </div>
-                      <div className="lg:col-span-5">
-                        <NetworkStatusBoard />
-                      </div>
                     </div>
                   </TabsContent>
                   <TabsContent value="treasury" className="space-y-6 mt-0">
@@ -393,12 +362,6 @@ export default function ShurukkhaDashboard() {
               </div>
             )}
           </main>
-
-          <footer className="border-t border-white/5 py-6 md:py-8 bg-muted/20 mt-12">
-            <div className="container mx-auto px-4 text-center">
-              <p className="text-[8px] md:text-xs text-muted-foreground font-body uppercase tracking-[0.2em] md:tracking-[0.4em]">Shurukkha Sovereign Hub © ২০২৪ | সিরাজগঞ্জ সুরক্ষা | 42nd Project | V31.0_SOVEREIGN</p>
-            </div>
-          </footer>
         </div>
       </div>
       <AlertCenter />
