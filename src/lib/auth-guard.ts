@@ -3,9 +3,8 @@
  * @fileOverview Imperial Auth Guard.
  * Manages session validity and Ephemeral Sovereign Tokens.
  * Implements Zero-Trust validation for mission-critical actions.
+ * Updated: Uses localStorage for persistence across redirects and sessions.
  */
-
-import { IntegrationBridge } from './integration-bridge';
 
 export const AuthGuard = {
   /**
@@ -13,15 +12,15 @@ export const AuthGuard = {
    */
   isValidSession: (): boolean => {
     if (typeof window === 'undefined') return false;
-    const token = sessionStorage.getItem('sovereign_session_token');
-    const expiry = sessionStorage.getItem('sovereign_session_expiry');
+    const token = localStorage.getItem('sovereign_session_token');
+    const expiry = localStorage.getItem('sovereign_session_expiry');
     
     if (!token || !expiry) return false;
     
-    // Check if token has expired (10 minutes TTL)
+    // Check if token has expired (30 minutes TTL)
     if (Date.now() > parseInt(expiry)) {
-      sessionStorage.removeItem('sovereign_session_token');
-      sessionStorage.removeItem('sovereign_session_expiry');
+      localStorage.removeItem('sovereign_session_token');
+      localStorage.removeItem('sovereign_session_expiry');
       return false;
     }
     
@@ -33,9 +32,19 @@ export const AuthGuard = {
    */
   establishSession: (token: string) => {
     if (typeof window === 'undefined') return;
-    const ttl = 30 * 60 * 1000; // Extended to 30 Minutes for better stability
-    sessionStorage.setItem('sovereign_session_token', token);
-    sessionStorage.setItem('sovereign_session_expiry', (Date.now() + ttl).toString());
+    const ttl = 30 * 60 * 1000; // 30 Minutes for stability
+    localStorage.setItem('sovereign_session_token', token);
+    localStorage.setItem('sovereign_session_expiry', (Date.now() + ttl).toString());
+  },
+
+  /**
+   * Clears the current sovereign session.
+   */
+  clearSession: () => {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem('sovereign_session_token');
+    localStorage.removeItem('sovereign_session_expiry');
+    sessionStorage.clear();
   },
 
   /**

@@ -1,8 +1,8 @@
 
 "use client"
 
-import React, { useState, useEffect } from 'react'
-import { Shield, Globe, Lock, LogIn, Loader2, Key, Fingerprint, Star, Zap } from 'lucide-react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { Shield, Globe, Lock, LogIn, Loader2, Key, Fingerprint, Star, Zap, ArrowRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth, useUser, useFirestore } from '@/firebase'
@@ -27,38 +27,12 @@ export default function LoginPage() {
   const [showBiometric, setShowBiometric] = useState(false)
   const [showSecurityKey, setShowSecurityKey] = useState(false)
   const [pendingSecret, setPendingSecret] = useState<string | null>(null)
+  const [handshakeComplete, setHandshakeComplete] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
-  // Handle Redirect Result on Mount
-  useEffect(() => {
-    if (auth) {
-      getRedirectResult(auth)
-        .then((result) => {
-          if (result?.user) {
-            console.log("[Auth] Redirect successful, user recognized.");
-            // The main user effect will catch this and trigger handshake
-          }
-        })
-        .catch((error) => {
-          console.error("[Auth] Redirect Error:", error.code);
-        });
-    }
-  }, [auth]);
-
-  // Main Auth Flow: Handshake or Redirect to Dashboard
-  useEffect(() => {
-    if (user && !loading && !isHandshaking && !show2FA && !showBiometric && !showSecurityKey) {
-      if (AuthGuard.isValidSession()) {
-        router.push('/dashboard')
-      } else {
-        performHandshake()
-      }
-    }
-  }, [user, loading, router, isHandshaking, show2FA, showBiometric, showSecurityKey])
-
-  const performHandshake = async () => {
-    if (!user || !firestore) return
+  const performHandshake = useCallback(async () => {
+    if (!user || !firestore || isHandshaking || handshakeComplete) return
     setIsHandshaking(true)
     
     try {
@@ -69,10 +43,10 @@ export default function LoginPage() {
         const userSnap = await getDoc(userRef);
         userData = userSnap.data();
       } catch (e: any) {
-        console.warn("[Handshake] Offline mode or Firestore unavailable. Proceeding with local handshake.");
+        console.warn("[Handshake] Firestore read skipped (offline/init).");
       }
 
-      if (userData?.twoFactorEnabled && userData?.twoFactorSecret) {
+      if (userData?.twoFactorEnabled && userData?.twoFactorSecret && !show2FA) {
         setPendingSecret(userData.twoFactorSecret);
         setShow2FA(true);
         setIsHandshaking(false);
@@ -94,11 +68,14 @@ export default function LoginPage() {
         AuthGuard.establishSession(data.token)
         localStorage.setItem('sovereign_device_id', fingerprint)
         
+        setHandshakeComplete(true)
         toast({
           title: "Sovereign Handshake ACTIVE",
-          description: "আপনার সেশন এনক্রিপ্ট করা হয়েছে।",
+          description: "আপনার সেশন সফলভাবে এনক্রিপ্ট করা হয়েছে।",
         })
-        router.push('/dashboard')
+        
+        // Immediate full-page navigation for reliability
+        window.location.href = '/dashboard'
       } else {
         throw new Error("Handshake Denied")
       }
@@ -107,11 +84,8 @@ export default function LoginPage() {
       if (!navigator.onLine) {
         const localToken = 'est_local_' + Math.random().toString(36).substring(7);
         AuthGuard.establishSession(localToken);
-        toast({
-          title: "OFFLINE MODE ACTIVE",
-          description: "সার্ভারের সাথে সংযোগ নেই, লোকাল সেশন ব্যবহার করা হচ্ছে।",
-        })
-        router.push('/dashboard')
+        setHandshakeComplete(true)
+        window.location.href = '/dashboard'
       } else {
         toast({
           title: "AUTH_FAILURE",
@@ -122,120 +96,88 @@ export default function LoginPage() {
     } finally {
       setIsHandshaking(false)
     }
+  }, [user, firestore, isHandshaking, handshakeComplete, show2FA, toast])
+
+  // Handle Auth Redirect Result
+  useEffect(() => {
+    if (auth) {
+      getRedirectResult(auth).catch((error) => console.error("[Auth] Redirect Error:", error.code));
+    }
+  }, [auth]);
+
+  // Main Auth Flow Trigger
+  useEffect(() => {
+    if (user && !loading && !isHandshaking && !show2FA && !showBiometric && !showSecurityKey && !handshakeComplete) {
+      if (AuthGuard.isValidSession()) {
+        router.replace('/dashboard')
+      } else {
+        performHandshake()
+      }
+    }
+  }, [user, loading, isHandshaking, show2FA, showBiometric, showSecurityKey, handshakeComplete, performHandshake, router])
+
+  const handleGoogleLogin = async () => {
+    if (!auth) return
+    setIsSigningIn(true)
+    const provider = new GoogleAuthProvider()
+    provider.setCustomParameters({ prompt: 'select_account' });
+    
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      if (error.code === 'auth/popup-closed-by-user') {
+        setIsSigningIn(false)
+        return
+      }
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (redirectError) {
+        setIsSigningIn(false);
+        toast({ title: "লগইন ব্যর্থ", variant: "destructive" });
+      }
+    } finally {
+      setTimeout(() => setIsSigningIn(false), 2000);
+    }
   }
 
   const handleVerify2FA = async (code: string): Promise<boolean> => {
     if (!pendingSecret) return false;
-    
     try {
       const response = await fetch('/api/v1/auth/verify-2fa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: code, secret: pendingSecret, userEmail: user?.email })
       });
-      
       const data = await response.json();
-      
       if (data.status === 'VERIFIED') {
         AuthGuard.establishSession(data.upgradeToken);
-        toast({ title: "2FA ভেরিফিকেশন সফল", description: "সাম্রাজ্যে স্বাগতম।" });
-        router.push('/dashboard');
+        setHandshakeComplete(true);
+        window.location.href = '/dashboard';
         return true;
       }
       return false;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  const handleBiometricVerify = async () => {
-    setShowBiometric(false);
-    if (user) {
-      await performHandshake();
-    } else {
-      const fakeToken = 'est_bio_' + Math.random().toString(36).substring(7);
-      AuthGuard.establishSession(fakeToken);
-      localStorage.setItem('sovereign_device_id', DeviceValidator.generateFingerprint());
-      toast({ title: "বায়োমেট্রিক প্রবেশ সফল", description: "আপনার ডিভাইস সার্বভৌমভাবে স্বীকৃত হয়েছে।" });
-      router.push('/dashboard');
-    }
-  }
-
-  const handleSecurityKeyVerify = async () => {
-    setShowSecurityKey(false);
-    const fakeToken = 'est_key_' + Math.random().toString(36).substring(7);
-    AuthGuard.establishSession(fakeToken);
-    localStorage.setItem('sovereign_device_id', DeviceValidator.generateFingerprint());
-    toast({ title: "সিকিউরিটি কী শনাক্ত হয়েছে", description: "ইম্পেরিয়াল অ্যাক্সেস গ্র্যান্ট করা হয়েছে।" });
-    router.push('/dashboard');
-  }
-
-  const handleGoogleLogin = async () => {
-    if (!auth) {
-      toast({ title: "সিস্টেম ত্রুটি", description: "অথেনটিকেশন সার্ভিস লোড হয়নি।", variant: "destructive" })
-      return
-    }
-    
-    setIsSigningIn(true)
-    const provider = new GoogleAuthProvider()
-    provider.setCustomParameters({ prompt: 'select_account' });
-    
-    try {
-      // Primary Attempt: Popup (Fastest for most users)
-      await signInWithPopup(auth, provider);
-    } catch (error: any) {
-      console.warn("[Auth] Popup blocked or failed. Attempting Redirect Mode...", error.code);
-      
-      // Secondary Attempt: Redirect (Handles desktop popup blockers/safari/brave)
-      if (
-        error.code === 'auth/popup-blocked' || 
-        error.code === 'auth/popup-closed-by-user' || 
-        error.code === 'auth/cancelled-popup-request' ||
-        error.code === 'auth/internal-error'
-      ) {
-        try {
-          await signInWithRedirect(auth, provider);
-        } catch (redirectError) {
-          setIsSigningIn(false);
-          toast({ title: "লগইন ব্যর্থ", description: "রিডাইরেক্ট মোড সক্রিয় করা সম্ভব হয়নি।", variant: "destructive" });
-        }
-      } else {
-        setIsSigningIn(false);
-        toast({ title: "লগইন ত্রুটি", description: "একটি টেকনিক্যাল সমস্যা হয়েছে।", variant: "destructive" });
-      }
-    } finally {
-      // Ensure signing in state is not stuck if not redirecting
-      setTimeout(() => setIsSigningIn(false), 3000);
-    }
+    } catch (e) { return false; }
   }
 
   return (
     <div className="min-h-screen bg-[#05070a] flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-primary/5 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] pointer-events-none" />
       
-      <div className="absolute -bottom-24 -left-24 opacity-5 rotate-12">
-        <AppLogo size={500} />
-      </div>
-
       <Card className="max-w-md w-full border-primary/20 bg-card/60 backdrop-blur-xl shadow-2xl z-10 overflow-hidden relative">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary animate-pulse" />
         
         <CardHeader className="text-center space-y-4 pt-10">
           <div className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto border border-primary/20 relative group">
-            <div className="absolute inset-0 bg-primary/10 blur-xl rounded-full scale-0 group-hover:scale-100 transition-transform duration-700" />
-            {isHandshaking || isSigningIn ? (
-              <AppLogo size={64} className="animate-sos-pulse" />
-            ) : (
-              <AppLogo size={64} />
-            )}
+            <AppLogo size={64} className={isHandshaking || isSigningIn ? "animate-sos-pulse" : ""} />
           </div>
           <div className="space-y-1">
             <CardTitle className="text-3xl font-headline font-bold tracking-tight uppercase">SHURUKKHA HUB</CardTitle>
             <CardDescription className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/60">
-              {isHandshaking ? "Establishing Sovereign Handshake..." : isSigningIn ? "Authorizing Google Identity..." : "Sovereign Identity Access"}
+              {isHandshaking ? "Establishing Sovereign Handshake..." : handshakeComplete ? "Handshake Complete" : "Sovereign Identity Access"}
             </CardDescription>
           </div>
         </CardHeader>
+
         <CardContent className="space-y-8 pb-10">
           {isHandshaking ? (
             <div className="py-8 text-center space-y-6">
@@ -244,19 +186,28 @@ export default function LoginPage() {
                 <div className="w-2 h-2 bg-accent rounded-full animate-ping [animation-delay:0.2s]" />
                 <div className="w-2 h-2 bg-primary rounded-full animate-ping [animation-delay:0.4s]" />
               </div>
-              <div className="space-y-2">
-                <p className="text-[11px] text-primary font-mono uppercase tracking-[0.4em] animate-pulse">Encrypting_Sovereign_Keys...</p>
-                <p className="text-[9px] text-muted-foreground font-mono">NODE_IDENTITY: core.sheikh.primary</p>
-              </div>
+              <p className="text-[11px] text-primary font-mono uppercase tracking-[0.4em] animate-pulse">Encrypting_Sovereign_Keys...</p>
             </div>
+          ) : handshakeComplete ? (
+             <div className="py-8 text-center space-y-6">
+               <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto border border-accent/40">
+                  <Zap className="text-accent animate-bounce" size={32} />
+               </div>
+               <div className="space-y-4">
+                 <p className="text-sm font-bold text-accent uppercase tracking-widest">পরিচয় নিশ্চিত হয়েছে!</p>
+                 <Button onClick={() => window.location.href = '/dashboard'} className="w-full bg-primary text-background font-bold gap-2">
+                   ড্যাশবোর্ডে প্রবেশ করুন <ArrowRight size={18} />
+                 </Button>
+               </div>
+             </div>
           ) : (
             <>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground text-center leading-relaxed px-4">
-                  সিরাজগঞ্জ সুরক্ষা পোর্টালে আপনার রাজকীয় পরিচয় নিশ্চিত করুন। নিরাপদ এক্সেস পেতে নিচের মাধ্যমটি ব্যবহার করুন।
+              <div className="space-y-4 text-center">
+                <p className="text-sm text-muted-foreground leading-relaxed px-4">
+                  সিরাজগঞ্জ সুরক্ষা পোর্টালে আপনার রাজকীয় পরিচয় নিশ্চিত করুন।
                 </p>
                 <div className="flex justify-center">
-                  <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5 py-1 px-4 gap-2 text-[10px] font-bold uppercase tracking-widest">
+                  <Badge variant="outline" className="border-primary/30 text-primary py-1 px-4 gap-2 text-[10px] font-bold uppercase tracking-widest">
                     <Star size={12} fill="currentColor" /> PHASE 31.0 SECURED
                   </Badge>
                 </div>
@@ -266,33 +217,20 @@ export default function LoginPage() {
                 <Button 
                   onClick={handleGoogleLogin}
                   disabled={isSigningIn}
-                  className="w-full h-16 bg-white text-black hover:bg-white/90 font-bold gap-4 rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all hover:scale-[1.02] active:scale-95 group relative overflow-hidden"
+                  className="w-full h-16 bg-white text-black hover:bg-white/90 font-bold gap-4 rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-all hover:scale-[1.02]"
                 >
-                  <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
-                  {isSigningIn ? (
-                    <Loader2 size={22} className="animate-spin relative z-10" />
-                  ) : (
-                    <Globe size={22} className="relative z-10 group-hover:rotate-12 transition-transform" /> 
-                  )}
-                  <span className="text-lg relative z-10 tracking-tight">
+                  {isSigningIn ? <Loader2 size={22} className="animate-spin" /> : <Globe size={22} />}
+                  <span className="text-lg tracking-tight">
                     {isSigningIn ? "প্রবেশ করা হচ্ছে..." : "Google দিয়ে রাজকীয় প্রবেশ"}
                   </span>
                 </Button>
                 
                 <div className="grid grid-cols-2 gap-3">
-                   <Button 
-                    variant="outline"
-                    onClick={() => setShowBiometric(true)}
-                    className="h-12 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold gap-2 rounded-xl text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95"
-                  >
-                    <Fingerprint size={16} /> বায়োমেট্রিক
+                   <Button variant="outline" onClick={() => setShowBiometric(true)} className="h-12 border-primary/20 bg-primary/5 text-primary text-[10px] uppercase tracking-wider">
+                    <Fingerprint size={16} className="mr-2" /> বায়োমেট্রিক
                   </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => setShowSecurityKey(true)}
-                    className="h-12 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold gap-2 rounded-xl text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95"
-                  >
-                    <Key size={16} /> সিকিউরিটি কী
+                  <Button variant="outline" onClick={() => setShowSecurityKey(true)} className="h-12 border-primary/20 bg-primary/5 text-primary text-[10px] uppercase tracking-wider">
+                    <Key size={16} className="mr-2" /> সিকিউরিটি কী
                   </Button>
                 </div>
               </div>
@@ -300,8 +238,8 @@ export default function LoginPage() {
           )}
 
           <div className="pt-6 border-t border-white/5 text-center">
-            <div className="flex flex-col items-center gap-3">
-              <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground uppercase tracking-[0.3em] font-bold">
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground uppercase tracking-[0.3em] font-bold">
                 <Lock size={12} className="text-primary" /> SHA256withRSA V2
               </div>
               <p className="text-[8px] font-mono text-muted-foreground/40">PROJECT_ID: 42ND_ARCHIVE | v31.0_SOVEREIGN</p>
@@ -310,25 +248,9 @@ export default function LoginPage() {
         </CardContent>
       </Card>
 
-      <TOTPVerificationDialog 
-        isOpen={show2FA} 
-        onVerify={handleVerify2FA} 
-        onCancel={() => setShow2FA(false)} 
-      />
-
-      <BiometricPrompt 
-        isOpen={showBiometric}
-        onVerify={handleBiometricVerify}
-        onCancel={() => setShowBiometric(false)}
-        actionName="Imperial Sovereign Access"
-      />
-
-      <BiometricPrompt 
-        isOpen={showSecurityKey}
-        onVerify={handleSecurityKeyVerify}
-        onCancel={() => setShowSecurityKey(false)}
-        actionName="Hardware Security Key Access"
-      />
+      <TOTPVerificationDialog isOpen={show2FA} onVerify={handleVerify2FA} onCancel={() => setShow2FA(false)} />
+      <BiometricPrompt isOpen={showBiometric} onVerify={() => { setShowBiometric(false); performHandshake(); }} onCancel={() => setShowBiometric(false)} actionName="Imperial Access" />
+      <BiometricPrompt isOpen={showSecurityKey} onVerify={() => { setShowSecurityKey(false); performHandshake(); }} onCancel={() => setShowSecurityKey(false)} actionName="Hardware Key Access" />
     </div>
   )
 }

@@ -67,31 +67,35 @@ export default function ShurukkhaDashboard() {
   const router = useRouter()
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login')
+    if (authLoading) return;
+
+    if (!user) {
+      router.replace('/login')
       return
     }
 
-    if (user && !AuthGuard.isValidSession()) {
-      setSessionValid(false)
-      toast({
-        title: "সেশন শেষ হয়েছে",
-        description: "নিরাপত্তার স্বার্থে আবার লগইন করুন।",
-        variant: "destructive"
-      })
-      router.push('/login')
+    // Give a small grace period for the handshake to reflect in storage if needed
+    const checkSession = () => {
+      if (!AuthGuard.isValidSession()) {
+        setSessionValid(false)
+        router.replace('/login')
+      }
     }
+
+    const timer = setTimeout(checkSession, 500); // 500ms grace period
 
     const storedFp = localStorage.getItem('sovereign_device_id')
     if (storedFp && !DeviceValidator.validateIntegrity(storedFp)) {
       handleEmergencyKillSwitch()
       toast({
         title: "SECURITY VIOLATION",
-        description: "অননুমোদিত ডিভাইস শনাক্ত হয়েছে। সিস্টেম লকডাউন করা হচ্ছে।",
+        description: "অননুমোদিত ডিভাইস শনাক্ত হয়েছে।",
         variant: "destructive"
       })
     }
-  }, [user, authLoading, router])
+
+    return () => clearTimeout(timer);
+  }, [user, authLoading, router, toast])
 
   useEffect(() => {
     if (user && firestore) {
@@ -118,7 +122,7 @@ export default function ShurukkhaDashboard() {
             setActiveView('ops');
           }
         } catch (e) {
-          console.warn("[Dashboard] Role fetch failed. Defaulting to citizen/cached role.");
+          console.warn("[Dashboard] Role fetch failed. Defaulting to citizen.");
           const currentRole = isAdmin ? 'admin' : 'citizen';
           setUserRole(currentRole as any);
         }
@@ -133,17 +137,11 @@ export default function ShurukkhaDashboard() {
       const online = navigator.onLine;
       setIsOffline(!online);
       CommunicationOrchestrator.getInstance().setConnectivity(online);
-      
-      if (online) {
-        setSurvivalMode(false);
-        syncOfflineData();
-      } else {
+      if (!online) {
         setSurvivalMode(true);
-        toast({
-          title: "SURVIVAL MODE ACTIVE",
-          description: "ইন্টারনেট নেই। অফলাইন কিউয়িং শুরু হয়েছে।",
-          variant: "destructive"
-        });
+        toast({ title: "SURVIVAL MODE ACTIVE", variant: "destructive" });
+      } else {
+        setSurvivalMode(false);
       }
     };
     
@@ -151,69 +149,24 @@ export default function ShurukkhaDashboard() {
     window.addEventListener('offline', handleConnectivityChange)
     handleConnectivityChange();
     
-    const interval = setInterval(() => {
-      setIsLockedDown(IntegrationBridge.isLocked);
-    }, 1000);
-
     const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
-    SovereignAudit.logMilestone('Phase_31.0', 'Engineering Milestone: Sovereign Shield Expansion Active');
-
     return () => {
       window.removeEventListener('online', handleConnectivityChange)
       window.removeEventListener('offline', handleConnectivityChange)
       unsubscribeOrchestrator()
-      clearInterval(interval);
     }
-  }, [])
-
-  const handleAutoModeToggle = (enabled: boolean) => {
-    setIsAutoMode(enabled)
-    AutonomousOrchestrator.setAutoMode(enabled)
-    toast({
-      title: enabled ? "Autonomous Mode Enabled" : "Manual Mode Enabled",
-      description: enabled ? "সিস্টেম এখন স্বয়ংক্রিয়ভাবে ডিসপ্যাচ ম্যানেজ করবে।" : "কর্তৃপক্ষকে এখন ম্যানুয়ালি ডিসপ্যাচ হ্যান্ডেল করতে হবে।",
-      variant: enabled ? "default" : "outline"
-    })
-  }
+  }, [toast])
 
   const handleEmergencyKillSwitch = () => {
-    setIsAutoMode(false)
-    AutonomousOrchestrator.setAutoMode(false)
-    IntegrationBridge.setLockdown(true)
-    sessionStorage.clear()
-    localStorage.removeItem('sovereign_session_token')
-    router.push('/login')
-  }
-
-  const syncOfflineData = async () => {
-    const reports = DisasterStorage.getReports()
-    if (reports.length === 0 || !firestore) return
-    setIsSyncing(true)
-    try {
-      for (const report of reports) {
-        await addDoc(collection(firestore, "incidents"), {
-          ...report,
-          timestamp: serverTimestamp(),
-          syncedFromOffline: true
-        })
-      }
-      DisasterStorage.clearReports()
-      toast({ title: "অফলাইন ডেটা সিঙ্ক সফল" })
-    } catch (e) {
-      console.error("Sync Failed", e)
-    } finally {
-      setIsSyncing(false)
-    }
+    AuthGuard.clearSession();
+    router.replace('/login')
   }
 
   const handleLogout = async () => {
     if (auth) {
       try {
-        sessionStorage.clear()
-        localStorage.removeItem('sovereign_session_token')
-        localStorage.removeItem('sovereign_session_expiry')
+        AuthGuard.clearSession();
         await signOut(auth)
-        toast({ title: "সফলভাবে লগআউট করা হয়েছে" })
         window.location.href = '/';
       } catch (e) {
         toast({ title: "লগআউট ব্যর্থ হয়েছে", variant: "destructive" })
@@ -231,16 +184,10 @@ export default function ShurukkhaDashboard() {
   if (authLoading || (user && !sessionValid)) {
     return (
       <div className="min-h-screen bg-[#05070a] flex flex-col items-center justify-center gap-8">
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary/20 blur-3xl animate-pulse rounded-full" />
-          <AppLogo size={120} className="animate-sos-pulse relative z-10" />
-        </div>
+        <AppLogo size={120} className="animate-sos-pulse" />
         <div className="flex flex-col items-center gap-2">
-          <div className="flex items-center gap-2">
-            <Loader2 className="animate-spin text-primary" size={16} />
-            <p className="text-[10px] uppercase tracking-[0.4em] font-bold text-primary animate-pulse">Establishing Sovereign Handshake...</p>
-          </div>
-          <p className="text-[8px] text-muted-foreground font-mono">PROJECT_ID: 42ND_ARCHIVE | v31.0</p>
+          <Loader2 className="animate-spin text-primary" size={24} />
+          <p className="text-[10px] uppercase tracking-[0.4em] font-bold text-primary animate-pulse">Initializing Sovereign Grid...</p>
         </div>
       </div>
     )
@@ -248,133 +195,63 @@ export default function ShurukkhaDashboard() {
 
   return (
     <SidebarProvider>
-      <div className={`flex min-h-screen w-full text-foreground transition-all duration-500 ${isLockedDown ? 'grayscale-[0.5] contrast-125' : ''}`}>
+      <div className={`flex min-h-screen w-full text-foreground`}>
         <AppSidebar userRole={userRole} onNavigate={handleSidebarNavigate} onLogout={handleLogout} activeTab={activeView} />
         
         <div className="flex-1 flex flex-col min-w-0">
-          <header className={`sticky top-0 z-40 border-b transition-colors duration-500 ${isLockedDown ? 'bg-destructive/20 border-destructive/40' : 'bg-background/80 border-white/5'} backdrop-blur-lg`}>
+          <header className="sticky top-0 z-40 border-b bg-background/80 border-white/5 backdrop-blur-lg">
             <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <SidebarTrigger className="h-10 w-10 md:hidden" />
-                <AppLogo size={32} variant={isLockedDown ? 'accent' : 'default'} className="md:w-10 md:h-10" />
+                <AppLogo size={32} />
                 <div className="hidden xs:block">
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-sm md:text-xl font-headline font-bold tracking-tighter leading-none uppercase">SHURUKKHA</h1>
-                    <Badge variant="outline" className="hidden lg:flex h-4 text-[7px] border-primary/20 text-primary uppercase tracking-[0.2em] font-bold">
-                      <Star size={8} fill="currentColor" className="mr-1" /> 42nd Project
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-1 md:gap-2">
-                    <span className="text-[8px] md:text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">v31.0_SOVEREIGN</span>
-                    {isLockedDown && <Badge variant="destructive" className="h-3 md:h-4 text-[6px] md:text-[8px] animate-pulse px-1">LOCKDOWN</Badge>}
-                  </div>
+                  <h1 className="text-sm md:text-xl font-headline font-bold tracking-tighter uppercase leading-none">SHURUKKHA</h1>
+                  <span className="text-[8px] md:text-[10px] text-muted-foreground uppercase tracking-[0.2em]">v31.0_SOVEREIGN</span>
                 </div>
               </div>
               
-              <div className="flex items-center gap-2 md:gap-6 flex-1 justify-end">
-                <div className="flex items-center gap-1">
-                  <Button 
-                    variant={activeView === 'citizen' ? 'default' : 'outline'} 
-                    size="sm" 
-                    onClick={() => setActiveView('citizen')}
-                    className="h-8 text-[8px] font-bold gap-1 rounded-full border-primary/20"
-                  >
-                    <Smartphone size={12} /> CITIZEN SHIELD
-                  </Button>
-                  <Button 
-                    variant={activeView === 'messages' ? 'default' : 'outline'} 
-                    size="sm" 
-                    onClick={() => setActiveView('messages')}
-                    className="h-8 text-[8px] font-bold gap-1 rounded-full border-primary/20"
-                  >
-                    <MessageSquare size={12} /> MESSAGES
-                  </Button>
-                </div>
-                {survivalMode && (
-                  <Badge variant="destructive" className="animate-pulse gap-1 text-[8px] h-6 px-2">
-                    <SignalLow size={10} /> SURVIVAL_MODE
-                  </Badge>
-                )}
+              <div className="flex items-center gap-4 justify-end flex-1">
+                {survivalMode && <Badge variant="destructive" className="animate-pulse h-6 text-[8px]">SURVIVAL_MODE</Badge>}
                 <SovereignStatusWidget />
-                {user && (
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8 border border-primary/20 cursor-pointer" onClick={() => handleSidebarNavigate('profile')}>
-                      <AvatarImage src={user.photoURL || ''} />
-                      <AvatarFallback className="bg-primary/10 text-[10px]">{user.displayName?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                  </div>
-                )}
+                <Avatar className="h-8 w-8 border border-primary/20 cursor-pointer" onClick={() => setActiveView('profile')}>
+                  <AvatarImage src={user?.photoURL || ''} />
+                  <AvatarFallback className="bg-primary/10 text-[10px]">{user?.displayName?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
               </div>
             </div>
           </header>
 
-          <main className="flex-1 container mx-auto px-4 py-4 md:py-8 overflow-x-hidden">
+          <main className="flex-1 container mx-auto px-4 py-6 overflow-x-hidden">
             {(userRole === 'admin' || userRole === 'authority') && activeView !== 'profile' && activeView !== 'citizen' && activeView !== 'messages' && <ImperialOverview />}
 
             {activeView === 'citizen' && (
               <div className="max-w-md mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-5">
-                <div className="text-center space-y-2">
-                  <Badge className="bg-primary/20 text-primary border-primary/40 uppercase tracking-[0.2em] font-bold text-[10px] px-4 py-1">Secure Sovereign Interface</Badge>
-                  <p className="text-xs text-muted-foreground italic">আপনার প্রতিটি সিগন্যাল সরাসরি ৪২টি নোডের মাধ্যমে কন্ট্রোল রুমে পৌঁছাবে।</p>
-                </div>
                 <SOSButton />
                 <div className="grid grid-cols-1 gap-6">
                   <AIAdviceTool />
                   <IncidentReport />
                 </div>
-                <Button 
-                  onClick={() => setActiveView('messages')}
-                  className="w-full h-12 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-2xl gap-3 font-bold"
-                >
+                <Button onClick={() => setActiveView('messages')} className="w-full h-12 bg-primary/10 text-primary border border-primary/20 rounded-2xl gap-3 font-bold">
                   <MessageSquare size={20} /> কন্ট্রোল রুমের সাথে কথা বলুন
                 </Button>
               </div>
             )}
 
-            {activeView === 'messages' && (
-              <div className="h-[calc(100vh-180px)] max-w-5xl mx-auto w-full">
-                <CommunicationConsole />
-              </div>
-            )}
-
-            {activeView === 'profile' && (
-              <div className="max-w-4xl mx-auto">
-                <SovereignIDCard user={user} role={userRole} />
-              </div>
-            )}
+            {activeView === 'messages' && <div className="h-[calc(100vh-180px)] max-w-5xl mx-auto w-full"><CommunicationConsole /></div>}
+            {activeView === 'profile' && <div className="max-w-4xl mx-auto"><SovereignIDCard user={user} role={userRole} /></div>}
 
             {(activeView !== 'citizen' && activeView !== 'profile' && activeView !== 'messages') && (
-              <div className="w-full">
-                <Tabs value={activeSubTab} onValueChange={handleSidebarNavigate} className="w-full">
-                  <TabsContent value="ops" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
-                    <div className="lg:col-span-12 space-y-6 h-[calc(100vh-250px)]">
-                      <DispatcherConsole />
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="intelligence" className="space-y-6 mt-0">
-                    <IncidentReviewBoard />
-                  </TabsContent>
-                  <TabsContent value="analytics" className="space-y-6 mt-0">
-                    <SystemHealth />
-                  </TabsContent>
-                  <TabsContent value="audits" className="space-y-6 mt-0">
-                    <AuditPanel />
-                  </TabsContent>
-                  <TabsContent value="integrations" className="space-y-6 mt-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                      <div className="lg:col-span-12">
-                        <SovereignNetworkMap />
-                      </div>
-                      <div className="lg:col-span-12">
-                        <SovereignDomainManager />
-                      </div>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="treasury" className="space-y-6 mt-0">
-                    <BankDirectory />
-                  </TabsContent>
-                </Tabs>
-              </div>
+              <Tabs value={activeSubTab} onValueChange={handleSidebarNavigate} className="w-full">
+                <TabsContent value="ops" className="h-[calc(100vh-250px)]"><DispatcherConsole /></TabsContent>
+                <TabsContent value="intelligence"><IncidentReviewBoard /></TabsContent>
+                <TabsContent value="analytics"><SystemHealth /></TabsContent>
+                <TabsContent value="audits"><AuditPanel /></TabsContent>
+                <TabsContent value="integrations" className="space-y-6">
+                  <SovereignNetworkMap />
+                  <SovereignDomainManager />
+                </TabsContent>
+                <TabsContent value="treasury"><BankDirectory /></TabsContent>
+              </Tabs>
             )}
           </main>
         </div>
