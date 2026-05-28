@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -21,7 +22,9 @@ import {
   SearchCode,
   Eye,
   Share2,
-  MessageSquare
+  MessageSquare,
+  Power,
+  Wifi
 } from "lucide-react"
 
 import {
@@ -40,6 +43,9 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { AppLogo } from "@/components/ui/app-logo"
 import { useToast } from "@/hooks/use-toast"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { NotificationManager } from "@/lib/notification-manager"
 
 interface AppSidebarProps {
   userRole: 'citizen' | 'authority' | 'admin'
@@ -51,6 +57,11 @@ interface AppSidebarProps {
 export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSidebarProps) {
   const { setOpenMobile } = useSidebar()
   const { toast } = useToast()
+  const [signalActive, setSignalActive] = React.useState(false)
+
+  React.useEffect(() => {
+    setSignalActive(NotificationManager.isSignalActive())
+  }, [])
 
   const handleNav = (tab: string) => {
     onNavigate(tab)
@@ -61,6 +72,22 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
     if (onLogout) {
       onLogout()
       setOpenMobile(false)
+    }
+  }
+
+  const toggleSovereignSignal = async (checked: boolean) => {
+    if (checked) {
+      const success = await NotificationManager.activateSovereignSignal()
+      if (success) {
+        setSignalActive(true)
+        toast({ title: "সক্রিয় সিগন্যাল", description: "আপনার ব্যাকগ্রাউন্ড প্রোটেকশন এখন চালু আছে।" })
+      } else {
+        toast({ title: "ব্যর্থ হয়েছে", description: "নোটিফিকেশন পারমিশন চেক করুন।", variant: "destructive" })
+      }
+    } else {
+      await NotificationManager.deactivateSovereignSignal()
+      setSignalActive(false)
+      toast({ title: "ডিসকানেক্টেড", description: "ব্যাকগ্রাউন্ড প্রসেস বন্ধ করা হয়েছে।" })
     }
   }
 
@@ -97,6 +124,28 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
       </SidebarHeader>
 
       <SidebarContent>
+        {/* Connection Status Section */}
+        <SidebarGroup>
+          <div className="px-4 py-4 mb-2 bg-primary/5 rounded-2xl mx-2 border border-primary/10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${signalActive ? 'bg-accent animate-pulse shadow-[0_0_8px_hsl(var(--accent))]' : 'bg-muted'}`} />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {signalActive ? 'Status: Active' : 'Status: Off'}
+                </span>
+              </div>
+              <Switch 
+                checked={signalActive} 
+                onCheckedChange={toggleSovereignSignal}
+                className="data-[state=checked]:bg-accent"
+              />
+            </div>
+            <p className="text-[8px] text-muted-foreground leading-relaxed italic">
+              {signalActive ? 'ব্যাকগ্রাউন্ডে আপনি সর্বদা অনলাইনে আছেন।' : 'সুইচ অন করলে নোটিফিকেশন বারে স্ট্যাটাস দেখাবে।'}
+            </p>
+          </div>
+        </SidebarGroup>
+
         {/* User Identity Section */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase font-bold text-muted-foreground/50 px-4">আপনার পরিচয়</SidebarGroupLabel>

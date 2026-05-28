@@ -1,5 +1,6 @@
 
 'use client';
+import { useEffect } from 'react';
 import { initializeFirebase, FirebaseClientProvider } from '@/firebase';
 import './globals.css';
 
@@ -10,7 +11,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // SVG Favicon using the AppLogo path
+  
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        console.log('[ServiceWorker] Registered with scope:', reg.scope);
+      }).catch((err) => {
+        console.error('[ServiceWorker] Registration failed:', err);
+      });
+    }
+  }, []);
+
   const faviconSvg = `
     <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>
       <path d='M50 5L15 20V45C15 70 50 95 50 95C50 95 85 70 85 45V20L50 5Z' fill='#7597FF'/>
@@ -18,7 +29,6 @@ export default function RootLayout({
       <circle cx='50' cy='35' r='8' fill='white'/>
     </svg>
   `;
-  const faviconDataUri = `data:image/svg+xml;base64,${typeof window !== 'undefined' ? btoa(faviconSvg) : ''}`;
 
   return (
     <html lang="bn" className="dark">
@@ -26,16 +36,11 @@ export default function RootLayout({
         <title>Shurukkha Hub | সিরাজগঞ্জ সুরক্ষা 🛡️</title>
         <meta name="title" content="Shurukkha Hub | সিরাজগঞ্জ সুরক্ষা 🛡️" />
         <meta name="description" content="সিরাজগঞ্জ জেলা প্রশাসনের জন্য একটি সার্বভৌম এআই-চালিত জরুরি ও আর্থিক পরিকাঠামো। Mission-Critical Sovereign Infrastructure." />
-        
-        {/* Sovereign Favicon */}
         <link rel="icon" href={`data:image/svg+xml,${encodeURIComponent(faviconSvg)}`} />
-        
-        {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:title" content="Shurukkha Hub | সিরাজগঞ্জ সুরক্ষা 🛡️" />
         <meta property="og:description" content="এআই-চালিত দুর্যোগ ব্যবস্থাপনা এবং সভারেন পেমেন্ট গ্রিডের এক অপূর্ব সমন্বয়।" />
         <meta property="og:image" content="https://picsum.photos/seed/42/1200/630" />
-
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet" />
