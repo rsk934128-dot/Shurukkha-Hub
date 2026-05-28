@@ -2,10 +2,11 @@
  * @fileOverview Universal Bridge for Shurukkha Hub Partnership.
  * Implements RSA v2 Bridge, SHA256withRSA signing, and Webhook Engine.
  * UPDATED Phase 31.0: Forensic Snapshotting & External API Header Management (Paddle Sync).
+ * Phase 31.2: Fixed UTF-8 Base64 encoding for Unicode support (Bengali).
  */
 
 import { db } from './firebase';
-import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
 
 export interface IntegrationEvent {
   type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT' | 'SOVEREIGN_HANDSHAKE' | 'NETWORK_HEARTBEAT' | 'LOCAL_PAYMENT_INITIATED' | 'SETTLEMENT_COMPLETED' | 'IDENTITY_RECOGNITION' | 'VERIFICATION_LOOP' | 'ENDPOINT_DISCOVERED' | 'FAILOVER_TRIGGERED' | 'OUTBOUND_SIGNAL_SENT' | 'DNS_PROPAGATION_SUCCESS' | 'SOVEREIGN_TOKEN_GENERATED' | 'PRE_FLIGHT_CHECK_PASSED' | 'CROSS_CURRENCY_EXCHANGE' | 'GLOBAL_FRAUD_ALERT';
@@ -36,7 +37,6 @@ export const IntegrationBridge = {
 
   /**
    * Generates standard headers for outbound API requests.
-   * Automates Authorization and Versioning to prevent invalid_token/invalid_field errors.
    */
   getSecureHeaders: (provider: 'paddle' | 'sovereign' = 'sovereign') => {
     const headers: Record<string, string> = {
@@ -46,7 +46,6 @@ export const IntegrationBridge = {
     };
 
     if (provider === 'paddle') {
-      // Use environment variable or provided fallback for token security
       const token = process.env.NEXT_PUBLIC_PADDLE_API_KEY || 'pdl_sdbx_apikey_01gtgztp8f4kek3yd4g1wrksa3_q6TGTJyvoIz7LDtXT65bX7_AQO';
       headers['Authorization'] = `Bearer ${token.trim()}`;
       headers['Paddle-Version'] = IntegrationBridge.apiVersions.paddle;
@@ -75,20 +74,34 @@ export const IntegrationBridge = {
   generateEphemeralToken: () => {
     const salt = Math.random().toString(36).substring(2, 15);
     const ts = Date.now().toString();
-    const token = 'est_' + btoa(`${salt}.${ts}.${IntegrationBridge.currentKeyId}`).substring(0, 32);
-    return token;
+    const rawData = `${salt}.${ts}.${IntegrationBridge.currentKeyId}`;
+    
+    // Cross-platform Base64 with UTF-8 support
+    const encoded = typeof window !== 'undefined' 
+      ? btoa(unescape(encodeURIComponent(rawData)))
+      : Buffer.from(rawData).toString('base64');
+      
+    return 'est_' + encoded.substring(0, 32);
   },
 
   generateSignature: (payload: any): string => {
-    const data = JSON.stringify({
+    const dataObj = {
       ...payload,
       _identity: IntegrationBridge.identity,
       _keyId: IntegrationBridge.currentKeyId,
       _token: IntegrationBridge.generateEphemeralToken(),
       _timestamp: Date.now()
-    });
+    };
+    
+    const dataString = JSON.stringify(dataObj);
     const salt = IntegrationBridge.currentKeyId;
-    const base64 = typeof window !== 'undefined' ? btoa(data + salt) : Buffer.from(data + salt).toString('base64');
+    const combined = dataString + salt;
+    
+    // Cross-platform Base64 with UTF-8 support (Important for Bengali chars)
+    const base64 = typeof window !== 'undefined' 
+      ? btoa(unescape(encodeURIComponent(combined)))
+      : Buffer.from(combined).toString('base64');
+      
     return 'sig_sha256_rsa_v2_sovereign_' + base64.substring(0, 64);
   },
 
@@ -97,7 +110,7 @@ export const IntegrationBridge = {
   },
 
   /**
-   * Creates a Forensic Snapshot of the current state and records it in the immutable ledger.
+   * Creates a Forensic Snapshot of the current state.
    */
   createSnapshot: async (logs: any[]) => {
     const snapshotHash = IntegrationBridge.generateSignature({ logCount: logs.length, lastLogId: logs[0]?.id });
@@ -123,7 +136,6 @@ export const IntegrationBridge = {
     if (IntegrationBridge.isLocked && event.type !== 'SYSTEM_LOCKDOWN') return;
 
     try {
-      const q = query(collection(db, "integrations"), where("status", "==", "active"));
       const signature = IntegrationBridge.generateSignature(event.payload);
 
       await addDoc(collection(db, "audit_trails"), {

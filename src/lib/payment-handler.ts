@@ -1,6 +1,7 @@
 /**
  * @fileOverview Sovereign Payment Handler for Local & Global Settlements.
  * Updated Phase 31.2: Multi-Layered Auth, Zero-Trust Integration & Automated Invoicing.
+ * Phase 31.3: Robust error handling and support for Unicode/Bengali merchant names.
  */
 
 import { IntegrationBridge } from './integration-bridge';
@@ -73,31 +74,41 @@ export class PaymentHandler {
    * Generates a Sovereign Imperial Invoice for a merchant.
    */
   static async generateInvoice(merchant: any, amount: number, description: string) {
-    const invoiceId = `INV-SOV-${Math.floor(100000 + Math.random() * 900000)}`;
-    const { fee } = this.calculateSettlement(amount);
-    
-    const invoiceData = {
-      invoiceId,
-      merchantId: merchant.merchantId || 'TXT-001',
-      merchantName: merchant.businessName || 'সিরাজগঞ্জ হ্যান্ডলুম প্রোডাকশন হাউস',
-      amount,
-      serviceFee: fee,
-      description,
-      status: 'pending',
-      issuedAt: new Date().toISOString(),
-      purity: 'VERIFIED_IMPERIAL'
-    };
+    if (!merchant) throw new Error("Invalid merchant data provided.");
 
-    // Log the invoice generation to the audit trail
-    await addDoc(collection(db, "audit_trails"), {
-      action: 'INVOICE_GENERATED',
-      details: invoiceData,
-      signature: IntegrationBridge.generateSignature(invoiceData),
-      timestamp: serverTimestamp(),
-      performedBy: 'Imperial_Invoicing_Engine'
-    });
+    try {
+      const invoiceId = `INV-SOV-${Math.floor(100000 + Math.random() * 900000)}`;
+      const { fee } = this.calculateSettlement(amount);
+      
+      const invoiceData = {
+        invoiceId,
+        merchantId: merchant.merchantId || 'TXT-001',
+        merchantName: merchant.businessName || 'সিরাজগঞ্জ হ্যান্ডলুম প্রোডাকশন হাউস',
+        amount,
+        serviceFee: fee,
+        description,
+        status: 'pending',
+        issuedAt: new Date().toISOString(),
+        purity: 'VERIFIED_IMPERIAL'
+      };
 
-    return invoiceData;
+      // Generate signature first to catch encoding errors
+      const signature = IntegrationBridge.generateSignature(invoiceData);
+
+      // Log the invoice generation to the audit trail
+      await addDoc(collection(db, "audit_trails"), {
+        action: 'INVOICE_GENERATED',
+        details: invoiceData,
+        signature,
+        timestamp: serverTimestamp(),
+        performedBy: 'Imperial_Invoicing_Engine'
+      });
+
+      return invoiceData;
+    } catch (error: any) {
+      console.error("[Invoice Engine] Failed to generate invoice:", error);
+      throw new Error(`Invoicing Fault: ${error.message}`);
+    }
   }
 
   /**
