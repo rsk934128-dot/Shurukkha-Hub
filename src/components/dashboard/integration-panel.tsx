@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle, RefreshCcw, Swords, Target, Crosshair, Sparkles, BrainCircuit, Fingerprint, Network } from 'lucide-react'
+import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle, RefreshCcw, Swords, Target, Crosshair, Sparkles, BrainCircuit, Fingerprint, Network, Scale } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,6 +17,7 @@ import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ThreatMap } from './threat-map'
 import { PredictiveForecasting } from './predictive-forecasting'
+import { JudiciaryPanel } from './judiciary-panel'
 
 export function IntegrationPanel() {
   const [apps, setApps] = useState<any[]>([])
@@ -128,11 +128,11 @@ export function IntegrationPanel() {
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
             <TabsTrigger value="war-room" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap"><Swords size={12}/> ওয়ার-রুম</TabsTrigger>
+            <TabsTrigger value="judiciary" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap"><Scale size={12}/> বিচার বিভাগ</TabsTrigger>
             <TabsTrigger value="intelligence" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap"><Skull size={12}/> ইন্টেল ইউনিট</TabsTrigger>
             <TabsTrigger value="evolution" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><BrainCircuit size={12}/> প্রেডিকশন</TabsTrigger>
             <TabsTrigger value="guard" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><ShieldX size={12}/> গার্ড</TabsTrigger>
             <TabsTrigger value="apps" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap"><Globe size={12}/> পার্টনার্স</TabsTrigger>
-            <TabsTrigger value="discovery" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><Search size={12}/> ডিকয়</TabsTrigger>
           </TabsList>
         </div>
 
@@ -159,6 +159,10 @@ export function IntegrationPanel() {
               </div>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="judiciary" className="flex-1 p-4 md:p-6 m-0">
+          <JudiciaryPanel />
         </TabsContent>
 
         <TabsContent value="intelligence" className="flex-1 p-4 md:p-6 space-y-6 m-0">
@@ -337,29 +341,6 @@ export function IntegrationPanel() {
               ))}
             </div>
           </ScrollArea>
-        </TabsContent>
-
-        <TabsContent value="discovery" className="flex-1 p-4 md:p-6 m-0 space-y-6">
-          <div className="grid gap-3">
-            {discoveryMap.map((ep: any) => (
-              <div key={ep.id} className="p-3 md:p-4 bg-muted/20 border border-white/5 rounded-2xl flex items-center justify-between group hover:border-accent/30 transition-all">
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center border ${ep.status === 'TRAP_ACTIVE' ? 'bg-destructive/10 border-destructive/20 text-destructive' : 'bg-accent/10 border-accent/20 text-accent'}`}>
-                    {ep.status === 'TRAP_ACTIVE' ? <Skull size={18} /> : <Link size={18} />}
-                  </div>
-                  <div>
-                    <h3 className="text-xs md:text-sm font-headline font-bold truncate max-w-[120px]">{ep.name}</h3>
-                    <code className="text-[7px] md:text-[9px] font-mono text-accent/80 bg-black/40 px-1.5 py-0.5 rounded truncate max-w-[120px] md:max-w-none block mt-1">
-                      {ep.path}
-                    </code>
-                  </div>
-                </div>
-                <Badge variant="outline" className={`text-[6px] md:text-[8px] h-4 md:h-5 ${ep.status === 'TRAP_ACTIVE' ? 'border-destructive/40 text-destructive' : 'border-accent/40 text-accent'}`}>
-                  {ep.status}
-                </Badge>
-              </div>
-            ))}
-          </div>
         </TabsContent>
       </Tabs>
     </Card>

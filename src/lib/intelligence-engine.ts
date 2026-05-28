@@ -1,8 +1,7 @@
-
 /**
  * @fileOverview Adaptive Threat Intelligence Engine.
  * Implements self-learning blacklisting and attacker profiling.
- * Updated: Engages Identity Correlation to link multiple attack vectors to a single actor.
+ * Updated: Engages Identity Correlation and triggers Auto-Justicesentences.
  */
 
 import { db } from './firebase';
@@ -10,6 +9,7 @@ import { collection, addDoc, getDocs, query, where, updateDoc, doc, serverTimest
 import { SelfHealing } from './self-healing';
 import { CounterIntelligence } from './counter-intelligence';
 import { SelfEvolutionEngine } from './self-evolution-engine';
+import { AutoJustice } from './auto-justice-protocol';
 
 export interface ThreatAnalysis {
   ip: string;
@@ -56,9 +56,11 @@ export const IntelligenceEngine = {
         SelfEvolutionEngine.evolveFromThreat(analysis.violationType);
       }
 
+      let profileId = "";
+
       if (ipSnapshot.empty) {
         // Create new profile with Fingerprint and Linked Identities
-        await addDoc(suspectsRef, {
+        const docRef = await addDoc(suspectsRef, {
           ipAddress: analysis.ip,
           fingerprint: fingerprint,
           linkedIdentities: linkedIps,
@@ -70,6 +72,7 @@ export const IntelligenceEngine = {
           metadata: { ...analysis.metadata, userAgent },
           timestamp: serverTimestamp()
         });
+        profileId = docRef.id;
 
         // Update previously captured suspects to include this new linked IP
         for (const suspectDoc of fpSnapshot.docs) {
@@ -80,6 +83,7 @@ export const IntelligenceEngine = {
       } else {
         // Update existing profile
         const profile = ipSnapshot.docs[0];
+        profileId = profile.id;
         const newViolationCount = (profile.data().violationCount || 0) + 1;
         const newStatus = newViolationCount >= 3 || analysis.source === 'honeypot' ? 'blacklisted' : 'monitored';
         
@@ -91,9 +95,23 @@ export const IntelligenceEngine = {
           linkedIdentities: linkedIps,
           timestamp: serverTimestamp()
         });
+
+        // Trigger Auto-Justice if threshold met
+        if (newViolationCount >= 5 || analysis.source === 'honeypot') {
+          await AutoJustice.executeSentence(profileId, fingerprint, newViolationCount >= 10 ? 'critical' : 'high');
+        }
       }
 
-      console.log(`[Intelligence Engine] Identity correlation complete for fingerprint ${fingerprint}.`);
+      // Record Forensic Evidence in Vault
+      await AutoJustice.recordEvidence({
+        fingerprint,
+        ip: analysis.ip,
+        violation: analysis.violationType,
+        source: analysis.source,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`[Intelligence Engine] Identity correlation and justice loop complete.`);
     } catch (error) {
       console.error("[Intelligence Engine] Failed to profile attacker.", error);
     }
