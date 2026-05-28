@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Imperial Auth Guard.
  * Manages session validity and Ephemeral Sovereign Tokens.
@@ -32,7 +33,7 @@ export const AuthGuard = {
    */
   establishSession: (token: string) => {
     if (typeof window === 'undefined') return;
-    const ttl = 10 * 60 * 1000; // 10 Minutes
+    const ttl = 30 * 60 * 1000; // Extended to 30 Minutes for better stability
     sessionStorage.setItem('sovereign_session_token', token);
     sessionStorage.setItem('sovereign_session_expiry', (Date.now() + ttl).toString());
   },
@@ -41,7 +42,6 @@ export const AuthGuard = {
    * Requires a Zero-Trust re-authentication for critical actions.
    */
   requireReAuth: async (): Promise<boolean> => {
-    // In a real implementation, this would trigger the BiometricPrompt UI
     console.log("[Zero-Trust] Re-authenticating Identity for Critical Action...");
     return new Promise((resolve) => {
       // Mocking a successful biometric/PIN check

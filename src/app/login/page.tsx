@@ -30,22 +30,23 @@ export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
 
+  // Handle Redirect Result on Mount
   useEffect(() => {
     if (auth) {
       getRedirectResult(auth)
         .then((result) => {
           if (result?.user) {
-            console.log("[Auth] Redirect handshake successful.");
+            console.log("[Auth] Redirect successful, user recognized.");
+            // The main user effect will catch this and trigger handshake
           }
         })
         .catch((error) => {
-          if (error.code !== 'auth/web-storage-unsupported') {
-            console.warn("[Auth] Redirect error handled:", error.message);
-          }
+          console.error("[Auth] Redirect Error:", error.code);
         });
     }
   }, [auth]);
 
+  // Main Auth Flow: Handshake or Redirect to Dashboard
   useEffect(() => {
     if (user && !loading && !isHandshaking && !show2FA && !showBiometric && !showSecurityKey) {
       if (AuthGuard.isValidSession()) {
@@ -180,35 +181,31 @@ export default function LoginPage() {
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
-      await signInWithPopup(auth, provider)
+      // Primary Attempt: Popup (Fastest for most users)
+      await signInWithPopup(auth, provider);
     } catch (error: any) {
-      // Handle closed popup gracefully
-      if (error.code === 'auth/popup-closed-by-user') {
-        toast({ 
-          title: "লগইন প্রসেস বাতিল", 
-          description: "আপনি নিজেই লগইন উইন্ডোটি বন্ধ করেছেন।" 
-        })
-      } else if (error.code === 'auth/popup-blocked') {
-        toast({ title: "পপ-আপ ব্লক করা হয়েছে", description: "রিডাইরেক্ট মোডে চেষ্টা করা হচ্ছে..." })
+      console.warn("[Auth] Popup blocked or failed. Attempting Redirect Mode...", error.code);
+      
+      // Secondary Attempt: Redirect (Handles desktop popup blockers/safari/brave)
+      if (
+        error.code === 'auth/popup-blocked' || 
+        error.code === 'auth/popup-closed-by-user' || 
+        error.code === 'auth/cancelled-popup-request' ||
+        error.code === 'auth/internal-error'
+      ) {
         try {
           await signInWithRedirect(auth, provider);
         } catch (redirectError) {
-          setIsSigningIn(false)
+          setIsSigningIn(false);
+          toast({ title: "লগইন ব্যর্থ", description: "রিডাইরেক্ট মোড সক্রিয় করা সম্ভব হয়নি।", variant: "destructive" });
         }
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        console.warn("[Auth] Multi-popup request cancelled.");
       } else {
-        console.error("Login attempt failed:", error)
-        toast({ 
-          title: "লগইন ত্রুটি", 
-          description: "একটি টেকনিক্যাল সমস্যা হয়েছে। আবার চেষ্টা করুন।",
-          variant: "destructive"
-        })
-        setIsSigningIn(false)
+        setIsSigningIn(false);
+        toast({ title: "লগইন ত্রুটি", description: "একটি টেকনিক্যাল সমস্যা হয়েছে।", variant: "destructive" });
       }
     } finally {
-      // Ensure the signing in state is cleared if not redirecting
-      setTimeout(() => setIsSigningIn(false), 2000);
+      // Ensure signing in state is not stuck if not redirecting
+      setTimeout(() => setIsSigningIn(false), 3000);
     }
   }
 
