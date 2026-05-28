@@ -2,7 +2,7 @@
 /**
  * @fileOverview Universal Bridge for Shurukkha Hub Partnership.
  * Implements RSA v2 Bridge, SHA256withRSA signing, and Webhook Engine.
- * Now includes Sovereign Lockdown and Forensic Snapshots.
+ * Now includes Sovereign Lockdown, Forensic Snapshots, and Key Rotation.
  */
 
 import { db } from './firebase';
@@ -16,6 +16,7 @@ export interface IntegrationEvent {
 
 export const IntegrationBridge = {
   isLocked: false,
+  currentKeyId: 'sk_imperial_master_key_v21',
 
   setLockdown: (locked: boolean) => {
     IntegrationBridge.isLocked = locked;
@@ -56,7 +57,9 @@ export const IntegrationBridge = {
 
   generateSignature: (payload: any): string => {
     const data = JSON.stringify(payload);
-    const base64 = typeof window !== 'undefined' ? btoa(data) : Buffer.from(data).toString('base64');
+    // Include currentKeyId in signature for rotation tracking
+    const salt = IntegrationBridge.currentKeyId;
+    const base64 = typeof window !== 'undefined' ? btoa(data + salt) : Buffer.from(data + salt).toString('base64');
     return 'sig_sha256_rsa_' + base64.substring(0, 64);
   },
 

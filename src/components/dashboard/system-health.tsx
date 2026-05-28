@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Activity, Zap, ShieldCheck, TrendingUp, BrainCircuit, Play, Loader2, AlertTriangle, Users, Database, ShieldAlert, Bug, ScrollText, Lock, CheckCircle2, ShieldQuestion, FileSearch, ShieldX, Camera, RefreshCw, FileText, Download } from 'lucide-react'
+import { Activity, Zap, ShieldCheck, TrendingUp, BrainCircuit, Play, Loader2, AlertTriangle, Users, Database, ShieldAlert, Bug, ScrollText, Lock, CheckCircle2, ShieldQuestion, FileSearch, ShieldX, Camera, RefreshCw, FileText, Download, BarChart4 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +11,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { runPredictiveSimulation, type PredictiveSimulationOutput } from '@/ai/flows/predictive-simulation-flow'
 import { useToast } from '@/hooks/use-toast'
-import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
 import { db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore'
@@ -19,12 +20,14 @@ import { IntegrationBridge } from '@/lib/integration-bridge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
-const PERFORMANCE_DATA = [
-  { name: '08:00', latency: 45, success: 98 },
-  { name: '10:00', latency: 52, success: 96 },
-  { name: '12:00', latency: 38, success: 100 },
-  { name: '14:00', latency: 65, success: 92 },
-  { name: '16:00', latency: 42, success: 99 },
+const FORENSIC_DATA = [
+  { name: '00:00', intensity: 20, safety: 98, latency: 45 },
+  { name: '04:00', intensity: 35, safety: 97, latency: 42 },
+  { name: '08:00', intensity: 65, safety: 99, latency: 38 },
+  { name: '12:00', intensity: 80, safety: 95, latency: 55 },
+  { name: '16:00', intensity: 55, safety: 100, latency: 40 },
+  { name: '20:00', intensity: 40, safety: 99, latency: 35 },
+  { name: '23:59', intensity: 25, safety: 100, latency: 30 },
 ]
 
 export function SystemHealth() {
@@ -113,7 +116,6 @@ export function SystemHealth() {
 
   const handleGenerateReport = async () => {
     setIsGeneratingReport(true);
-    // Simulate generation of a royal report
     setTimeout(async () => {
       const report = {
         title: "Mission Sovereignty Report v1.0",
@@ -253,9 +255,9 @@ export function SystemHealth() {
             <CardHeader className="bg-muted/20 border-b border-white/5 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-sm font-headline flex items-center gap-2 uppercase tracking-widest">
-                  <BrainCircuit className="text-accent" size={16} /> প্রিডিক্টিভ ইঞ্জিন ও ফরেনসিক টুলস
+                  <BarChart4 className="text-accent" size={16} /> Forensic Audit Dashboard
                 </CardTitle>
-                <CardDescription className="text-[10px]">সার্বভৌম নিরাপত্তা ও ভবিষ্যত ঝুঁকি বিশ্লেষণ</CardDescription>
+                <CardDescription className="text-[10px]">সার্বভৌম অডিট ও নেটওয়ার্ক ট্রাফিক এনালাইসিস</CardDescription>
               </div>
               <div className="flex gap-2">
                 <Button 
@@ -270,16 +272,6 @@ export function SystemHealth() {
                 </Button>
                 <Button 
                   size="sm" 
-                  variant="outline"
-                  onClick={handleMassStressTest} 
-                  disabled={isStressTesting}
-                  className="border-destructive/30 text-destructive font-bold h-8 text-[10px] gap-2 hover:bg-destructive/10"
-                >
-                  {isStressTesting ? <Loader2 size={12} className="animate-spin" /> : <Bug size={12} />}
-                  স্ট্রেস টেস্ট
-                </Button>
-                <Button 
-                  size="sm" 
                   onClick={handleStartSimulation} 
                   disabled={isSimulating}
                   className="bg-accent text-background font-bold h-8 text-[10px] gap-2"
@@ -289,44 +281,45 @@ export function SystemHealth() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-0">
-              {simulationResult ? (
-                <div className="p-6 space-y-6 animate-in fade-in zoom-in-95">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">রিস্ক প্রজেকশন</p>
-                      <div className="flex items-center gap-4">
-                        <div className="relative w-16 h-16 flex items-center justify-center">
-                          <svg className="w-full h-full transform -rotate-90">
-                            <circle cx="32" cy="32" r="28" fill="transparent" stroke="currentColor" strokeWidth="4" className="text-white/5" />
-                            <circle cx="32" cy="32" r="28" fill="transparent" stroke="currentColor" strokeWidth="4" strokeDasharray={176} strokeDashoffset={176 - (176 * simulationResult.estimatedRiskScore) / 100} className="text-destructive" />
-                          </svg>
-                          <span className="absolute text-xs font-bold">{simulationResult.estimatedRiskScore}%</span>
-                        </div>
-                        <p className="text-[10px] leading-tight text-destructive font-bold uppercase">Extreme Risk</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">প্রয়োজনীয় রিসোর্স</p>
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-bold">Rescue: {simulationResult.requiredResponders.rescue} Units</p>
-                        <p className="text-[10px] font-bold">Medical: {simulationResult.requiredResponders.medical} Teams</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">জোন অ্যালার্ট</p>
-                      <div className="flex flex-wrap gap-1">
-                        {simulationResult.priorityZones.map(zone => (
-                          <Badge key={zone} variant="outline" className="text-[8px] border-destructive/30 text-destructive">{zone}</Badge>
-                        ))}
-                      </div>
-                    </div>
+            <CardContent className="p-6">
+              <div className="h-[250px] w-full">
+                <ChartContainer config={{ 
+                  intensity: { label: "Network Intensity", color: "hsl(var(--primary))" },
+                  safety: { label: "Integrity Score", color: "hsl(var(--accent))" }
+                }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={FORENSIC_DATA}>
+                      <defs>
+                        <linearGradient id="colorIntensity" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--color-intensity)" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="var(--color-intensity)" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="name" fontSize={8} stroke="rgba(255,255,255,0.3)" />
+                      <YAxis fontSize={8} stroke="rgba(255,255,255,0.3)" />
+                      <Tooltip content={<ChartTooltipContent />} />
+                      <Area type="monotone" dataKey="intensity" stroke="var(--color-intensity)" fillOpacity={1} fill="url(#colorIntensity)" />
+                      <Area type="monotone" dataKey="safety" stroke="var(--color-safety)" fill="transparent" strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </div>
+              
+              {simulationResult && (
+                <div className="mt-6 p-4 bg-primary/5 rounded-xl border border-primary/20 grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in zoom-in-95">
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">রিস্ক স্কোর</p>
+                    <p className="text-xl font-headline font-bold text-destructive">{simulationResult.estimatedRiskScore}%</p>
                   </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center p-12 opacity-20 text-center">
-                  <BrainCircuit size={64} className="mb-4" />
-                  <p className="text-sm font-headline font-bold uppercase tracking-widest">Sovereign Intelligence Ready</p>
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">রেস্কিউ টিম</p>
+                    <p className="text-xl font-headline font-bold text-primary">{simulationResult.requiredResponders.rescue} Units</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">মেডিকেল সাপোর্ট</p>
+                    <p className="text-xl font-headline font-bold text-accent">{simulationResult.requiredResponders.medical} Teams</p>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -386,22 +379,21 @@ export function SystemHealth() {
           <Card className="bg-card border-white/5">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-headline flex items-center gap-2 uppercase tracking-widest">
-                <TrendingUp size={16} /> অপারেশনাল ট্রেন্ড
+                <TrendingUp size={16} /> নেটওয়ার্ক ল্যাটেন্সি (Smart)
               </CardTitle>
             </CardHeader>
             <CardContent className="h-[200px] pt-4">
               <ChartContainer config={{ 
-                latency: { label: "Latency", color: "hsl(var(--primary))" },
-                success: { label: "Success", color: "hsl(var(--accent))" }
+                latency: { label: "Latency (ms)", color: "hsl(var(--accent))" }
               }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={PERFORMANCE_DATA}>
+                  <BarChart data={FORENSIC_DATA}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                     <XAxis dataKey="name" fontSize={8} stroke="rgba(255,255,255,0.3)" />
                     <YAxis fontSize={8} stroke="rgba(255,255,255,0.3)" />
                     <Tooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="latency" stroke="var(--color-latency)" strokeWidth={2} dot={false} />
-                  </LineChart>
+                    <Bar dataKey="latency" fill="var(--color-latency)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
             </CardContent>
@@ -415,12 +407,16 @@ export function SystemHealth() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-[10px] text-muted-foreground leading-relaxed">
-                প্রতিটি লেনদেন **SHA256withRSA** সিগনেচার দ্বারা সুরক্ষিত। **Emergency Lock** সক্রিয় থাকলে সব থার্ড-পার্টি ট্রাফিক স্বয়ংক্রিয়ভাবে রিভোক করা হবে।
+                প্রতিটি লেনদেন **SHA256withRSA** সিগনেচার দ্বারা সুরক্ষিত। **Dynamic Key Rotation** এখন সক্রিয় রয়েছে।
               </p>
               <div className="space-y-2">
                 <div className="flex justify-between text-[9px] uppercase font-bold">
                   <span className="text-muted-foreground">Audit Registry Status</span>
                   <span className="text-accent">ENCRYPTED</span>
+                </div>
+                <div className="flex justify-between text-[9px] uppercase font-bold">
+                  <span className="text-muted-foreground">Smart-Routing</span>
+                  <span className="text-accent">ACTIVE</span>
                 </div>
                 <div className="flex justify-between text-[9px] uppercase font-bold">
                   <span className="text-muted-foreground">Lockdown Protocol</span>
@@ -476,53 +472,6 @@ export function SystemHealth() {
           <Button className="w-full bg-primary text-background font-bold" onClick={() => setVerificationData(prev => ({ ...prev, open: false }))}>
             বন্ধ করুন
           </Button>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!reportData} onOpenChange={() => setReportData(null)}>
-        <DialogContent className="bg-card border-accent/40 max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="font-headline flex items-center gap-2 text-accent">
-              <FileText /> Imperial Mission Sovereignty Report
-            </DialogTitle>
-            <DialogDescription className="text-xs font-mono uppercase tracking-widest">
-              Archive ID: {reportData?.archiveId}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-4 font-mono text-[10px] leading-relaxed">
-            <div className="p-4 bg-accent/5 border border-accent/20 rounded-xl space-y-2">
-              <div className="flex justify-between border-b border-accent/10 pb-1">
-                <span>MISSION_STATUS:</span>
-                <span className="text-accent">{reportData?.status}</span>
-              </div>
-              <div className="flex justify-between border-b border-accent/10 pb-1">
-                <span>SECURITY_PROTOCOL:</span>
-                <span className="text-accent">{reportData?.security}</span>
-              </div>
-              <div className="flex justify-between border-b border-accent/10 pb-1">
-                <span>GLOBAL_GRID:</span>
-                <span className="text-accent">{reportData?.grid}</span>
-              </div>
-              <div className="flex justify-between border-b border-accent/10 pb-1">
-                <span>FORENSIC_INTEGRITY:</span>
-                <span className={reportData?.forensicIntegrity.includes('CRITICAL') ? 'text-destructive' : 'text-primary'}>
-                  {reportData?.forensicIntegrity}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>TIMESTAMP:</span>
-                <span className="text-muted-foreground">{reportData?.timestamp}</span>
-              </div>
-            </div>
-            <p className="italic text-muted-foreground">
-              * এই রিপোর্টটি শেখ কোড এক্সচেঞ্জ (42nd Project) আর্কাইভে স্বয়ংক্রিয়ভাবে সংরক্ষিত হয়েছে এবং SHA256withRSA সিগনেচার দ্বারা সুরক্ষিত।
-            </p>
-          </div>
-          <DialogFooter>
-            <Button className="w-full bg-accent text-background font-bold" onClick={() => setReportData(null)}>
-              আর্কাইভে সেভ করুন
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

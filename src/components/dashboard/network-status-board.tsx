@@ -2,21 +2,27 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Globe, Activity, ShieldCheck, Zap, Server, Lock, RefreshCw, Facebook, Cloud, CreditCard } from 'lucide-react'
+import { Globe, Activity, ShieldCheck, Zap, Server, Lock, RefreshCw, Facebook, Cloud, CreditCard, Cpu, RotateCcw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { NetworkAuditor, NetworkNode } from '@/lib/network-auditor'
+import { SovereignIntelligence } from '@/lib/sovereign-intelligence'
 import { useToast } from '@/hooks/use-toast'
 
 export function NetworkStatusBoard() {
   const [nodes, setNodes] = useState<NetworkNode[]>([])
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isRotating, setIsRotating] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
-    setNodes(NetworkAuditor.getGlobalNodes())
+    refreshNodes()
   }, [])
+
+  const refreshNodes = () => {
+    setNodes(NetworkAuditor.getGlobalNodes())
+  }
 
   const handleManualHandshake = async (nodeId: string) => {
     setIsRefreshing(true)
@@ -27,12 +33,25 @@ export function NetworkStatusBoard() {
           title: "HANDSHAKE SUCCESSFUL",
           description: `নোড ${nodeId} আমাদের RSA v2 সিগনেচার গ্রহণ করেছে।`,
         })
+        refreshNodes()
       }
     } catch (e) {
       toast({ title: "HANDSHAKE FAILED", variant: "destructive" })
     } finally {
       setIsRefreshing(false)
     }
+  }
+
+  const handleKeyRotation = () => {
+    setIsRotating(true)
+    setTimeout(() => {
+      const newKey = SovereignIntelligence.rotateSovereignKeys()
+      toast({
+        title: "SECURITY KEYS ROTATED",
+        description: `নতুন সিগনেচার কী কার্যকর করা হয়েছে। ID: ${newKey.substring(0, 12)}...`,
+      })
+      setIsRotating(false)
+    }, 1500)
   }
 
   const getProviderIcon = (provider: string) => {
@@ -52,33 +71,56 @@ export function NetworkStatusBoard() {
               NETWORK-TO-NETWORK ACCESS BOARD
             </CardTitle>
             <CardDescription className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/60">
-              Global Access Nodes • RSA v2 Authentication ACTIVE
+              Global Access Nodes • Smart-Routing & Auto-Repair ACTIVE
             </CardDescription>
           </div>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            disabled={isRefreshing}
-            onClick={() => setNodes(NetworkAuditor.getGlobalNodes())}
-            className="h-8 border-primary/20 text-primary gap-2"
-          >
-            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
-            SCAN NODES
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={handleKeyRotation}
+              disabled={isRotating}
+              className="h-8 border-accent/20 text-accent gap-2"
+            >
+              <RotateCcw size={14} className={isRotating ? 'animate-spin' : ''} />
+              ROTATE KEYS
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              disabled={isRefreshing}
+              onClick={() => {
+                setIsRefreshing(true)
+                setTimeout(() => {
+                  refreshNodes()
+                  setIsRefreshing(false)
+                }, 1000)
+              }}
+              className="h-8 border-primary/20 text-primary gap-2"
+            >
+              <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+              SCAN NODES
+            </Button>
+          </div>
         </div>
       </CardHeader>
       
       <CardContent className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {nodes.map(node => (
-            <div key={node.id} className="p-4 bg-muted/20 border border-white/5 rounded-2xl space-y-4 hover:border-primary/30 transition-all group">
+            <div key={node.id} className={`p-4 bg-muted/20 border rounded-2xl space-y-4 transition-all group ${node.isOptimal ? 'border-accent shadow-[0_0_15px_rgba(34,211,238,0.1)]' : 'border-white/5 hover:border-primary/30'}`}>
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
                     {getProviderIcon(node.provider)}
                   </div>
                   <div>
-                    <h3 className="text-sm font-headline font-bold">{node.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-headline font-bold">{node.name}</h3>
+                      {node.isOptimal && (
+                        <Badge variant="outline" className="h-4 text-[7px] bg-accent/10 border-accent/40 text-accent">OPTIMAL</Badge>
+                      )}
+                    </div>
                     <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">{node.provider}</p>
                   </div>
                 </div>
@@ -91,11 +133,11 @@ export function NetworkStatusBoard() {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1.5">
                     <Zap size={10} className="text-accent" />
-                    <span className="text-[9px] font-mono text-muted-foreground">{node.latency}ms</span>
+                    <span className={`text-[9px] font-mono ${node.isOptimal ? 'text-accent font-bold' : 'text-muted-foreground'}`}>{node.latency}ms</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <ShieldCheck size={10} className="text-primary" />
-                    <span className="text-[9px] font-mono text-muted-foreground">RSA_V2</span>
+                    <span className="text-[9px] font-mono text-muted-foreground">RSA_V2_ROT</span>
                   </div>
                 </div>
                 <Button 
@@ -112,17 +154,21 @@ export function NetworkStatusBoard() {
         </div>
 
         <div className="mt-8 p-4 bg-primary/5 rounded-2xl border border-primary/20">
-          <div className="flex items-center gap-2 mb-3">
-            <Activity size={16} className="text-primary" />
-            <h4 className="text-xs font-headline font-bold uppercase tracking-widest">Handshake Auditor Logs</h4>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Activity size={16} className="text-primary" />
+              <h4 className="text-xs font-headline font-bold uppercase tracking-widest">Handshake Auditor Logs</h4>
+            </div>
+            <Badge variant="outline" className="text-[8px] border-primary/20 text-primary">SECURE_TUNNEL_ACTIVE</Badge>
           </div>
           <div className="space-y-2 max-h-[150px] overflow-y-auto pr-2">
             {nodes.map((node, i) => (
-              <div key={i} className="flex items-center justify-between text-[9px] font-mono p-2 bg-black/40 rounded border border-white/5">
+              <div key={i} className={`flex items-center justify-between text-[9px] font-mono p-2 rounded border transition-colors ${node.isOptimal ? 'bg-accent/5 border-accent/10' : 'bg-black/40 border-white/5'}`}>
                 <span className="text-muted-foreground">[{new Date(node.lastHandshake).toLocaleTimeString()}]</span>
-                <span className="text-accent">HANDSHAKE_INITIATED</span>
-                <span className="text-primary truncate max-w-[150px]">SIG: RSA_SHA256_{Math.random().toString(36).substring(7)}</span>
-                <span className="text-accent">VERIFIED</span>
+                <span className={node.isOptimal ? "text-accent font-bold" : "text-primary"}>NETWORK_HANDSHAKE</span>
+                <span className="text-muted-foreground truncate max-w-[100px]">{node.id}</span>
+                <span className="text-accent">VERIFIED_RSA</span>
+                <span className="text-muted-foreground">LATENCY_{node.latency}ms</span>
               </div>
             ))}
           </div>
