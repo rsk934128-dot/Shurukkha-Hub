@@ -35,8 +35,9 @@ export const AutoLockdown = {
 
   /**
    * Triggers the sovereign lockdown protocol.
+   * Note: Removed 'private' modifier as this is an object literal.
    */
-  private async triggerLockdown(identifier: string) {
+  async triggerLockdown(identifier: string) {
     console.error(`[CRITICAL] LOCKDOWN TRIGGERED for identifier: ${identifier}`);
     
     // In a real implementation, this would update user status in DB
