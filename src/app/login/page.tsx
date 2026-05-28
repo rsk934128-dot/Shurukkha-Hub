@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -12,6 +13,7 @@ import { DeviceValidator } from '@/lib/device-fingerprint-validator'
 import { useToast } from '@/hooks/use-toast'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { TOTPVerificationDialog } from '@/components/auth/totp-verification-dialog'
+import { AppLogo } from '@/components/ui/app-logo'
 
 export default function LoginPage() {
   const { auth } = useAuth()
@@ -125,11 +127,11 @@ export default function LoginPage() {
       
       <Card className="max-w-md w-full border-primary/20 bg-card/60 backdrop-blur-xl shadow-2xl z-10">
         <CardHeader className="text-center space-y-4">
-          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto border border-primary/20">
+          <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto border border-primary/20">
             {isHandshaking ? (
               <Loader2 className="animate-spin text-primary" size={32} />
             ) : (
-              <Shield className="text-primary" size={32} />
+              <AppLogo size={48} />
             )}
           </div>
           <div className="space-y-1">

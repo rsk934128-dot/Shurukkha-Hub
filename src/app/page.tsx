@@ -42,6 +42,7 @@ import { DeviceValidator } from '@/lib/device-fingerprint-validator'
 import { useRouter } from 'next/navigation'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
+import { AppLogo } from '@/components/ui/app-logo'
 
 export default function ShurukkhaDashboard() {
   const [isOffline, setIsOffline] = useState(false)
@@ -221,9 +222,7 @@ export default function ShurukkhaDashboard() {
             <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <SidebarTrigger className="h-10 w-10 md:hidden" />
-                <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center border transition-colors ${isLockedDown ? 'bg-destructive/20 border-destructive/40' : 'bg-primary/10 border-primary/20'}`}>
-                  <Shield className={isLockedDown ? "text-destructive" : "text-primary"} size={20} />
-                </div>
+                <AppLogo size={32} variant={isLockedDown ? 'accent' : 'default'} className="md:w-10 md:h-10" />
                 <div className="hidden xs:block">
                   <div className="flex items-center gap-2">
                     <h1 className="text-sm md:text-xl font-headline font-bold tracking-tighter leading-none uppercase">SHURUKKHA</h1>
@@ -232,7 +231,7 @@ export default function ShurukkhaDashboard() {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-1 md:gap-2">
-                    <span className="text-[8px] md:text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">v31.0</span>
+                    <span className="text-[8px] md:text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">v31.0_SOVEREIGN</span>
                     {isLockedDown && <Badge variant="destructive" className="h-3 md:h-4 text-[6px] md:text-[8px] animate-pulse px-1">LOCKDOWN</Badge>}
                   </div>
                 </div>

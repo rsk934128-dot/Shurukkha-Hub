@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { AppLogo } from '@/components/ui/app-logo'
 
 export default function WelcomeLanding() {
   return (
@@ -35,9 +35,7 @@ export default function WelcomeLanding() {
       {/* Header */}
       <nav className="container mx-auto px-6 py-8 flex justify-between items-center relative z-20">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center border border-primary/30">
-            <Shield className="text-primary" size={24} />
-          </div>
+          <AppLogo size={40} />
           <div>
             <h1 className="text-xl font-headline font-bold tracking-tighter uppercase">SHURUKKHA HUB</h1>
             <p className="text-[8px] text-primary/60 uppercase font-bold tracking-[0.3em]">Sovereign Infrastructure</p>
@@ -149,7 +147,7 @@ export default function WelcomeLanding() {
       <section className="container mx-auto px-6 py-24">
         <div className="bg-primary/5 border border-primary/20 rounded-[3rem] p-12 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-10">
-            <Cpu size={200} className="text-primary" />
+            <AppLogo size={200} />
           </div>
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>

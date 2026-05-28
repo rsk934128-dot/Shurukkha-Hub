@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -32,6 +33,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { Badge } from "@/components/ui/badge"
+import { AppLogo } from "@/components/ui/app-logo"
 
 interface AppSidebarProps {
   userRole: 'citizen' | 'authority' | 'admin'
@@ -51,9 +53,7 @@ export function AppSidebar({ userRole, onNavigate, activeTab }: AppSidebarProps)
     <Sidebar className="border-r border-white/5 bg-card/60 backdrop-blur-xl">
       <SidebarHeader className="p-4 border-b border-white/5">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center border border-primary/30">
-            <Cpu className="text-primary" size={18} />
-          </div>
+          <AppLogo size={32} />
           <div>
             <h2 className="text-sm font-headline font-bold tracking-tight uppercase">SHURUKKHA HUB</h2>
             <p className="text-[8px] text-primary/60 uppercase font-bold tracking-[0.2em]">Sovereign Grid v31.0</p>
