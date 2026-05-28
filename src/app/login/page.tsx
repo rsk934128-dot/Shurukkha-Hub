@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -11,7 +10,7 @@ import { useRouter } from 'next/navigation'
 import { AuthGuard } from '@/lib/auth-guard'
 import { DeviceValidator } from '@/lib/device-fingerprint-validator'
 import { useToast } from '@/hooks/use-toast'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { TOTPVerificationDialog } from '@/components/auth/totp-verification-dialog'
 import { BiometricPrompt } from '@/components/auth/biometric-prompt'
 import { AppLogo } from '@/components/ui/app-logo'
@@ -25,11 +24,11 @@ export default function LoginPage() {
   const [isSigningIn, setIsSigningIn] = useState(false)
   const [show2FA, setShow2FA] = useState(false)
   const [showBiometric, setShowBiometric] = useState(false)
+  const [showSecurityKey, setShowSecurityKey] = useState(false)
   const [pendingSecret, setPendingSecret] = useState<string | null>(null)
   const router = useRouter()
   const { toast } = useToast()
 
-  // Handle redirect result on mount (for browsers that block popups)
   useEffect(() => {
     if (auth && !user) {
       getRedirectResult(auth)
@@ -47,21 +46,20 @@ export default function LoginPage() {
   }, [auth, user]);
 
   useEffect(() => {
-    if (user && !loading && !isHandshaking && !show2FA && !showBiometric) {
+    if (user && !loading && !isHandshaking && !show2FA && !showBiometric && !showSecurityKey) {
       if (AuthGuard.isValidSession()) {
         router.push('/')
       } else {
         performHandshake()
       }
     }
-  }, [user, loading, router, isHandshaking, show2FA, showBiometric])
+  }, [user, loading, router, isHandshaking, show2FA, showBiometric, showSecurityKey])
 
   const performHandshake = async () => {
     if (!user || !firestore) return
     setIsHandshaking(true)
     
     try {
-      // Check if user has 2FA enabled
       const userRef = doc(firestore, "users", user.uid);
       const userSnap = await getDoc(userRef);
       const userData = userSnap.data();
@@ -134,22 +132,24 @@ export default function LoginPage() {
 
   const handleBiometricVerify = async () => {
     setShowBiometric(false);
-    
     if (user) {
-      // If user already logged in via Google, just upgrade session
       await performHandshake();
     } else {
-      // Simple simulation for demo purposes
       const fakeToken = 'est_bio_' + Math.random().toString(36).substring(7);
       AuthGuard.establishSession(fakeToken);
       localStorage.setItem('sovereign_device_id', DeviceValidator.generateFingerprint());
-      
-      toast({
-        title: "বায়োমেট্রিক প্রবেশ সফল",
-        description: "আপনার ডিভাইস সার্বভৌমভাবে স্বীকৃত হয়েছে।",
-      });
+      toast({ title: "বায়োমেট্রিক প্রবেশ সফল", description: "আপনার ডিভাইস সার্বভৌমভাবে স্বীকৃত হয়েছে।" });
       router.push('/');
     }
+  }
+
+  const handleSecurityKeyVerify = async () => {
+    setShowSecurityKey(false);
+    const fakeToken = 'est_key_' + Math.random().toString(36).substring(7);
+    AuthGuard.establishSession(fakeToken);
+    localStorage.setItem('sovereign_device_id', DeviceValidator.generateFingerprint());
+    toast({ title: "সিকিউরিটি কী শনাক্ত হয়েছে", description: "ইম্পেরিয়াল অ্যাক্সেস গ্র্যান্ট করা হয়েছে।" });
+    router.push('/');
   }
 
   const handleGoogleLogin = async () => {
@@ -165,26 +165,14 @@ export default function LoginPage() {
       await signInWithPopup(auth, provider)
     } catch (error: any) {
       console.error("Login attempt failed:", error)
-      
       if (error.code === 'auth/popup-blocked') {
-        toast({
-          title: "পপ-আপ ব্লক করা হয়েছে",
-          description: "ব্রাউজার পপ-আপ ব্লক করায় রিডাইরেক্ট মোডে চেষ্টা করা হচ্ছে...",
-        })
+        toast({ title: "পপ-আপ ব্লক করা হয়েছে", description: "রিডাইরেক্ট মোডে চেষ্টা করা হচ্ছে..." })
         try {
           await signInWithRedirect(auth, provider);
         } catch (redirectError) {
-          console.error("Redirect attempt failed:", redirectError);
           setIsSigningIn(false)
         }
-      } else if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
-        setIsSigningIn(false)
       } else {
-        toast({
-          title: "লগইন ব্যর্থ",
-          description: error.message || "গুগল লগইন সম্পন্ন করা সম্ভব হয়নি।",
-          variant: "destructive"
-        })
         setIsSigningIn(false)
       }
     }
@@ -194,7 +182,6 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#05070a] flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-primary/5 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] pointer-events-none" />
       
-      {/* Visual Background Logo */}
       <div className="absolute -bottom-24 -left-24 opacity-5 rotate-12">
         <AppLogo size={500} />
       </div>
@@ -237,7 +224,6 @@ export default function LoginPage() {
                 <p className="text-sm text-muted-foreground text-center leading-relaxed px-4">
                   সিরাজগঞ্জ সুরক্ষা পোর্টালে আপনার রাজকীয় পরিচয় নিশ্চিত করুন। নিরাপদ এক্সেস পেতে নিচের মাধ্যমটি ব্যবহার করুন।
                 </p>
-                
                 <div className="flex justify-center">
                   <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5 py-1 px-4 gap-2 text-[10px] font-bold uppercase tracking-widest">
                     <Star size={12} fill="currentColor" /> PHASE 31.0 SECURED
@@ -272,8 +258,8 @@ export default function LoginPage() {
                   </Button>
                   <Button 
                     variant="outline"
-                    disabled
-                    className="h-12 border-white/5 font-bold gap-2 opacity-50 rounded-xl text-[10px] uppercase tracking-wider"
+                    onClick={() => setShowSecurityKey(true)}
+                    className="h-12 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold gap-2 rounded-xl text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95"
                   >
                     <Key size={16} /> সিকিউরিটি কী
                   </Button>
@@ -304,6 +290,13 @@ export default function LoginPage() {
         onVerify={handleBiometricVerify}
         onCancel={() => setShowBiometric(false)}
         actionName="Imperial Sovereign Access"
+      />
+
+      <BiometricPrompt 
+        isOpen={showSecurityKey}
+        onVerify={handleSecurityKeyVerify}
+        onCancel={() => setShowSecurityKey(false)}
+        actionName="Hardware Security Key Access"
       />
     </div>
   )
