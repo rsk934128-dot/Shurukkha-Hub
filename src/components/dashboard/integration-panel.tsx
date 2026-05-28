@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle, RefreshCcw, Swords, Target, Crosshair } from 'lucide-react'
+import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle, RefreshCcw, Swords, Target, Crosshair, Sparkles, BrainCircuit } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +17,7 @@ import { SelfHealing } from '@/lib/self-healing'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ThreatMap } from './threat-map'
+import { PredictiveForecasting } from './predictive-forecasting'
 
 export function IntegrationPanel() {
   const [apps, setApps] = useState<any[]>([])
@@ -127,6 +128,7 @@ export function IntegrationPanel() {
         <div className="px-6 py-2 bg-muted/20 border-b border-white/5">
           <TabsList className="bg-transparent border-none p-0 h-8">
             <TabsTrigger value="war-room" className="text-xs gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold"><Swords size={14}/> ইম্পেরিয়াল ওয়ার-রুম</TabsTrigger>
+            <TabsTrigger value="evolution" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><BrainCircuit size={14}/> ইভোলিউশন ও প্রেডিকশন</TabsTrigger>
             <TabsTrigger value="guard" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><ShieldX size={14}/> গার্ড ও ইন্টারসেপ্টর</TabsTrigger>
             <TabsTrigger value="intelligence" className="text-xs gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold"><Skull size={14}/> ইন্টেলিজেন্স</TabsTrigger>
             <TabsTrigger value="apps" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Globe size={14}/> পার্টনার্স</TabsTrigger>
@@ -178,6 +180,10 @@ export function IntegrationPanel() {
               </div>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="evolution" className="flex-1 p-6 m-0">
+          <PredictiveForecasting />
         </TabsContent>
 
         <TabsContent value="guard" className="flex-1 p-6 space-y-6 m-0">
