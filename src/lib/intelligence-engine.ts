@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Adaptive Threat Intelligence Engine.
  * Implements self-learning blacklisting and attacker profiling.
@@ -6,6 +5,7 @@
 
 import { db } from './firebase';
 import { collection, addDoc, getDocs, query, where, updateDoc, doc, serverTimestamp, limit } from 'firebase/firestore';
+import { SelfHealing } from './self-healing';
 
 export interface ThreatAnalysis {
   ip: string;
@@ -25,6 +25,11 @@ export const IntelligenceEngine = {
       const suspectsRef = collection(db, "suspect_profiles");
       const q = query(suspectsRef, where("ipAddress", "==", analysis.ip), limit(1));
       const snapshot = await getDocs(q);
+
+      // Trigger Self-Healing if threat is from a deep inspection or honeypot
+      if (analysis.source === 'honeypot' || analysis.source === 'deep_inspection') {
+        SelfHealing.initiateRecovery(analysis.source, analysis.violationType);
+      }
 
       if (snapshot.empty) {
         // Create new profile

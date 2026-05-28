@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -18,6 +17,7 @@ import { NetworkStatusBoard } from '@/components/dashboard/network-status-board'
 import { SovereignNetworkMap } from '@/components/dashboard/sovereign-network-map'
 import { SovereignDomainManager } from '@/components/dashboard/sovereign-domain-manager'
 import { BankDirectory } from '@/components/treasury/bank-directory'
+import { AlertCenter } from '@/components/dashboard/alert-center'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -297,6 +297,7 @@ export default function ShurukkhaDashboard() {
         </div>
       </footer>
       
+      <AlertCenter />
       <Toaster />
     </div>
   )

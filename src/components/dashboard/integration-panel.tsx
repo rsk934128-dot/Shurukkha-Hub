@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle } from 'lucide-react'
+import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle, RefreshCcw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +12,7 @@ import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestor
 import { IntegrationBridge } from '@/lib/integration-bridge'
 import { SovereignConnector } from '@/lib/sovereign-connector'
 import { SovereignGuard } from '@/lib/sovereign-guard'
+import { SelfHealing } from '@/lib/self-healing'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -22,6 +22,7 @@ export function IntegrationPanel() {
   const [loading, setLoading] = useState(false)
   const [newApp, setNewApp] = useState({ name: '', webhook: '' })
   const [isHandshaking, setIsHandshaking] = useState(false)
+  const [healingStatus, setHealingStatus] = useState(SelfHealing.getStatus())
   
   const discoveryMap = [
     { id: 1, name: 'Payment Webhook', path: '/api/webhook/bkash', status: 'v25_active', redundancy: 'Primary' },
@@ -44,9 +45,14 @@ export function IntegrationPanel() {
       setSuspects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
+    const interval = setInterval(() => {
+      setHealingStatus(SelfHealing.getStatus());
+    }, 1000);
+
     return () => {
       unsubApps();
       unsubSuspects();
+      clearInterval(interval);
     }
   }, [])
 
@@ -71,7 +77,7 @@ export function IntegrationPanel() {
   const handleSovereignHandshake = async () => {
     setIsHandshaking(true)
     try {
-      const result = await SovereignConnector.authorizeAction('SYSTEM_HANDSHAKE', {
+      await SovereignConnector.authorizeAction('SYSTEM_HANDSHAKE', {
         source: 'SIRAJGANJ_SURAKKHA_HUB',
         target: 'NOORAI_FUSIONPAY_GRID'
       });
@@ -100,8 +106,8 @@ export function IntegrationPanel() {
             </CardDescription>
           </div>
           <div className="flex gap-2">
-            <Badge variant="outline" className="border-destructive/40 text-destructive bg-destructive/5 gap-1.5 py-1">
-              <ShieldAlert size={12} className="animate-pulse" /> TRAP_ENGAGED
+            <Badge variant="outline" className={`gap-1.5 py-1 ${healingStatus.status === 'OPTIMAL' ? 'border-accent/40 text-accent' : 'border-destructive/40 text-destructive animate-pulse'}`}>
+              <RefreshCcw size={12} className={healingStatus.status === 'REPAIRING' ? 'animate-spin' : ''} /> {healingStatus.status}
             </Badge>
             <Button 
               size="sm" 
@@ -122,6 +128,7 @@ export function IntegrationPanel() {
             <TabsTrigger value="intelligence" className="text-xs gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold"><Skull size={14}/> ইন্টেলিজেন্স ইউনিট</TabsTrigger>
             <TabsTrigger value="apps" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Globe size={14}/> পার্টনার্স</TabsTrigger>
             <TabsTrigger value="discovery" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><Search size={14}/> ডিকয় ও ট্র্যাপ</TabsTrigger>
+            <TabsTrigger value="future" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Rocket size={14}/> ফিউচার প্রো</TabsTrigger>
           </TabsList>
         </div>
 
@@ -199,7 +206,7 @@ export function IntegrationPanel() {
         <TabsContent value="intelligence" className="flex-1 p-6 space-y-6 m-0">
           <div className="p-4 bg-destructive/5 border border-destructive/20 rounded-xl space-y-2">
             <h4 className="text-xs font-headline font-bold text-destructive uppercase tracking-widest flex items-center gap-2">
-              <Skull size={18} /> CAPTURED ATTACKERS (SUSPECT PROFILES)
+              <Skull size={18} /> CAPTURED ATTACKERS (IMPERIAL INTEL)
             </h4>
             <p className="text-[10px] text-muted-foreground">এআই ইন্টেলিজেন্স ইউনিট দ্বারা শনাক্তকৃত সন্দেহভাজন আক্রমণকারীদের তালিকা।</p>
           </div>
@@ -316,6 +323,32 @@ export function IntegrationPanel() {
                 <Badge variant="outline" className={`text-[8px] h-5 gap-1 ${ep.status === 'TRAP_ACTIVE' ? 'border-destructive/40 text-destructive animate-pulse' : 'border-accent/40 text-accent'}`}>
                   {ep.status === 'TRAP_ACTIVE' ? <AlertTriangle size={10} /> : <CheckCircle2 size={10} />} {ep.status}
                 </Badge>
+              </div>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="future" className="flex-1 p-6 m-0 space-y-6">
+          <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+            <h4 className="text-xs font-headline font-bold text-primary uppercase tracking-widest flex items-center gap-2 mb-2">
+              <Rocket size={18} /> FUTURE READINESS ROADMAP
+            </h4>
+            <p className="text-[10px] text-muted-foreground">সাম্রাজ্যের পরবর্তী ৩টি বড় মাইলস্টোন এবং টু-ওয়ে সিঙ্ক লজিক।</p>
+          </div>
+          <div className="grid gap-4">
+            {[
+              { phase: '25.0', title: 'Direct Settlement & Merchant Funding', desc: 'বিকাশ বা অন্যান্য গেটওয়ের সাথে সরাসরি সেটেলমেন্ট লজিক।' },
+              { phase: '26.0', title: 'Two-Way Outbound Data Sync', desc: 'আমাদের সিস্টেম থেকে পার্টনার অ্যাপে স্বয়ংক্রিয় সিগন্যাল পাঠানো।' },
+              { phase: '27.0', title: 'Predictive Traffic Analysis', desc: 'গ্লোবাল পেমেন্ট রাউটিংয়ের জন্য এআই চালিত পূর্বাভাস।' }
+            ].map((milestone, idx) => (
+              <div key={idx} className="p-4 bg-muted/20 border border-white/5 rounded-2xl flex items-center gap-4 group hover:border-primary/30 transition-all">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 font-headline font-bold text-primary">
+                  {milestone.phase}
+                </div>
+                <div>
+                  <h3 className="text-sm font-headline font-bold">{milestone.title}</h3>
+                  <p className="text-[10px] text-muted-foreground">{milestone.desc}</p>
+                </div>
               </div>
             ))}
           </div>
