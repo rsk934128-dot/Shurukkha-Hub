@@ -9,6 +9,7 @@ import { collection, addDoc, serverTimestamp, getDocs, query, where, limit } fro
 import { FraudRecovery } from './fraud-recovery-protocol';
 import { EconomicForecaster } from './economic-forecaster';
 import { AuthGuard } from './auth-guard';
+import { SovereignAudit } from './sovereign-audit';
 
 export interface PaymentIntent {
   amount: number;
@@ -77,8 +78,8 @@ export class PaymentHandler {
     
     const invoiceData = {
       invoiceId,
-      merchantId: merchant.merchantId,
-      merchantName: merchant.businessName,
+      merchantId: merchant.merchantId || 'TXT-001',
+      merchantName: merchant.businessName || 'সিরাজগঞ্জ হ্যান্ডলুম প্রোডাকশন হাউস',
       amount,
       serviceFee: fee,
       description,
@@ -103,23 +104,34 @@ export class PaymentHandler {
    * Simulates a full financial cycle from picking a merchant to final settlement.
    */
   static async simulateFinancialCycle(onLog: (msg: string) => void) {
-    onLog("[INITIATING]: Picking Active Merchant from Registry...");
+    onLog("[INITIATING]: Picking Targeted Merchant for Stress Test...");
     
-    // Step 1: Pick a merchant
-    const merchantsSnap = await getDocs(query(collection(db, "merchants"), limit(1)));
-    const merchant = !merchantsSnap.empty ? { id: merchantsSnap.docs[0].id, ...merchantsSnap.docs[0].data() } : { businessName: 'Sirajganj Handloom House', merchantId: 'SMID-4242' };
+    // Step 1: Pick a merchant (Prioritize the one requested by the user)
+    const merchantsSnap = await getDocs(query(collection(db, "merchants"), where("merchantId", "==", "TXT-001"), limit(1)));
+    let merchant: any;
+    
+    if (!merchantsSnap.empty) {
+      merchant = { id: merchantsSnap.docs[0].id, ...merchantsSnap.docs[0].data() };
+    } else {
+      merchant = { 
+        businessName: 'সিরাজগঞ্জ হ্যান্ডলুম প্রোডাকশন হাউস', 
+        merchantId: 'TXT-001',
+        category: 'Textile'
+      };
+    }
     
     onLog(`[MERCHANT]: Selected ${merchant.businessName} (${merchant.merchantId})`);
     
     // Step 2: Generate Invoice
-    onLog("[INVOICE]: Generating Sovereign Bill...");
-    const invoice = await this.generateInvoice(merchant, 25000, "Imperial Protection & Gateway Service");
-    onLog(`[SUCCESS]: Invoice ${invoice.invoiceId} generated. Amount: ৳${invoice.amount}`);
+    const amount = 10000;
+    onLog(`[INVOICE]: Generating Sovereign Bill for ৳${amount}...`);
+    const invoice = await this.generateInvoice(merchant, amount, "Imperial Service Fee - Strategic Validation");
+    onLog(`[SUCCESS]: Invoice ${invoice.invoiceId} generated and pushed to ledger.`);
 
     // Step 3: Zero-Trust Handshake
     onLog("[SECURITY]: Executing Zero-Trust Handshake (RSA v2)...");
-    await new Promise(r => setTimeout(r, 1000));
-    onLog("[SUCCESS]: Identity Verified via Node 42.");
+    await new Promise(r => setTimeout(r, 1200));
+    onLog("[SUCCESS]: Identity Verified via Sovereign Node 42.");
 
     // Step 4: Atomic Settlement
     const intent: PaymentIntent = {
@@ -155,6 +167,9 @@ export class PaymentHandler {
       performedBy: 'Autonomous_Revenue_Engine'
     });
 
+    // Log the Sovereign Milestone
+    await SovereignAudit.logMilestone('PHASE_31_FINANCE', `First digital revenue settlement (৳${fee}) completed for ${merchant.businessName}.`);
+
     onLog(`[COMPLETED]: Cycle Finished. Settlement ID: ${settlementId}`);
     return { success: true, settlementId, fee };
   }
@@ -174,7 +189,7 @@ export class PaymentHandler {
     const risk = PaymentHandler.predictRisk(intent);
     
     if (risk === 'CRITICAL') {
-      FraudRecovery.freezeFunds('txn_failed_' + Date.now(), intent.amount, 'CRITICAL_RISK_MERCHANT');
+      FraudRecovery.freezeFunds('txn_failed_' + Date.now(), intent.amount, 'CRITICAL_RIS_MERCHANT');
       throw new Error("Transaction BLOCKED by AI Fraud Engine. Funds HELD for recovery.");
     }
 

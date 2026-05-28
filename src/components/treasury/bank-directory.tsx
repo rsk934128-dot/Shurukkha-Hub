@@ -235,10 +235,10 @@ export function BankDirectory() {
                 </div>
               ) : (
                 ledgerLogs.map((log) => (
-                  <div key={log.id} className={`p-4 rounded-2xl border transition-all hover:border-primary/40 ${log.action === 'SETTLEMENT_COMPLETED' ? 'bg-accent/5 border-accent/20' : 'bg-primary/5 border-primary/20'}`}>
+                  <div key={log.id} className={`p-4 rounded-2xl border transition-all hover:border-primary/40 ${log.action === 'SETTLEMENT_COMPLETED' ? 'bg-accent/5 border-accent/20 shadow-[0_0_15px_rgba(34,211,238,0.1)]' : 'bg-primary/5 border-primary/20'}`}>
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${log.action === 'SETTLEMENT_COMPLETED' ? 'bg-accent/20 text-accent' : 'bg-primary/20 text-primary'}`}>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${log.action === 'SETTLEMENT_COMPLETED' ? 'bg-accent/20 text-accent' : 'bg-primary/20 text-primary'}`}>
                           {log.action === 'SETTLEMENT_COMPLETED' ? <CheckCircle2 size={16} /> : <FileText size={16} />}
                         </div>
                         <div>
@@ -251,18 +251,18 @@ export function BankDirectory() {
                       </Badge>
                     </div>
                     
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 p-2 bg-black/40 rounded-xl border border-white/5">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 p-3 bg-black/40 rounded-xl border border-white/5">
                        <div className="space-y-0.5">
-                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Amount</p>
-                          <p className="text-xs font-bold text-foreground">৳{log.details?.amount?.toLocaleString()}</p>
+                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Total Amount</p>
+                          <p className="text-sm font-bold text-foreground">৳{log.details?.amount?.toLocaleString()}</p>
                        </div>
                        <div className="space-y-0.5">
-                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Imperial Fee</p>
-                          <p className="text-xs font-bold text-accent">৳{log.details?.feeCollected || log.details?.serviceFee || 0}</p>
+                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Imperial Fee (1.5%)</p>
+                          <p className="text-sm font-bold text-accent">৳{log.details?.feeCollected || log.details?.serviceFee || 0}</p>
                        </div>
                        <div className="space-y-0.5 col-span-2">
-                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Entity</p>
-                          <p className="text-xs font-bold text-primary truncate">{log.details?.merchantId || log.details?.settlementId || 'Sovereign Node'}</p>
+                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Target Merchant</p>
+                          <p className="text-sm font-bold text-primary truncate">{log.details?.merchantName || log.details?.merchantId || 'TXT-001'}</p>
                        </div>
                     </div>
                   </div>
