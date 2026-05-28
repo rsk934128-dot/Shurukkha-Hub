@@ -48,7 +48,7 @@ export function DispatcherConsole() {
       if (activeAlerts.length > 0 && activeAlerts[0].id !== lastAlertId.current) {
         if (activeAlerts[0].status === 'pending') {
           playAlertSound();
-          toast({ title: "নতুন জরুরি সংকেত পাওয়া গেছে!", variant: "destructive" });
+          toast({ title: "নতুন জরুরি সংকেত!", variant: "destructive" });
         }
         lastAlertId.current = activeAlerts[0].id;
       }
@@ -83,15 +83,13 @@ export function DispatcherConsole() {
       await webrtcRef.current.answerCall(stream, (remote) => {
         setRemoteStream(remote);
       });
-      toast({ title: "Sovereign WebRTC Secure Link Active" });
     } catch (e) {
       setIsCalling(false);
-      toast({ title: "Encryption Handshake Failed", variant: "destructive" });
+      toast({ title: "Encryption Failed", variant: "destructive" });
     }
   }
 
   const endCall = () => {
-    // Explicitly stop camera and mic tracks
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
       localStreamRef.current = null;
@@ -144,102 +142,72 @@ export function DispatcherConsole() {
       
       if (responderId) updateData.assignedResponder = responderId;
       await updateDoc(alertRef, updateData);
-      
       toast({ title: `Command Executed: ${status.toUpperCase()}` });
-    } catch (error) {
-      console.error(error)
-    }
+    } catch (error) { console.error(error); }
   }
 
   return (
-    <div className={`h-full flex flex-col gap-6 transition-all duration-1000 ${isCalling ? 'call-active-glow' : 'animate-in fade-in'}`}>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-0">
-        {/* Left: Emergency Feed */}
-        <div className="lg:col-span-3 space-y-6 flex flex-col min-h-0">
-           <Card className="bg-card/40 border-primary/20 flex flex-col flex-1 overflow-hidden neon-glow-primary min-h-[400px]">
-              <CardHeader className="bg-primary/10 border-b border-white/5 py-3 flex flex-row items-center justify-between">
-                <CardTitle className="text-xs font-headline flex items-center gap-2 uppercase tracking-widest neon-text-primary">
-                  <Activity size={14} className="animate-pulse" /> Live_Emergencies
+    <div className={`h-full flex flex-col gap-4 md:gap-6 transition-all duration-1000 ${isCalling ? 'call-active-glow' : 'animate-in fade-in'}`}>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 h-full min-h-0">
+        
+        {/* Left: Emergency Feed - Optimized for scroll on mobile */}
+        <div className="lg:col-span-3 space-y-4 md:space-y-6 flex flex-col min-h-0 order-2 lg:order-1">
+           <Card className="bg-card/40 border-primary/20 flex flex-col flex-1 overflow-hidden neon-glow-primary min-h-[300px] lg:min-h-[400px]">
+              <CardHeader className="bg-primary/10 border-b border-white/5 py-2 md:py-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-[10px] md:text-xs font-headline flex items-center gap-2 uppercase tracking-widest neon-text-primary">
+                  <Activity size={12} md:size={14} className="animate-pulse" /> Live_Feed
                 </CardTitle>
-                <Badge variant="outline" className="text-[7px] border-primary/40 text-primary">{alerts.length} ACTIVE</Badge>
+                <Badge variant="outline" className="text-[6px] md:text-[7px] border-primary/40 text-primary">{alerts.length} ACTIVE</Badge>
               </CardHeader>
               <ScrollArea className="flex-1 bg-black/20">
-                <div className="p-3 space-y-3">
+                <div className="p-2 md:p-3 space-y-2 md:space-y-3">
                    {alerts.map((alert) => (
                      <div 
                        key={alert.id} 
                        onClick={() => handleAnalyze(alert)}
-                       className={`p-4 rounded-2xl border transition-all cursor-pointer relative group ${selectedAlert?.id === alert.id ? 'bg-primary/20 border-primary ring-1 ring-primary/40' : 'bg-card/60 border-white/5 hover:border-primary/40'}`}
+                       className={`p-3 md:p-4 rounded-xl md:rounded-2xl border transition-all cursor-pointer relative group ${selectedAlert?.id === alert.id ? 'bg-primary/20 border-primary ring-1 ring-primary/40' : 'bg-card/60 border-white/5 hover:border-primary/40'}`}
                      >
-                        <div className="flex justify-between items-start mb-2">
-                           <Badge className={`text-[7px] h-4 uppercase font-bold ${alert.status === 'pending' ? 'bg-destructive animate-pulse' : 'bg-accent text-background'}`}>
+                        <div className="flex justify-between items-start mb-1 md:mb-2">
+                           <Badge className={`text-[6px] md:text-[7px] h-3 md:h-4 uppercase font-bold ${alert.status === 'pending' ? 'bg-destructive animate-pulse' : 'bg-accent text-background'}`}>
                               {alert.status}
                            </Badge>
-                           <span className="text-[8px] font-mono text-muted-foreground">[{alert.timestamp?.toDate ? alert.timestamp.toDate().toLocaleTimeString() : '0.00s'}]</span>
+                           <span className="text-[7px] md:text-[8px] font-mono text-muted-foreground">[{alert.timestamp?.toDate ? alert.timestamp.toDate().toLocaleTimeString() : '0.00s'}]</span>
                         </div>
-                        <p className="text-[11px] font-bold text-foreground line-clamp-1">{alert.location}</p>
-                        <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-tighter mt-1">{alert.type}</p>
-                        
-                        {selectedAlert?.id === alert.id && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-r-full" />}
+                        <p className="text-[10px] md:text-[11px] font-bold text-foreground line-clamp-1">{alert.location}</p>
+                        <p className="text-[8px] md:text-[9px] text-muted-foreground uppercase font-bold tracking-tighter mt-1">{alert.type}</p>
                      </div>
                    ))}
                 </div>
               </ScrollArea>
            </Card>
-
-           <Card className="bg-card/40 border-white/5 p-4 space-y-4">
-              <h4 className="text-[10px] font-headline font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 border-b border-white/5 pb-2">
-                 <ShieldCheck size={14} className="text-primary" /> System_Purity
-              </h4>
-              <div className="space-y-3">
-                 <div className="flex justify-between items-center text-[9px] font-mono">
-                    <span className="text-white/60">ENCRYPTION</span>
-                    <span className="text-accent font-bold">RSA_v2_ACTIVE</span>
-                 </div>
-                 <div className="flex justify-between items-center text-[9px] font-mono">
-                    <span className="text-white/60">AUDIO_LINK</span>
-                    <span className={isCalling ? "text-accent font-bold animate-pulse" : "text-muted-foreground"}>
-                      {isCalling ? 'HD_ACTIVE' : 'IDLE'}
-                    </span>
-                 </div>
-              </div>
-           </Card>
         </div>
 
-        {/* Center: Dynamic Panel (Map / Communication) */}
-        <div className="lg:col-span-6 flex flex-col min-h-0">
+        {/* Center: Strategic Panel - Higher visibility on mobile */}
+        <div className="lg:col-span-6 flex flex-col min-h-[400px] md:min-h-0 order-1 lg:order-2">
           <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-2">
-              <TabsList className="bg-black/40 border border-white/5 p-1 h-10 rounded-2xl">
-                <TabsTrigger value="map" className="text-[10px] gap-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-background font-bold uppercase tracking-widest px-4">
-                  <Globe size={12} /> Strategic Map
+              <TabsList className="bg-black/40 border border-white/5 p-1 h-9 md:h-10 rounded-xl md:rounded-2xl">
+                <TabsTrigger value="map" className="text-[8px] md:text-[10px] gap-1.5 md:gap-2 rounded-lg md:rounded-xl data-[state=active]:bg-primary data-[state=active]:text-background font-bold uppercase tracking-widest px-3 md:px-4">
+                  <Globe size={12} /> Map
                 </TabsTrigger>
-                <TabsTrigger value="comm" className="text-[10px] gap-2 rounded-xl data-[state=active]:bg-accent data-[state=active]:text-background font-bold uppercase tracking-widest px-4">
-                  <MessageSquare size={12} /> Comm Console
+                <TabsTrigger value="comm" className="text-[8px] md:text-[10px] gap-1.5 md:gap-2 rounded-lg md:rounded-xl data-[state=active]:bg-accent data-[state=active]:text-background font-bold uppercase tracking-widest px-3 md:px-4">
+                  <MessageSquare size={12} /> Comms
                 </TabsTrigger>
               </TabsList>
-              <Badge variant="outline" className="border-accent/40 text-accent text-[8px] animate-pulse">HUB_SYNC: 100%</Badge>
+              <Badge variant="outline" className="border-accent/40 text-accent text-[7px] md:text-[8px] animate-pulse">GRID_SYNC</Badge>
             </div>
             
-            <TabsContent value="map" className="flex-1 mt-0 relative min-h-0">
+            <TabsContent value="map" className="flex-1 mt-0 relative min-h-0 rounded-2xl overflow-hidden border border-white/5">
                <ResourceMap />
                {isCalling && (
-                 <div className="absolute inset-x-0 bottom-8 flex justify-center z-[70] animate-in slide-in-from-bottom-5">
-                   <MediaControls onHangUp={endCall} />
+                 <div className="absolute inset-x-0 bottom-4 md:bottom-8 flex justify-center z-[70] animate-in slide-in-from-bottom-5 px-4">
+                   <MediaControls onHangUp={endCall} className="w-full max-w-xs" />
                  </div>
                )}
                {isCalling && remoteStream && (
-                 <div className="absolute top-4 right-4 w-64 aspect-video bg-black rounded-3xl border-2 border-accent shadow-2xl overflow-hidden z-[60] animate-in zoom-in-95 group">
+                 <div className="absolute top-2 right-2 md:top-4 md:right-4 w-40 md:w-64 aspect-video bg-black rounded-xl md:rounded-3xl border-2 border-accent shadow-2xl overflow-hidden z-[60] animate-in zoom-in-95">
                     <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-                    <div className="absolute top-3 left-3 flex gap-2">
-                      <Badge className="bg-red-600 animate-pulse text-[7px] border-none">LIVE_HUD</Badge>
-                      <Badge variant="outline" className="text-[7px] border-white/20 bg-black/40 text-white">4K_ULTRA</Badge>
-                    </div>
-                    <div className="absolute bottom-3 left-3">
-                       <p className="text-[10px] font-headline font-bold text-white uppercase tracking-widest">{selectedAlert?.location}</p>
-                       <p className="text-[7px] text-accent font-mono">LATENCY: 0.002ms</p>
-                    </div>
+                    <Badge className="absolute top-2 left-2 bg-red-600 animate-pulse text-[6px] md:text-[7px] border-none">HUD</Badge>
                  </div>
                )}
             </TabsContent>
@@ -250,40 +218,36 @@ export function DispatcherConsole() {
           </Tabs>
         </div>
 
-        {/* Right: Tactical Ops */}
-        <div className="lg:col-span-3 flex flex-col gap-6 min-h-0">
-          <Card className="bg-card/40 border-accent/20 flex-1 flex flex-col overflow-hidden relative neon-glow-accent min-h-[400px]">
-             <CardHeader className="bg-accent/10 border-b border-white/5 py-4">
-                <CardTitle className="text-sm font-headline flex items-center gap-2 uppercase tracking-[0.2em] neon-text-accent">
-                   <Target size={18} className="animate-spin-slow" /> Tactical_Ops
+        {/* Right: Tactical Ops - Action panel */}
+        <div className="lg:col-span-3 flex flex-col gap-4 md:gap-6 min-h-0 order-3">
+          <Card className="bg-card/40 border-accent/20 flex-1 flex flex-col overflow-hidden relative neon-glow-accent min-h-[300px] lg:min-h-[400px]">
+             <CardHeader className="bg-accent/10 border-b border-white/5 py-3 md:py-4">
+                <CardTitle className="text-xs md:text-sm font-headline flex items-center gap-2 uppercase tracking-[0.2em] neon-text-accent">
+                   <Target size={16} md:size={18} /> Tactical_Ops
                 </CardTitle>
              </CardHeader>
              <CardContent className="p-0 flex-1 flex flex-col">
                 {selectedAlert ? (
                   <div className="flex-1 flex flex-col min-h-0">
-                    <div className="aspect-video bg-black/60 relative m-4 rounded-3xl border border-white/5 overflow-hidden group">
+                    <div className="aspect-video bg-black/60 relative m-2 md:m-4 rounded-xl md:rounded-3xl border border-white/5 overflow-hidden">
                        {isCalling ? (
-                         <div className="w-full h-full flex flex-col items-center justify-center space-y-3 bg-accent/5">
-                            <div className="relative">
-                               <div className="absolute -inset-4 bg-accent/20 rounded-full blur-xl animate-pulse" />
-                               <Volume2 className="text-accent animate-bounce relative z-10" size={32} />
-                            </div>
-                            <p className="text-[9px] font-mono text-accent uppercase tracking-[0.3em] animate-pulse">Sovereign Link Stable</p>
+                         <div className="w-full h-full flex flex-col items-center justify-center space-y-2 md:space-y-3 bg-accent/5">
+                            <Volume2 className="text-accent animate-bounce" size={24} md:size={32} />
+                            <p className="text-[8px] md:text-[9px] font-mono text-accent uppercase tracking-[0.3em] animate-pulse">Session Active</p>
                          </div>
                        ) : (
-                         <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3">
-                            <Video size={32} className="text-white/10 group-hover:text-accent transition-colors" />
-                            <p className="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">No Active Video Link</p>
+                         <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2">
+                            <Video size={24} md:size={32} className="text-white/10" />
+                            <p className="text-[8px] md:text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">No Signal</p>
                          </div>
                        )}
-                       <Badge className="absolute top-3 left-3 bg-accent/80 text-background text-[7px] font-mono">NODE: {selectedAlert.id.substring(0, 6).toUpperCase()}</Badge>
                     </div>
 
-                    <ScrollArea className="flex-1 px-4">
+                    <ScrollArea className="flex-1 px-3 md:px-4">
                        <div className="space-y-4 pb-4">
                           <div className="space-y-1">
-                             <h3 className="text-lg font-headline font-bold neon-text-accent">{selectedAlert.location}</h3>
-                             <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{selectedAlert.type}</p>
+                             <h3 className="text-sm md:text-lg font-headline font-bold neon-text-accent">{selectedAlert.location}</h3>
+                             <p className="text-[8px] md:text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{selectedAlert.type}</p>
                           </div>
 
                           <div className="flex gap-2">
@@ -291,42 +255,37 @@ export function DispatcherConsole() {
                                onClick={handleCall} 
                                disabled={isCalling} 
                                size="sm" 
-                               className={`bg-accent text-background font-bold gap-2 flex-1 rounded-xl h-10 shadow-lg shadow-accent/20 transition-all ${isCalling ? 'opacity-50 scale-95' : 'hover:scale-105'}`}
+                               className="bg-accent text-background font-bold gap-2 flex-1 rounded-xl h-9 md:h-10 text-[10px]"
                              >
-                               <Phone size={14} /> {isCalling ? 'LINK_ACTIVE' : 'Establish Video Link'}
+                               <Phone size={14} /> {isCalling ? 'ACTIVE' : 'Start Link'}
                              </Button>
-                             {isCalling && (
-                               <Button variant="destructive" size="icon" onClick={endCall} className="h-10 w-10 rounded-xl animate-pulse">
-                                  <PhoneOff size={16} />
-                               </Button>
-                             )}
                           </div>
 
-                          <div className="pt-4 border-t border-white/5 space-y-4">
+                          <div className="pt-3 border-t border-white/5">
                              {analyzing ? (
-                               <div className="py-4 text-center space-y-3">
-                                  <Loader2 className="animate-spin text-accent mx-auto" size={24} />
-                                  <p className="text-[10px] font-mono text-accent uppercase animate-pulse">Calculating AI Strategy...</p>
+                               <div className="py-4 text-center space-y-2">
+                                  <Loader2 className="animate-spin text-accent mx-auto" size={20} />
+                                  <p className="text-[8px] font-mono text-accent uppercase animate-pulse">Computing...</p>
                                </div>
                              ) : recommendation ? (
-                               <div className="p-4 bg-primary/10 rounded-2xl border border-primary/30 space-y-3 animate-in zoom-in-95">
+                               <div className="p-3 md:p-4 bg-primary/10 rounded-xl md:rounded-2xl border border-primary/30 space-y-2 md:space-y-3">
                                   <div className="flex items-center gap-2">
-                                     <BrainCircuit size={18} className="text-primary" />
-                                     <span className="text-[10px] font-bold uppercase tracking-widest text-primary">AI Strategy</span>
+                                     <BrainCircuit size={16} className="text-primary" />
+                                     <span className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-primary">Strategy</span>
                                   </div>
-                                  <p className="text-[11px] text-foreground/80 leading-relaxed italic">"{recommendation.reasoning}"</p>
-                                  <Button onClick={() => handleDispatch(recommendation.recommendedResponderId)} className="w-full bg-primary text-background font-bold text-[10px] h-9 rounded-xl mt-2">
-                                     AUTHORIZE DISPATCH
+                                  <p className="text-[10px] md:text-[11px] text-foreground/80 leading-relaxed italic">"{recommendation.reasoning}"</p>
+                                  <Button onClick={() => handleDispatch(recommendation.recommendedResponderId)} className="w-full bg-primary text-background font-bold text-[9px] md:text-[10px] h-8 md:h-9 rounded-xl">
+                                     AUTHORIZE
                                   </Button>
                                </div>
                              ) : selectedAlert.status === 'dispatched' ? (
-                               <div className="p-4 bg-accent/5 rounded-2xl border border-accent/20 flex items-center justify-center gap-3">
-                                  <CheckCircle2 className="text-accent" size={20} />
-                                  <span className="text-[10px] font-bold uppercase tracking-widest text-accent">Unit_En_Route_0.004ms</span>
+                               <div className="p-3 bg-accent/5 rounded-xl border border-accent/20 flex items-center justify-center gap-2">
+                                  <CheckCircle2 className="text-accent" size={16} />
+                                  <span className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-accent">Deployed</span>
                                 </div>
                              ) : (
-                               <Button onClick={() => handleAnalyze(selectedAlert)} className="w-full bg-muted/40 hover:bg-muted/60 text-white font-bold text-[10px] h-10 rounded-xl gap-2 border border-white/5">
-                                  <Zap size={14} className="text-accent" /> Run Tactical AI Analysis
+                               <Button onClick={() => handleAnalyze(selectedAlert)} className="w-full bg-muted/40 hover:bg-muted/60 text-white font-bold text-[9px] md:text-[10px] h-9 md:h-10 rounded-xl gap-2">
+                                  <Zap size={14} className="text-accent" /> Run AI Analysis
                                </Button>
                              )}
                           </div>
@@ -335,31 +294,11 @@ export function DispatcherConsole() {
                   </div>
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center p-8 text-center opacity-30">
-                     <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-4 border border-white/10">
-                        <LayoutDashboard size={40} className="text-muted-foreground" />
-                     </div>
-                     <p className="font-headline font-bold uppercase tracking-[0.2em] text-xs">Mission Center Ready</p>
-                     <p className="text-[10px] mt-2 leading-relaxed">Select an incoming signal to initiate command.</p>
+                     <LayoutDashboard size={40} className="text-muted-foreground mb-4" />
+                     <p className="font-headline font-bold uppercase tracking-[0.2em] text-[10px]">Awaiting Signal</p>
                   </div>
                 )}
              </CardContent>
-          </Card>
-
-          <Card className="bg-card/40 border-white/5 p-4 space-y-3">
-             <h4 className="text-[10px] font-headline font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                <Database size={14} className="text-accent" /> Units_Available
-             </h4>
-             <div className="space-y-2">
-                {MOCK_RESPONDERS.map(res => (
-                  <div key={res.id} className="flex items-center justify-between p-2 bg-black/20 rounded-xl border border-white/5">
-                     <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                        <span className="text-[9px] font-bold truncate max-w-[80px]">{res.name}</span>
-                     </div>
-                     <Badge variant="outline" className="text-[7px] border-accent/30 text-accent h-4">{res.type}</Badge>
-                  </div>
-                ))}
-             </div>
           </Card>
         </div>
       </div>

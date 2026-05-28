@@ -138,7 +138,7 @@ export default function ShurukkhaDashboard() {
 
       fetchRole();
 
-      // Universal Call Listener - Incoming
+      // Universal Call Listener
       const callsQ = query(
         collection(db, 'webrtc_sessions'),
         where('recipientId', '==', user.uid),
@@ -147,24 +147,20 @@ export default function ShurukkhaDashboard() {
 
       const unsubscribeCalls = onSnapshot(callsQ, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added') {
+          if (change.type === 'added' && !activeCall) {
             const data = change.doc.data();
-            // Avoid re-triggering if already in call
-            if (!activeCall) {
-              setActiveCall({
-                sessionId: change.doc.id,
-                callerId: data.callerId,
-                callerName: data.callerName,
-                callerAvatar: data.callerAvatar,
-                type: data.type,
-                isIncoming: true
-              });
-            }
+            setActiveCall({
+              sessionId: change.doc.id,
+              callerId: data.callerId,
+              callerName: data.callerName,
+              callerAvatar: data.callerAvatar,
+              type: data.type,
+              isIncoming: true
+            });
           }
         });
       });
 
-      // Self Call Listener - Outgoing (handles calls started from CommConsole)
       const myCallsQ = query(
         collection(db, 'webrtc_sessions'),
         where('callerId', '==', user.uid),
@@ -173,19 +169,16 @@ export default function ShurukkhaDashboard() {
 
       const unsubscribeMyCalls = onSnapshot(myCallsQ, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added') {
+          if (change.type === 'added' && !activeCall) {
             const data = change.doc.data();
-            // Start overlay for caller
-            if (!activeCall) {
-              setActiveCall({
-                sessionId: change.doc.id,
-                callerId: data.callerId,
-                callerName: data.recipientName || 'Identity',
-                callerAvatar: data.recipientAvatar,
-                type: data.type,
-                isIncoming: false
-              });
-            }
+            setActiveCall({
+              sessionId: change.doc.id,
+              callerId: data.callerId,
+              callerName: data.recipientName || 'Identity',
+              callerAvatar: data.recipientAvatar,
+              type: data.type,
+              isIncoming: false
+            });
           }
         });
       });
@@ -195,7 +188,7 @@ export default function ShurukkhaDashboard() {
         unsubscribeMyCalls();
       };
     }
-  }, [user?.uid, firestore]) // Only depend on UID to avoid loop
+  }, [user?.uid, firestore])
 
   useEffect(() => {
     const handleConnectivityChange = () => {
@@ -205,9 +198,7 @@ export default function ShurukkhaDashboard() {
       if (!online) {
         setSurvivalMode(true);
         toast({ title: "SURVIVAL MODE ACTIVE", variant: "destructive" });
-      } else {
-        setSurvivalMode(false);
-      }
+      } else { setSurvivalMode(false); }
     };
     
     window.addEventListener('online', handleConnectivityChange)
@@ -233,17 +224,12 @@ export default function ShurukkhaDashboard() {
         AuthGuard.clearSession();
         await signOut(auth)
         window.location.assign('/')
-      } catch (e) {
-        toast({ title: "লগআউট ব্যর্থ হয়েছে", variant: "destructive" })
-      }
+      } catch (e) { toast({ title: "লগআউট ব্যর্থ হয়েছে", variant: "destructive" }) }
     }
   }
 
   const handleSidebarNavigate = (view: string) => {
-    if (view === 'lens') {
-      setIsLensOpen(true);
-      return;
-    }
+    if (view === 'lens') { setIsLensOpen(true); return; }
     setActiveView(view);
     if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile', 'messages'].includes(view)) {
       setActiveSubTab(view);
@@ -254,64 +240,59 @@ export default function ShurukkhaDashboard() {
     return (
       <div className="min-h-screen bg-[#05070a] flex flex-col items-center justify-center gap-8">
         <AppLogo size={120} className="animate-sos-pulse" />
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="animate-spin text-primary" size={24} />
-          <p className="text-[10px] uppercase tracking-[0.4em] font-bold text-primary animate-pulse">Initializing Sovereign Grid...</p>
-        </div>
+        <Loader2 className="animate-spin text-primary" size={24} />
       </div>
     )
   }
 
   return (
     <SidebarProvider>
-      <div className={`flex min-h-screen w-full text-foreground`}>
+      <div className="flex min-h-screen w-full text-foreground bg-[#05070a]">
         <AppSidebar userRole={userRole} onNavigate={handleSidebarNavigate} onLogout={handleLogout} activeTab={activeView} />
         
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="sticky top-0 z-40 border-b bg-background/80 border-white/5 backdrop-blur-lg">
-            <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <SidebarTrigger className="h-10 w-10 md:hidden" />
-                <AppLogo size={32} />
-                <div className="hidden xs:block">
-                  <h1 className="text-sm md:text-xl font-headline font-bold tracking-tighter uppercase leading-none">SHURUKKHA</h1>
-                  <span className="text-[8px] md:text-[10px] text-muted-foreground uppercase tracking-[0.2em]">v31.0_SOVEREIGN</span>
-                </div>
+          <header className="sticky top-0 z-40 border-b bg-background/80 border-white/5 backdrop-blur-lg px-2 md:px-4 h-14 md:h-16 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger className="h-9 w-9 md:hidden" />
+              <AppLogo size={24} md:size={32} />
+              <div className="hidden xs:block">
+                <h1 className="text-xs md:text-sm font-headline font-bold uppercase leading-none">SHURUKKHA</h1>
+                <span className="text-[6px] md:text-[8px] text-muted-foreground uppercase tracking-widest">v31.0</span>
               </div>
-              
-              <div className="flex items-center gap-4 justify-end flex-1">
-                {survivalMode && <Badge variant="destructive" className="animate-pulse h-6 text-[8px]">SURVIVAL_MODE</Badge>}
-                <SovereignStatusWidget />
-                <Avatar className="h-8 w-8 border border-primary/20 cursor-pointer" onClick={() => setActiveView('profile')}>
-                  <AvatarImage src={user?.photoURL || ''} />
-                  <AvatarFallback className="bg-primary/10 text-[10px]">{user?.displayName?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
-              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 md:gap-4">
+              {survivalMode && <Badge variant="destructive" className="h-5 text-[6px] md:text-[8px]">SURVIVAL</Badge>}
+              <SovereignStatusWidget />
+              <Avatar className="h-7 w-7 md:h-8 md:w-8 border border-primary/20 cursor-pointer" onClick={() => setActiveView('profile')}>
+                <AvatarImage src={user?.photoURL || ''} />
+                <AvatarFallback className="bg-primary/10 text-[8px] md:text-[10px]">{user?.displayName?.substring(0, 2).toUpperCase()}</AvatarFallback>
+              </Avatar>
             </div>
           </header>
 
-          <main className="flex-1 container mx-auto px-4 py-6 overflow-x-hidden">
-            {(userRole === 'admin' || userRole === 'authority') && activeView !== 'profile' && activeView !== 'citizen' && activeView !== 'messages' && <ImperialOverview />}
+          <main className="flex-1 px-3 md:px-6 py-4 md:py-6 overflow-x-hidden">
+            {(userRole === 'admin' || userRole === 'authority') && activeView !== 'profile' && activeView !== 'citizen' && activeView !== 'messages' && <div className="mb-4 md:mb-8"><ImperialOverview /></div>}
 
             {activeView === 'citizen' && (
-              <div className="max-w-md mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-5">
+              <div className="max-w-md mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-5">
                 <SOSButton />
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 gap-4 md:gap-6">
                   <AIAdviceTool />
                   <IncidentReport />
                 </div>
-                <Button onClick={() => setActiveView('messages')} className="w-full h-12 bg-primary/10 text-primary border border-primary/20 rounded-2xl gap-3 font-bold">
-                  <MessageSquare size={20} /> কন্ট্রোল রুমের সাথে কথা বলুন
+                <Button onClick={() => setActiveView('messages')} className="w-full h-12 bg-primary/10 text-primary border border-primary/20 rounded-2xl gap-3 font-bold text-xs md:text-sm">
+                  <MessageSquare size={18} /> কন্ট্রোল রুমের সাথে কথা বলুন
                 </Button>
               </div>
             )}
 
-            {activeView === 'messages' && <div className="h-[calc(100vh-180px)] max-w-5xl mx-auto w-full"><CommunicationConsole /></div>}
+            {activeView === 'messages' && <div className="h-[calc(100vh-140px)] md:h-[calc(100vh-180px)] max-w-5xl mx-auto w-full"><CommunicationConsole /></div>}
             {activeView === 'profile' && <div className="max-w-4xl mx-auto"><SovereignIDCard user={user} role={userRole} /></div>}
 
             {(activeView !== 'citizen' && activeView !== 'profile' && activeView !== 'messages') && (
               <Tabs value={activeSubTab} onValueChange={handleSidebarNavigate} className="w-full">
-                <TabsContent value="ops" className="h-[calc(100vh-250px)]"><DispatcherConsole /></TabsContent>
+                <TabsContent value="ops" className="h-[calc(100vh-220px)] md:h-[calc(100vh-250px)]"><DispatcherConsole /></TabsContent>
                 <TabsContent value="intelligence"><IncidentReviewBoard /></TabsContent>
                 <TabsContent value="analytics"><SystemHealth /></TabsContent>
                 <TabsContent value="audits"><AuditPanel /></TabsContent>

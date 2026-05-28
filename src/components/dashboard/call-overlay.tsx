@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, ShieldCheck, Loader2, User, Volume2, Activity, Zap, X } from 'lucide-react'
+import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, ShieldCheck, Loader2, User, Volume2, Activity, Zap, X, Maximize2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -39,7 +39,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const streamRef = useRef<MediaStream | null>(null)
   const { playAlertSound } = useAudioEngine()
 
-  // Control Ringtone with strict logic
   const stopRingtone = () => {
     if (ringtoneIntervalRef.current) {
       clearInterval(ringtoneIntervalRef.current)
@@ -53,13 +52,9 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     ringtoneIntervalRef.current = setInterval(playAlertSound, 3000)
   }
 
-  // Hardware Kill-Switch Logic
   const cleanupStreams = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => {
-        track.stop();
-        console.log(`[Hardware Kill-Switch] Stopped track: ${track.kind}`);
-      });
+      streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
     if (localStream) {
@@ -113,7 +108,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     }
   }, [callData?.sessionId]);
 
-  // Sync Streams with video elements reliably
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
@@ -122,7 +116,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
-      console.log("[CallOverlay] Assigning remote stream to video element");
       remoteVideoRef.current.srcObject = remoteStream;
       remoteVideoRef.current.play().catch(e => console.warn("[WebRTC] Autoplay prevented", e));
     }
@@ -139,7 +132,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       setLocalStream(stream);
       webrtcRef.current = new WebRTCManager(callData.sessionId);
       await webrtcRef.current.createCall(stream, (remote) => {
-        console.log("[CallOverlay] Receiver stream received");
         setRemoteStream(remote);
       });
     } catch (e) {
@@ -160,7 +152,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       setLocalStream(stream);
       webrtcRef.current = new WebRTCManager(callData.sessionId);
       await webrtcRef.current.answerCall(stream, (remote) => {
-        console.log("[CallOverlay] Caller stream received");
         setRemoteStream(remote);
       });
       
@@ -213,43 +204,43 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
   return (
     <Dialog open={!!callData} onOpenChange={(open) => !open && handleEndCall()}>
-      <DialogContent className="max-w-4xl bg-[#05070a] border-primary/20 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+      <DialogContent className="max-w-[100vw] h-[100dvh] md:max-w-4xl md:h-auto md:aspect-video bg-[#05070a] border-none md:border md:border-primary/20 p-0 overflow-hidden md:rounded-[2.5rem] shadow-2xl z-[100]">
         <DialogHeader className="sr-only">
           <DialogTitle>Sovereign Communication Hub</DialogTitle>
           <DialogDescription>Secure encrypted session Link active.</DialogDescription>
         </DialogHeader>
         
-        <div className="relative aspect-video bg-slate-950 flex items-center justify-center group">
+        <div className="relative w-full h-full bg-slate-950 flex items-center justify-center group overflow-hidden">
           {/* Incoming Call UI */}
           {status === 'ringing' && callData.isIncoming && (
-            <div className="flex flex-col items-center gap-8 z-50 animate-in fade-in zoom-in-95 duration-500">
+            <div className="flex flex-col items-center gap-8 z-50 animate-in fade-in zoom-in-95 duration-500 w-full px-6">
                <div className="relative">
-                  <div className="absolute -inset-12 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-                  <Avatar className="h-48 w-48 border-4 border-primary/40 relative z-10 shadow-2xl">
+                  <div className="absolute -inset-8 md:-inset-12 bg-primary/20 rounded-full blur-2xl md:blur-3xl animate-pulse" />
+                  <Avatar className="h-40 w-40 md:h-48 md:h-48 border-4 border-primary/40 relative z-10 shadow-2xl">
                     <AvatarImage src={callData.callerAvatar} />
-                    <AvatarFallback className="bg-primary/10 text-6xl font-headline font-bold text-primary">
+                    <AvatarFallback className="bg-primary/10 text-5xl md:text-6xl font-headline font-bold text-primary">
                       {callData.callerName?.[0] || 'S'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="absolute -inset-4 border-2 border-primary/40 rounded-full animate-ping" />
                </div>
                <div className="text-center space-y-4 z-10">
-                 <h2 className="text-4xl font-headline font-bold tracking-tight neon-text-primary">{callData.callerName}</h2>
+                 <h2 className="text-3xl md:text-4xl font-headline font-bold tracking-tight neon-text-primary">{callData.callerName}</h2>
                  <Badge className="bg-primary/20 text-primary border-primary/40 px-4 py-1 uppercase tracking-[0.3em] font-bold animate-bounce">
-                    INCOMING {callData.type.toUpperCase()} SIGNAL
+                    INCOMING {callData.type.toUpperCase()}
                  </Badge>
                </div>
                
-               <div className="flex items-center gap-12 mt-4">
+               <div className="flex items-center gap-8 md:gap-12 mt-4">
                   <div className="flex flex-col items-center gap-3">
-                    <Button onClick={handleAccept} className="h-24 w-24 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-[0_0_40px_rgba(34,197,94,0.4)] animate-sos-pulse border-4 border-background">
-                      <Phone size={40} />
+                    <Button onClick={handleAccept} className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-[0_0_40px_rgba(34,197,94,0.4)] animate-sos-pulse border-4 border-background">
+                      <Phone size={32} />
                     </Button>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-green-500">Accept</span>
                   </div>
                   <div className="flex flex-col items-center gap-3">
-                    <Button onClick={handleEndCall} className="h-24 w-24 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-[0_0_40px_rgba(239,68,68,0.4)] border-4 border-background">
-                      <PhoneOff size={40} />
+                    <Button onClick={handleEndCall} className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-[0_0_40px_rgba(239,68,68,0.4)] border-4 border-background">
+                      <PhoneOff size={32} />
                     </Button>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-destructive">Decline</span>
                   </div>
@@ -257,7 +248,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             </div>
           )}
 
-          {/* Video Display Area - Always Present to avoid Ref issues */}
+          {/* Video Display Area */}
           <div className={`w-full h-full relative ${status === 'connected' ? 'block' : 'hidden'}`}>
              <video 
                 ref={remoteVideoRef} 
@@ -266,19 +257,19 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                 className={`w-full h-full object-cover ${callData.type === 'audio' ? 'hidden' : ''}`} 
              />
              {callData.type === 'audio' && (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-6 bg-slate-900">
+                <div className="w-full h-full flex flex-col items-center justify-center gap-6 bg-slate-900 px-6">
                    <div className="relative">
                       <div className="absolute -inset-8 bg-accent/20 rounded-full blur-3xl animate-pulse" />
-                      <Avatar className="h-40 w-40 border-4 border-accent/40 relative z-10 shadow-2xl">
+                      <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-accent/40 relative z-10 shadow-2xl">
                          <AvatarImage src={callData.callerAvatar} />
-                         <AvatarFallback className="bg-primary/10 text-5xl font-headline font-bold text-primary">
+                         <AvatarFallback className="bg-primary/10 text-4xl md:text-5xl font-headline font-bold text-primary">
                             {callData.callerName?.[0] || 'S'}
                          </AvatarFallback>
                       </Avatar>
                    </div>
                    <div className="text-center space-y-2">
-                      <h2 className="text-3xl font-headline font-bold tracking-tight text-white">{callData.callerName}</h2>
-                      <Badge variant="outline" className="border-accent/40 text-accent uppercase tracking-widest text-[10px]">Secure Audio Signal</Badge>
+                      <h2 className="text-2xl md:text-3xl font-headline font-bold tracking-tight text-white">{callData.callerName}</h2>
+                      <Badge variant="outline" className="border-accent/40 text-accent uppercase tracking-widest text-[10px]">Secure Audio Link</Badge>
                    </div>
                 </div>
              )}
@@ -286,44 +277,44 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
           {/* Outgoing Ringing State */}
           {status === 'ringing' && !callData.isIncoming && (
-             <div className="flex flex-col items-center gap-6 z-10">
+             <div className="flex flex-col items-center gap-6 z-10 w-full px-6">
                 <div className="relative">
                    <div className="absolute -inset-8 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-                   <Avatar className="h-40 w-40 border-4 border-primary/40 relative z-10 shadow-2xl">
+                   <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-primary/40 relative z-10 shadow-2xl">
                      <AvatarImage src={callData.callerAvatar} />
-                     <AvatarFallback className="bg-primary/10 text-5xl font-headline font-bold text-primary">
+                     <AvatarFallback className="bg-primary/10 text-4xl md:text-5xl font-headline font-bold text-primary">
                        {callData.callerName?.[0] || 'S'}
                      </AvatarFallback>
                    </Avatar>
                 </div>
                 <div className="text-center space-y-2">
-                  <h2 className="text-3xl font-headline font-bold tracking-tight">{callData.callerName}</h2>
-                  <p className="text-xs font-mono text-primary uppercase tracking-[0.4em] animate-pulse">Calling Sovereign Node...</p>
+                  <h2 className="text-2xl md:text-3xl font-headline font-bold tracking-tight">{callData.callerName}</h2>
+                  <p className="text-xs font-mono text-primary uppercase tracking-[0.4em] animate-pulse">Calling Node...</p>
                 </div>
              </div>
           )}
 
-          {/* Local Video Picture-in-Picture */}
-          <div className={`absolute top-6 right-6 w-48 aspect-video bg-black rounded-2xl border border-white/20 shadow-2xl overflow-hidden z-20 ${status === 'connected' && callData.type === 'video' ? 'block' : 'hidden'}`}>
+          {/* Local Video Picture-in-Picture - Adaptive Position */}
+          <div className={`absolute bottom-24 right-4 md:top-6 md:right-6 w-32 md:w-48 aspect-[3/4] md:aspect-video bg-black rounded-2xl border border-white/20 shadow-2xl overflow-hidden z-20 ${status === 'connected' && callData.type === 'video' ? 'block' : 'hidden'}`}>
              <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-             <Badge className="absolute top-2 left-2 bg-black/40 text-[7px] uppercase">My_Feed</Badge>
+             <Badge className="absolute top-2 left-2 bg-black/40 text-[7px] uppercase">You</Badge>
           </div>
 
           {/* HUD Indicators */}
           <div className="absolute top-6 left-6 flex flex-col gap-2 z-30">
             <Badge variant="outline" className="border-accent/40 text-accent bg-black/60 backdrop-blur-md text-[8px] uppercase tracking-widest gap-2">
-              <Activity size={10} className="animate-pulse" /> SOVEREIGN_LINK_v3.6
+              <Activity size={10} className="animate-pulse" /> SOVEREIGN_V3.6
             </Badge>
             {status === 'connected' && (
               <div className="flex items-center gap-2 text-[8px] font-mono text-white/40 bg-black/40 px-2 py-1 rounded">
-                 <ShieldCheck size={8} className="text-primary" /> SESSION: {formatTime(timer)}
+                 <ShieldCheck size={8} className="text-primary" /> {formatTime(timer)}
               </div>
             )}
           </div>
 
-          {/* Controls */}
+          {/* Controls - Mobile Optimized */}
           {(status === 'connected' || (status === 'ringing' && !callData.isIncoming)) && (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-6 z-40 bg-black/60 backdrop-blur-xl p-4 px-8 rounded-full border border-white/10 shadow-2xl transition-all hover:scale-105">
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 md:gap-6 z-40 bg-black/60 backdrop-blur-xl p-3 md:p-4 px-6 md:px-8 rounded-full border border-white/10 shadow-2xl transition-all w-[90%] md:w-auto justify-center">
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -356,14 +347,24 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                 </Button>
               )}
 
-              <Button onClick={handleEndCall} className="h-16 w-16 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-xl shadow-destructive/40 transition-transform active:scale-90 border-4 border-background">
-                <PhoneOff size={28} />
+              <Button onClick={handleEndCall} className="h-14 w-14 md:h-16 md:w-16 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-xl shadow-destructive/40 transition-transform active:scale-90 border-4 border-background">
+                <PhoneOff size={24} md:size={28} />
               </Button>
             </div>
           )}
 
+          {/* Mobile Back Button */}
+          <Button 
+            size="icon" 
+            variant="ghost" 
+            onClick={handleEndCall} 
+            className="absolute top-6 right-6 text-white/40 hover:text-white md:hidden h-10 w-10"
+          >
+            <X size={24} />
+          </Button>
+
           {/* CRT Visual Effect */}
-          <div className="absolute inset-0 pointer-events-none opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] z-20" />
+          <div className="absolute inset-0 pointer-events-none opacity-5 md:opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] z-20" />
         </div>
       </DialogContent>
     </Dialog>
