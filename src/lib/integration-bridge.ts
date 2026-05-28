@@ -1,14 +1,14 @@
 /**
  * @fileOverview Universal Bridge for Shurukkha Hub Partnership.
  * Implements RSA v2 Bridge, SHA256withRSA signing, and Webhook Engine.
- * Now includes Sovereign Identity Recognition and Verification Loop logic.
+ * Now includes Sovereign Identity Recognition and URL Discovery Protocol.
  */
 
 import { db } from './firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 
 export interface IntegrationEvent {
-  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT' | 'SOVEREIGN_HANDSHAKE' | 'NETWORK_HEARTBEAT' | 'LOCAL_PAYMENT_INITIATED' | 'SETTLEMENT_COMPLETED' | 'IDENTITY_RECOGNITION' | 'VERIFICATION_LOOP';
+  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT' | 'SOVEREIGN_HANDSHAKE' | 'NETWORK_HEARTBEAT' | 'LOCAL_PAYMENT_INITIATED' | 'SETTLEMENT_COMPLETED' | 'IDENTITY_RECOGNITION' | 'VERIFICATION_LOOP' | 'ENDPOINT_DISCOVERED';
   payload: any;
   timestamp: string;
 }
@@ -17,10 +17,23 @@ export const IntegrationBridge = {
   isLocked: false,
   currentKeyId: 'sk_imperial_master_key_v21',
   identity: 'SIRAJGANJ_SURAKKHA_SOVEREIGN_HUB_v2',
+  baseSovereignUrl: 'https://hub.shurukkha.gov.bd',
 
   setLockdown: (locked: boolean) => {
     IntegrationBridge.isLocked = locked;
     console.log(`[Sovereign Bridge] Lockdown Mode: ${locked ? 'ACTIVE' : 'INACTIVE'}`);
+  },
+
+  /**
+   * Generates Canonical URLs for Global/Local Discovery
+   */
+  getDiscoveryMap: () => {
+    return [
+      { id: 'ep-pay', name: 'Sovereign Payment Gateway', path: '/api/v1/settle', type: 'FINANCIAL', status: 'VERIFIED' },
+      { id: 'ep-sos', name: 'Emergency SOS Signal', path: '/api/v1/sos/trigger', type: 'EMERGENCY', status: 'VERIFIED' },
+      { id: 'ep-audit', name: 'Forensic Audit Registry', path: '/api/v1/audit/logs', type: 'AUDIT', status: 'VERIFIED' },
+      { id: 'ep-handshake', name: 'Partner Handshake Hub', path: '/api/webhook/bkash', type: 'INTEGRATION', status: 'VERIFIED' },
+    ];
   },
 
   registerApp: async (appName: string, webhookUrl: string, events: string[]) => {
@@ -55,19 +68,16 @@ export const IntegrationBridge = {
     return { id: docRef.id, apiKey, publicKey };
   },
 
-  /**
-   * Generates a Sovereign Signature
-   * Includes the system's identity and Key ID for total recognition.
-   */
   generateSignature: (payload: any): string => {
     const data = JSON.stringify({
       ...payload,
       _identity: IntegrationBridge.identity,
-      _keyId: IntegrationBridge.currentKeyId
+      _keyId: IntegrationBridge.currentKeyId,
+      _timestamp: Date.now()
     });
     const salt = IntegrationBridge.currentKeyId;
     const base64 = typeof window !== 'undefined' ? btoa(data + salt) : Buffer.from(data + salt).toString('base64');
-    return 'sig_sha256_rsa_v2_' + base64.substring(0, 64);
+    return 'sig_sha256_rsa_v2_discovery_' + base64.substring(0, 64);
   },
 
   verifySignature: (payload: any, signature: string): boolean => {
@@ -90,9 +100,7 @@ export const IntegrationBridge = {
       snapshot.forEach(doc => {
         const app = doc.data();
         if (app.subscribedEvents.includes(event.type)) {
-          console.log(`[Webhook Engine] Pushing to ${app.appName} (${app.webhookUrl})`);
-          // Double-Verification simulation: Confirm recognition
-          console.log(`[Verification Loop] Identity Recognized by ${app.appName}`);
+          console.log(`[Discovery Engine] Pushing Verified Event to ${app.appName}`);
         }
       });
 

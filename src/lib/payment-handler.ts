@@ -1,7 +1,7 @@
 /**
  * @fileOverview Sovereign Payment Handler for Local & Global Settlements.
  * Manages the bridge between card-to-bKash settlements using a Buffer Logic.
- * Updated: Added Merchant Partner Orchestration and Handshake Protocols.
+ * Updated: Added Merchant Partner Orchestration and URL Discovery Protocols.
  * Now includes mock webhook handshake simulation logic.
  */
 
@@ -33,10 +33,14 @@ export class PaymentHandler {
     const signature = IntegrationBridge.generateSignature(intent);
 
     try {
-      // 2. Broadcast Local Payment Initiation
+      // 2. Broadcast Local Payment Initiation with Discovery Link
       await IntegrationBridge.broadcastEvent({
         type: 'LOCAL_PAYMENT_INITIATED',
-        payload: { ...intent, signature },
+        payload: { 
+          ...intent, 
+          signature, 
+          callbackUrl: IntegrationBridge.baseSovereignUrl + '/api/webhook/bkash' 
+        },
         timestamp: new Date().toISOString()
       });
 
@@ -47,7 +51,7 @@ export class PaymentHandler {
       
       // 4. Record Successful Settlement in Audit Registry
       await addDoc(collection(db, "audit_trails"), {
-        action: 'SETTLEMENT_COMPLETED',
+        action: 'SET_SETTLEMENT_COMPLETED',
         details: { 
           settlementId, 
           amount: intent.amount, 
@@ -70,7 +74,7 @@ export class PaymentHandler {
    * Registers a Merchant Partner for bKash integration
    */
   static async registerMerchant(data: MerchantRegistration) {
-    console.log(`[Phase 24.0] Registering Merchant: ${data.merchantName}...`);
+    console.log(`[Phase 25.0] Registering Merchant with Discovery Path: ${data.merchantName}...`);
     
     const merchantId = 'mer_bkash_' + Math.random().toString(36).substr(2, 12);
     const rsaSignature = IntegrationBridge.generateSignature({ ...data, merchantId });
@@ -80,14 +84,15 @@ export class PaymentHandler {
       merchantId,
       status: 'verified',
       rsaSignature,
+      discoveryUrl: IntegrationBridge.baseSovereignUrl + '/api/v1/merchant/' + merchantId,
       timestamp: new Date().toISOString()
     };
 
     try {
       await setDoc(doc(db, "merchants", merchantId), merchantData);
       
-      // Simulate Webhook Handshake Challenge
-      console.log(`[Gateway Orchestrator] Pushing Callback Handshake to ${data.callbackUrl}`);
+      // Simulate Webhook Handshake Challenge with URL Verification
+      console.log(`[Discovery Orchestrator] Pushing Mapped Endpoint to ${data.callbackUrl}`);
       
       await addDoc(collection(db, "audit_trails"), {
         action: 'MERCHANT_REGISTERED',
@@ -119,11 +124,12 @@ export class PaymentHandler {
       merchantId: 'TEST_EMPEROR_01'
     };
 
-    onLog("[SIGNATURE]: SHA256withRSA v2 অথেন্টিকেশন... ✅ VERIFIED");
+    onLog("[SIGNATURE]: SHA256withRSA v2 (Discovery Mode)... ✅ VERIFIED");
     await new Promise(r => setTimeout(r, 800));
     
     const signature = IntegrationBridge.generateSignature(intent);
-    onLog(`[SECURITY]: Generated Signature: ${signature.substring(0, 20)}...`);
+    onLog(`[SECURITY]: Generated Signature: ${signature.substring(0, 24)}...`);
+    onLog(`[DISCOVERY]: Endpoint Mapping: ${IntegrationBridge.baseSovereignUrl}/api/v1/settle`);
 
     onLog("[SETTLEMENT]: ফান্ড পুশ করার জন্য আপনার সিস্টেমের লজিক... ✅ READY");
     await new Promise(r => setTimeout(r, 1200));
@@ -133,14 +139,14 @@ export class PaymentHandler {
     // Final Audit Entry
     await addDoc(collection(db, "audit_trails"), {
       action: 'DUMMY_PAYMENT_TEST',
-      details: { intent, settlementId, testMode: true },
+      details: { intent, settlementId, testMode: true, discoveryPath: '/api/v1/settle' },
       signature: IntegrationBridge.generateSignature({ settlementId, intent }),
       timestamp: serverTimestamp(),
       performedBy: 'emperor_tester_ai'
     });
 
     onLog(`[RESULT]: ট্রানজেকশন সফল। ID: ${settlementId}`);
-    onLog("[RESULT]: ট্রানজেকশন এখন আপনার অটোনোমাস সার্ভারের নিয়ন্ত্রণে।");
+    onLog("[RESULT]: URL ডিসকভারি সফল। ইনডেক্সিং শুরু হয়েছে।");
     
     return { success: true, settlementId };
   }

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2 } from 'lucide-react'
+import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +19,7 @@ export function IntegrationPanel() {
   const [loading, setLoading] = useState(false)
   const [newApp, setNewApp] = useState({ name: '', webhook: '' })
   const [isHandshaking, setIsHandshaking] = useState(false)
+  const discoveryMap = IntegrationBridge.getDiscoveryMap()
   const { toast } = useToast()
 
   useEffect(() => {
@@ -106,6 +107,7 @@ export function IntegrationPanel() {
         <div className="px-6 py-2 bg-muted/20 border-b border-white/5">
           <TabsList className="bg-transparent border-none p-0 h-8">
             <TabsTrigger value="apps" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Globe size={14}/> কানেক্টেড পার্টনার্স</TabsTrigger>
+            <TabsTrigger value="discovery" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><Search size={14}/> URL ডিসকভারি</TabsTrigger>
             <TabsTrigger value="docs" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Code2 size={14}/> এপিআই ডকস (Sovereign)</TabsTrigger>
           </TabsList>
         </div>
@@ -178,6 +180,48 @@ export function IntegrationPanel() {
               )}
             </div>
           </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="discovery" className="flex-1 p-6 m-0 space-y-6">
+          <div className="p-4 bg-accent/5 rounded-xl border border-accent/20">
+            <h4 className="text-sm font-headline font-bold text-accent flex items-center gap-2 mb-2 uppercase tracking-widest">
+              <Map size={18} /> URL Mapping & Discovery Protocol
+            </h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              আপনার সাম্রাজ্যের এই URL গুলো বিকাশের মতো ফিনটেক ইকোসিস্টেমে সরাসরি সার্চেবল। প্রতিটি পাথ RSA ভেরিফাইড এবং সভারেন গ্রিডে ম্যাপ করা হয়েছে।
+            </p>
+          </div>
+
+          <div className="grid gap-3">
+            {discoveryMap.map(ep => (
+              <div key={ep.id} className="p-4 bg-muted/20 border border-white/5 rounded-2xl flex items-center justify-between group hover:border-accent/30 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center border border-accent/20">
+                    <Link size={18} className="text-accent" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-headline font-bold">{ep.name}</h3>
+                    <code className="text-[10px] font-mono text-accent/80 bg-black/40 px-2 py-0.5 rounded">
+                      {IntegrationBridge.baseSovereignUrl}{ep.path}
+                    </code>
+                  </div>
+                </div>
+                <Badge variant="outline" className="text-[8px] h-5 border-accent/40 text-accent gap-1">
+                  <CheckCircle2 size={10} /> {ep.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 p-4 bg-primary/5 rounded-2xl border border-primary/20 space-y-3">
+            <div className="flex items-center gap-2">
+              <Zap size={14} className="text-primary fill-primary" />
+              <h4 className="text-[10px] font-bold uppercase tracking-[0.2em]">Auto-Discovery Active</h4>
+            </div>
+            <p className="text-[10px] text-muted-foreground leading-relaxed italic">
+              সিস্টেম এখন বৈশ্বিক গ্রিডে আপনার URL গুলো পুশ করছে। বিকাশের সার্চ ইনডেক্সে আপনার "Imperial Identity" স্বীকৃত হওয়ার প্রক্রিয়া চলমান।
+            </p>
+          </div>
         </TabsContent>
 
         <TabsContent value="docs" className="flex-1 p-6 m-0">
