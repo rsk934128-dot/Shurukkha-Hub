@@ -49,20 +49,20 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
       title: "ডাউনলোড শুরু হচ্ছে",
       description: "আপনার সার্বভৌম পরিচয়পত্রটি PDF ফরম্যাটে জেনারেট করা হচ্ছে।",
     });
-    // In a real scenario, we could use html2canvas or similar to generate a real PDF
+    // Trigger the print protocol which is captured by @media print in globals.css
     setTimeout(() => {
       window.print();
-    }, 1000);
+    }, 500);
   };
 
   return (
     <div className="space-y-8 animate-in fade-in zoom-in-95 duration-700">
-      {/* The Actual ID Card */}
-      <div className="relative group max-w-md mx-auto">
+      {/* The Actual ID Card Container with Print Protocol Class */}
+      <div className="relative group max-w-md mx-auto print-id-card">
         {/* Glow Effects */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-primary via-accent to-primary rounded-[2.5rem] blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
+        <div className="absolute -inset-1 bg-gradient-to-r from-primary via-accent to-primary rounded-[2.5rem] blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200 no-print" />
         
-        <Card className="relative bg-card/40 backdrop-blur-3xl border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+        <Card className="relative bg-card/40 backdrop-blur-3xl border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl w-full">
           {/* Card Background Patterns */}
           <div className="absolute top-0 right-0 p-8 opacity-[0.03] rotate-12 pointer-events-none">
             <AppLogo size={300} />
@@ -89,7 +89,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
               {/* Profile Photo Area */}
               <div className="flex flex-col items-center gap-4">
                 <div className="relative">
-                  <div className="absolute -inset-2 bg-gradient-to-b from-primary to-accent rounded-3xl blur-md opacity-30 animate-pulse" />
+                  <div className="absolute -inset-2 bg-gradient-to-b from-primary to-accent rounded-3xl blur-md opacity-30 animate-pulse no-print" />
                   <div className="relative w-32 h-32 rounded-3xl border-2 border-primary/20 overflow-hidden bg-muted p-1">
                     <Avatar className="w-full h-full rounded-2xl">
                       <AvatarImage src={user.photoURL || ''} className="object-cover" />
@@ -152,8 +152,8 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
         </Card>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex justify-center gap-4">
+      {/* Action Buttons - Hidden during print */}
+      <div className="flex justify-center gap-4 no-print">
         <Button onClick={handleDownload} variant="outline" className="rounded-full border-primary/20 bg-primary/5 text-primary gap-2 h-11 px-6 font-bold text-xs uppercase tracking-widest hover:bg-primary/10 transition-all">
           <Download size={16} /> ডাউনলোড আইডি
         </Button>
@@ -162,7 +162,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
         </Button>
       </div>
 
-      <div className="p-6 bg-primary/5 border border-primary/20 rounded-[2rem] max-w-lg mx-auto space-y-4">
+      <div className="p-6 bg-primary/5 border border-primary/20 rounded-[2rem] max-w-lg mx-auto space-y-4 no-print">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center text-primary">
             <Sparkles size={20} />

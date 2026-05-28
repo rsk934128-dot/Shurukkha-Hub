@@ -93,3 +93,30 @@
 /* Hide scrollbar */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Sovereign Print Protocols */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-id-card, .print-id-card * {
+    visibility: visible;
+  }
+  .print-id-card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #05070a !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    min-height: 100vh !important;
+  }
+  /* Remove UI buttons from print */
+  .no-print {
+    display: none !important;
+  }
+}
