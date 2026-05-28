@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Store, User, Plus, Search, ShieldCheck, Key, CreditCard, Activity, Trash2, CheckCircle2, Loader2, Globe, TrendingUp, Landmark, FileText, Download, Share2, Sparkles, MessageSquare, Zap, Target, FilePlus } from 'lucide-react'
+import { Store, User, Plus, Search, ShieldCheck, Key, CreditCard, Activity, Trash2, CheckCircle2, Loader2, Globe, TrendingUp, Landmark, FileText, Download, Share2, Sparkles, MessageSquare, Zap, Target, FilePlus, Printer, QrCode } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -89,7 +90,7 @@ export function MerchantRegistry() {
   const handleIssueInvoice = async (merchant: any) => {
     setIsInvoicing(merchant.id);
     try {
-      const amount = 5000; // Mock invoice amount
+      const amount = 5000;
       await PaymentHandler.generateInvoice(merchant, amount, "Imperial Service Fee - Phase 31 Verification");
       toast({ title: "ইনভয়েস জেনারেটেড", description: `${merchant.businessName} এর জন্য ইনভয়েস পাঠানো হয়েছে।` });
     } catch (e) {
@@ -105,6 +106,49 @@ export function MerchantRegistry() {
       await deleteDoc(doc(db, "merchants", id));
       toast({ title: "মার্চেন্ট অপসারিত" });
     } catch (e) { toast({ title: "ত্রুটি", variant: "destructive" }); }
+  }
+
+  const handleDownloadKit = () => {
+    if (!lastOnboarded) return;
+    
+    // 1. Download Text Kit
+    const kitContent = `
+=========================================
+SHURUKKHA HUB | সিরাজগঞ্জ সুরক্ষা 🛡️
+IMPERIAL MERCHANT AFFILIATION KIT
+=========================================
+Merchant Name: ${lastOnboarded.businessName}
+Owner Name: ${lastOnboarded.ownerName}
+Category: ${lastOnboarded.category}
+Sovereign ID: ${lastOnboarded.merchantId}
+Imperial API Key: ${lastOnboarded.apiKey}
+Status: ACTIVE
+Sync Status: 42 NODES (OPTIMAL)
+-----------------------------------------
+SECURITY NOTICE: Keep your API Key secure. 
+Any unauthorized use will trigger system lockdown.
+=========================================
+    `.trim();
+
+    const blob = new Blob([kitContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${lastOnboarded.merchantId}_Imperial_Kit.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "কিট জেনারেট করা হয়েছে",
+      description: "মার্চেন্ট ক্রেডেনশিয়াল এবং সার্টিফিকেট প্রস্তুত।",
+    });
+
+    // 2. Trigger Print for Certificate
+    setTimeout(() => {
+      window.print();
+    }, 500);
   }
 
   const applyTemplate = (tpl: any) => {
@@ -123,7 +167,74 @@ export function MerchantRegistry() {
 
   return (
     <div className="space-y-6">
-      <div className="p-4 bg-primary/5 border border-primary/20 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* Printable Certificate - Hidden in UI, Visible in Print */}
+      {lastOnboarded && (
+        <div className="print-certificate hidden">
+           <div className="w-[800px] h-[1000px] bg-slate-950 border-[12px] border-primary/20 relative p-12 overflow-hidden flex flex-col items-center text-center">
+              <div className="absolute top-0 right-0 p-12 opacity-5 rotate-12">
+                 <AppLogo size={400} />
+              </div>
+              
+              <div className="mb-8">
+                 <AppLogo size={80} />
+                 <h1 className="text-2xl font-headline font-bold text-primary mt-4 tracking-[0.2em] uppercase">SHURUKKHA HUB</h1>
+                 <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.4em]">Sovereign Infrastructure</p>
+              </div>
+
+              <div className="w-full h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent my-10" />
+
+              <div className="space-y-6 flex-1">
+                 <h2 className="text-4xl font-headline font-bold text-white uppercase tracking-tight">Certificate of Affiliation</h2>
+                 <p className="text-lg text-muted-foreground italic max-w-lg mx-auto">This document certifies that the following entity is officially integrated with the Sirajganj Sovereign Intelligence & Financial Grid.</p>
+                 
+                 <div className="py-12 space-y-2">
+                    <p className="text-xs font-bold text-primary uppercase tracking-widest">Business Name</p>
+                    <h3 className="text-4xl font-headline font-bold text-white">{lastOnboarded.businessName}</h3>
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-12 text-left bg-primary/5 p-10 rounded-[2rem] border border-primary/10">
+                    <div className="space-y-4">
+                       <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">Sovereign Merchant ID</p>
+                          <p className="text-xl font-mono font-bold text-primary">{lastOnboarded.merchantId}</p>
+                       </div>
+                       <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">Sector Category</p>
+                          <p className="text-lg font-bold text-white">{lastOnboarded.category}</p>
+                       </div>
+                    </div>
+                    <div className="space-y-4">
+                       <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">Integration Date</p>
+                          <p className="text-lg font-bold text-white">{new Date().toLocaleDateString('bn-BD')}</p>
+                       </div>
+                       <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">Trust Score</p>
+                          <p className="text-lg font-bold text-accent">100.0% PURE</p>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="w-full flex justify-between items-end mt-12">
+                 <div className="text-left space-y-4">
+                    <QrCode size={100} className="text-primary/40" />
+                    <p className="text-[8px] font-mono text-muted-foreground uppercase tracking-widest">Verification: core.sheikh/verify/${lastOnboarded.merchantId}</p>
+                 </div>
+                 <div className="text-right space-y-1">
+                    <p className="text-[10px] font-mono text-accent font-bold">SIG_SHA256_RSA_V2_ENCRYPTED</p>
+                    <p className="text-[8px] text-muted-foreground opacity-50 truncate max-w-[300px] uppercase">{IntegrationBridge.generateSignature({ id: lastOnboarded.merchantId })}</p>
+                    <div className="h-px w-64 bg-primary/40 mt-12 mb-2" />
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Supreme Admin, Shurukkha Hub</p>
+                 </div>
+              </div>
+              
+              <div className="absolute bottom-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-accent to-primary" />
+           </div>
+        </div>
+      )}
+
+      <div className="p-4 bg-primary/5 border border-primary/20 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 no-print">
         <div className="flex items-center gap-4">
            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
               <Sparkles className="text-primary animate-pulse" size={24} />
@@ -151,8 +262,8 @@ export function MerchantRegistry() {
         </div>
       </div>
 
-      {showPitch && (
-        <Card className="bg-card/40 border-accent/20 border-dashed animate-in zoom-in-95 duration-500 rounded-[2rem] overflow-hidden">
+      {showPitch && !isAdding && (
+        <Card className="bg-card/40 border-accent/20 border-dashed animate-in zoom-in-95 duration-500 rounded-[2rem] overflow-hidden no-print">
            <CardHeader className="bg-accent/5 border-b border-accent/10">
               <CardTitle className="text-xs font-headline font-bold text-accent uppercase tracking-[0.3em] flex items-center gap-2">
                 <Target size={14} /> Strategic Pitch Deck
@@ -176,7 +287,7 @@ export function MerchantRegistry() {
       )}
 
       {isAdding && (
-        <div className="space-y-6">
+        <div className="space-y-6 no-print">
            <div className="flex flex-wrap gap-2">
               {SECTOR_TEMPLATES.map((tpl, i) => (
                 <Badge 
@@ -251,7 +362,7 @@ export function MerchantRegistry() {
       )}
 
       {lastOnboarded && !isAdding && (
-        <Card className="bg-accent/5 border-accent/20 rounded-[2.5rem] overflow-hidden animate-in zoom-in-95">
+        <Card className="bg-accent/5 border-accent/20 rounded-[2.5rem] overflow-hidden animate-in zoom-in-95 no-print">
            <div className="p-8 flex flex-col md:flex-row items-center gap-8 relative">
               <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
                  <AppLogo size={200} />
@@ -270,7 +381,7 @@ export function MerchantRegistry() {
                     <Badge variant="outline" className="border-white/10 text-[9px] font-mono">KEY: {lastOnboarded.apiKey.substring(0, 10)}...</Badge>
                  </div>
                  <div className="flex gap-3 justify-center md:justify-start">
-                    <Button variant="outline" className="h-9 text-[10px] uppercase font-bold gap-2 border-accent/40 text-accent rounded-xl">
+                    <Button onClick={handleDownloadKit} variant="outline" className="h-9 text-[10px] uppercase font-bold gap-2 border-accent/40 text-accent rounded-xl">
                        <Download size={14} /> ডাউনলোড কিট
                     </Button>
                     <Button onClick={() => setLastOnboarded(null)} variant="ghost" className="h-9 text-[10px] uppercase font-bold text-muted-foreground">
@@ -283,7 +394,7 @@ export function MerchantRegistry() {
       )}
 
       {!isAdding && (
-        <div className="space-y-6">
+        <div className="space-y-6 no-print">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
             <Input 

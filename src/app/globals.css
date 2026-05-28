@@ -99,10 +99,11 @@
   body * {
     visibility: hidden;
   }
-  .print-id-card, .print-id-card * {
+  .print-id-card, .print-id-card *, 
+  .print-certificate, .print-certificate * {
     visibility: visible;
   }
-  .print-id-card {
+  .print-id-card, .print-certificate {
     position: absolute;
     left: 0;
     top: 0;
