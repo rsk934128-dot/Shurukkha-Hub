@@ -2,26 +2,26 @@
 
 **সিরাজগঞ্জ সুরক্ষা** একটি এআই-চালিত এবং ইভেন্ট-ভিত্তিক "District-Scale Mission-Critical Emergency Infrastructure"। এটি এখন একটি **Sovereign Intelligence & Financial Grid** হিসেবে নূরআই (NoorAI) এবং ফিউশনপে (FusionPay)-এর সাথে একীভূত।
 
-## 🚀 মাইলস্টোন: Phase 23.0 (Project 42 - Sheikh Code Exchange)
+## 🚀 মাইলস্টোন: Phase 26.0 (Merchant Revenue & Funding Engine)
 
-বর্তমানে সিস্টেমটি তার ইতিহাসের সবচেয়ে শক্তিশালী পর্যায়ে অবস্থান করছে। **Phase 23.0**-এর মাধ্যমে বৈশ্বিক ব্যাংকিং ডিরেক্টরি এবং সভারেন গ্রিড ইন্টিগ্রেশন সম্পন্ন হয়েছে।
+বর্তমানে সিস্টেমটি তার ইতিহাসের সবচেয়ে শক্তিশালী পর্যায়ে অবস্থান করছে। **Phase 26.0**-এর মাধ্যমে সিস্টেমটি এখন থেকে রেভিনিউ জেনারেট করতে সক্ষম।
 
 ### মূল বৈশিষ্ট্যসমূহ (Core Features)
 
+- **Revenue Engine (Phase 26.0):** প্রতিটি ট্রানজেকশন থেকে স্বয়ংক্রিয়ভাবে ১.৫% সার্ভিস ফি (Imperial Tax) কাটার সক্ষমতা।
 - **Offline-First Survival Mode:** `DisasterStorage` লেয়ারের মাধ্যমে ইন্টারনেট বিচ্ছিন্ন অবস্থায়ও অ্যাপটি কার্যকরী থাকে।
 - **Autonomous Dispatcher Engine:** Google Genkit AI ব্যবহার করে স্বয়ংক্রিয়ভাবে সবচেয়ে উপযুক্ত রেসপন্ডার নির্বাচন।
 - **Forensic-Ready Audit Trails:** `audit_trails` কালেকশনের মাধ্যমে প্রতিটি ইমার্জেন্সি রেসপন্সের একটি অপরিবর্তনীয় SHA256withRSA রেকর্ড।
-- **Sovereign Handshake:** নূরআই এবং ফিউশনপে গ্রিডের সাথে রাজকীয় ডিজিটাল সংযোগ (Developer Portal v21.0)।
-- **Predictive Simulation Engine:** এআই-এর মাধ্যমে ভবিষ্যতের ঝুঁকির পূর্বাভাস এবং রিসোর্স প্রজেকশন।
+- **Sovereign Handshake:** নূরআই এবং ফিউশনপে গ্রিডের সাথে রাজকীয় ডিজিটাল সংযোগ।
 - **Global Banking Directory:** Stripe Financial Connections-এর মাধ্যমে ১৫০+ দেশের ব্যাংকিং নোড ইন্টিগ্রেশন।
-- **Emergency Sovereign Lock:** এক ক্লিকে বাইরের সব API কানেকশন বিচ্ছিন্ন করার সক্ষমতা।
-- **Two-Way Sync Engine:** আউটবাউন্ড সিগন্যালিং এবং গেটওয়ে কন্ট্রোল লজিক।
+- **Self-Healing Sentinel:** ৪২টি ডিস্ট্রিবিউটেড নোড যা নিজে নিজেই ত্রুটি মেরামত করতে পারে।
 
-## 📂 ফিউচার রোডম্যাপ (Future Roadmap)
+## 💰 ইনকাম ও রেভিনিউ মডেল
 
-- **Phase 25.0:** Direct Settlement & Merchant Funding Logic.
-- **Phase 26.0:** Two-Way Outbound Data Sync & AI Orchestration.
-- **Phase 27.0:** Predictive Traffic Analysis for Global Payment Routing.
+সিস্টেমটি ৩টি উপায়ে অর্থ উপার্জন করতে পারে:
+১. **মার্চেন্ট ট্রানজেকশন ফি:** ব্যবসায়ীদের পেমেন্ট প্রসেসিং থেকে ১.৫% কমিশন।
+২. **এপিআই লাইসেন্সিং:** থার্ড-পার্টি ডেভেলপারদের ডেটা অ্যাক্সেস প্রদানের মাধ্যমে সাবস্ক্রিপশন ফি।
+৩. **গভর্নমেন্ট সলিউশন:** অন্য জেলা প্রশাসনের কাছে এই প্রযুক্তিটি লাইসেন্স করা।
 
 ## 🛠️ টেক স্ট্যাক (Tech Stack)
 
