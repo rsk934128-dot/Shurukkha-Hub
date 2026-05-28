@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -178,6 +179,7 @@ export default function ShurukkhaDashboard() {
     AutonomousOrchestrator.setAutoMode(false)
     IntegrationBridge.setLockdown(true)
     sessionStorage.clear()
+    localStorage.removeItem('sovereign_session_token')
     router.push('/login')
   }
 
@@ -205,11 +207,16 @@ export default function ShurukkhaDashboard() {
   const handleLogout = async () => {
     if (auth) {
       try {
+        // Clear all session related data
         sessionStorage.clear()
         localStorage.removeItem('sovereign_session_token')
+        localStorage.removeItem('sovereign_session_expiry')
+        
         await signOut(auth)
         toast({ title: "সফলভাবে লগআউট করা হয়েছে" })
-        router.push('/login')
+        
+        // Use window.location to ensure a hard refresh for auth state
+        window.location.href = '/login';
       } catch (e) {
         toast({ title: "লগআউট ব্যর্থ হয়েছে", variant: "destructive" })
       }

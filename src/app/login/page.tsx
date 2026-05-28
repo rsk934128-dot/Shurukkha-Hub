@@ -180,6 +180,8 @@ export default function LoginPage() {
     
     setIsSigningIn(true)
     const provider = new GoogleAuthProvider()
+    // Force Google to show the account picker
+    provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
       await signInWithPopup(auth, provider)
