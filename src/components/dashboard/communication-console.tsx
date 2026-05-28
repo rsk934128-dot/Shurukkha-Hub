@@ -122,7 +122,7 @@ export function CommunicationConsole() {
     if (!input.trim() || !user) return;
     const comm = CommunicationOrchestrator.getInstance();
     const content = input;
-    setInput(''); // Clear immediately for UX
+    setInput(''); 
     
     await comm.sendMessage({
       senderId: user.uid,
@@ -134,15 +134,18 @@ export function CommunicationConsole() {
 
   const handleCall = async (type: 'audio' | 'video') => {
     if (!user || !selectedContact) return;
-    const chatId = CommunicationOrchestrator.getChatId(user.uid, selectedContact.id);
     
-    // Create a WebRTC session doc to notify the recipient
-    const sessionRef = doc(db, 'webrtc_sessions', chatId);
+    // Using simple unique ID for this call session
+    const callSessionId = `call_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    
+    const sessionRef = doc(db, 'webrtc_sessions', callSessionId);
     await setDoc(sessionRef, {
       callerId: user.uid,
       callerName: user.displayName || 'Sovereign Node',
       callerAvatar: user.photoURL || '',
       recipientId: selectedContact.id,
+      recipientName: selectedContact.name,
+      recipientAvatar: selectedContact.avatar,
       status: 'ringing',
       type: type,
       timestamp: serverTimestamp()
@@ -183,10 +186,10 @@ export function CommunicationConsole() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => handleCall('audio')} variant="outline" size="icon" className="h-8 w-8 border-white/10 text-primary hover:bg-primary/10">
+          <Button onClick={() => handleCall('audio')} variant="outline" size="icon" className="h-8 w-8 border-white/10 text-primary hover:bg-primary/10" title="Audio Call">
             <Phone size={14} />
           </Button>
-          <Button onClick={() => handleCall('video')} variant="outline" size="icon" className="h-8 w-8 border-white/10 text-accent hover:bg-accent/10">
+          <Button onClick={() => handleCall('video')} variant="outline" size="icon" className="h-8 w-8 border-white/10 text-accent hover:bg-accent/10" title="Video Call">
             <Video size={14} />
           </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">

@@ -139,7 +139,7 @@ export default function ShurukkhaDashboard() {
 
       fetchRole();
 
-      // Universal Call Listener
+      // Universal Call Listener - Incoming
       const callsQ = query(
         collection(db, 'webrtc_sessions'),
         where('recipientId', '==', user.uid),
@@ -162,7 +162,7 @@ export default function ShurukkhaDashboard() {
         });
       });
 
-      // Self Call Listener (for outgoing call state sync)
+      // Self Call Listener - Outgoing (handles calls started from CommConsole)
       const myCallsQ = query(
         collection(db, 'webrtc_sessions'),
         where('callerId', '==', user.uid),
@@ -173,13 +173,12 @@ export default function ShurukkhaDashboard() {
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
             const data = change.doc.data();
-            // This case handles when the user initiates a call from CommunicationConsole
-            // but we want the global CallOverlay to take over.
+            // Start overlay for caller
             if (!activeCall) {
               setActiveCall({
                 sessionId: change.doc.id,
                 callerId: data.callerId,
-                callerName: data.recipientName || 'Node',
+                callerName: data.recipientName || 'Identity',
                 callerAvatar: data.recipientAvatar,
                 type: data.type,
                 isIncoming: false

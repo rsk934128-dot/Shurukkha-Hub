@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -169,7 +170,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                   <Avatar className="h-40 w-40 border-4 border-primary/40 relative z-10 shadow-2xl">
                     <AvatarImage src={callData.callerAvatar} />
                     <AvatarFallback className="bg-primary/10 text-5xl font-headline font-bold text-primary">
-                      {callData.callerName[0]}
+                      {callData.callerName?.[0] || 'S'}
                     </AvatarFallback>
                   </Avatar>
                   {status === 'ringing' && (
