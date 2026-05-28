@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { MessageSquare, Send, Paperclip, Mic, Phone, Video, User, Circle, ShieldCheck, MoreVertical, Search, Download, FileText, Loader2, Signal, Landmark, UserPlus, Plus } from 'lucide-react'
+import { MessageSquare, Send, Paperclip, Mic, Phone, Video, User, Circle, ShieldCheck, MoreVertical, Search, Download, FileText, Loader2, Signal, Landmark, UserPlus, Plus, Shield, CheckCircle2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,7 @@ import { useUser } from '@/firebase'
 import { collection, query, orderBy, limit, onSnapshot, where, getDocs } from 'firebase/firestore'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 
-const COMMAND_CENTER_CONTACT = { id: 'command_center', name: "Sovereign Command", role: "Authority", status: 'online', avatar: '' }
+const COMMAND_CENTER_CONTACT = { id: 'command_center', name: "Sovereign Command", role: "admin", status: 'online', avatar: '' }
 
 export function CommunicationConsole() {
   const { user } = useUser()
@@ -31,19 +31,19 @@ export function CommunicationConsole() {
   const { playMessageSound } = useAudioEngine()
   const lastMessageId = useRef<string | null>(null)
 
-  // Fetch users for the contact list
+  // Fetch all users to allow universal communication
   useEffect(() => {
     if (!user) return;
 
     const fetchUsers = async () => {
       try {
-        const q = query(collection(db, "users"), limit(100));
+        const q = query(collection(db, "users"), limit(200));
         const snap = await getDocs(q);
         const otherUsers = snap.docs
           .map(doc => ({ 
             id: doc.id, 
             name: doc.data().displayName || "Anonymous User", 
-            role: doc.data().role || "Citizen",
+            role: doc.data().role || "citizen",
             status: 'online',
             avatar: doc.data().photoURL || '',
             email: doc.data().email || ''
@@ -70,7 +70,7 @@ export function CommunicationConsole() {
     );
   }, [contacts, searchQuery]);
 
-  // Real-time message listener
+  // Real-time message listener with robust error handling
   useEffect(() => {
     if (!user || !selectedContact) return;
 
@@ -81,7 +81,7 @@ export function CommunicationConsole() {
       collection(db, "messages"),
       where("chatId", "==", currentChatId),
       orderBy("timestamp", "asc"),
-      limit(50)
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -98,7 +98,7 @@ export function CommunicationConsole() {
       }
 
       setMessages(chatMsgs);
-      setTimeout(scrollToBottom, 100);
+      setTimeout(scrollToBottom, 200);
     }, (err) => {
       console.error("[Chat Query] Signal Interruption:", err);
     });
@@ -146,13 +146,18 @@ export function CommunicationConsole() {
           <div className="relative">
             <Avatar className="h-10 w-10 border border-primary/40">
               <AvatarImage src={selectedContact.avatar} />
-              <AvatarFallback>{selectedContact.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                {selectedContact.name?.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
             <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${selectedContact.status === 'online' ? 'bg-accent animate-pulse' : 'bg-muted'}`} />
           </div>
           <div>
-            <CardTitle className="text-sm font-headline font-bold uppercase tracking-widest">{selectedContact.name}</CardTitle>
-            <p className="text-[9px] text-muted-foreground font-mono uppercase">{selectedContact.role} • SOVEREIGN_CHANNEL_v3.1</p>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-headline font-bold uppercase tracking-widest">{selectedContact.name}</CardTitle>
+              {selectedContact.role === 'admin' && <Badge variant="outline" className="text-[7px] border-accent/40 text-accent uppercase font-bold bg-accent/5">Imperial Admin</Badge>}
+            </div>
+            <p className="text-[9px] text-muted-foreground font-mono uppercase tracking-tighter">CHANNEL_v3.1_ENCRYPTED • {selectedContact.role === 'admin' ? 'SECURE_COMMAND' : 'CITIZEN_COMM'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -173,7 +178,7 @@ export function CommunicationConsole() {
         <div className="w-20 md:w-72 border-r border-white/5 flex flex-col bg-black/20">
           <div className="p-4 border-b border-white/5 space-y-3 hidden md:block">
             <div className="flex items-center justify-between">
-               <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Signals</h4>
+               <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Sovereign Signals</h4>
                <Button variant="ghost" size="sm" onClick={startNewSignal} className="h-6 px-2 text-[9px] font-bold text-primary hover:bg-primary/10 gap-1">
                  <Plus size={12} /> NEW
                </Button>
@@ -182,7 +187,7 @@ export function CommunicationConsole() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
               <Input 
                 ref={searchInputRef}
-                placeholder="Search Citizens..." 
+                placeholder="Search Identity..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-9 pl-9 text-[11px] bg-background/50 border-white/10 rounded-xl focus:ring-primary/40" 
@@ -193,8 +198,8 @@ export function CommunicationConsole() {
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
               {filteredContacts.length === 0 ? (
-                <div className="py-8 text-center px-4 hidden md:block">
-                  <p className="text-[10px] text-muted-foreground italic">No citizen found with that identity.</p>
+                <div className="py-8 text-center px-4 hidden md:block opacity-40">
+                  <p className="text-[10px] text-muted-foreground italic">No identity match found.</p>
                 </div>
               ) : (
                 filteredContacts.map(res => (
@@ -203,16 +208,19 @@ export function CommunicationConsole() {
                     onClick={() => { setSelectedContact(res); setSearchQuery(''); }}
                     className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${selectedContact.id === res.id ? 'bg-primary/20 border border-primary/30' : 'hover:bg-white/5 border border-transparent'}`}
                   >
-                    <Avatar className="h-9 w-9 border border-white/10">
-                      <AvatarImage src={res.avatar} />
-                      <AvatarFallback>{res.name[0]}</AvatarFallback>
-                    </Avatar>
+                    <div className="relative">
+                      <Avatar className="h-9 w-9 border border-white/10">
+                        <AvatarImage src={res.avatar} />
+                        <AvatarFallback className="text-[10px] font-bold">{res.name[0]}</AvatarFallback>
+                      </Avatar>
+                      {res.role === 'admin' && <div className="absolute -top-1 -right-1 bg-accent p-0.5 rounded-full"><Shield size={8} className="text-background fill-accent" /></div>}
+                    </div>
                     <div className="hidden md:block overflow-hidden flex-1">
                       <div className="flex items-center justify-between">
                         <p className="text-[11px] font-bold truncate text-foreground">{res.name}</p>
-                        {res.id === 'command_center' && <Badge variant="outline" className="text-[6px] h-3 border-primary/40 text-primary">CORE</Badge>}
+                        {res.id === 'command_center' && <Badge className="bg-primary/80 text-background text-[6px] h-3 uppercase font-bold">Center</Badge>}
                       </div>
-                      <p className="text-[8px] text-muted-foreground uppercase tracking-tight">{res.role}</p>
+                      <p className="text-[8px] text-muted-foreground uppercase tracking-tight">{res.role === 'admin' ? 'Imperial Authority' : 'Registered Citizen'}</p>
                     </div>
                   </div>
                 ))
@@ -227,7 +235,7 @@ export function CommunicationConsole() {
             <div className="space-y-6">
               <div className="flex justify-center">
                 <Badge variant="outline" className="text-[8px] border-white/5 text-muted-foreground uppercase py-1 px-4 gap-2 bg-black/20 backdrop-blur-sm">
-                  <ShieldCheck size={10} className="text-accent" /> RSA_V2 Secure Bridge Active
+                  <ShieldCheck size={10} className="text-accent" /> RSA_V2 Secure Sovereign Tunnel Active
                 </Badge>
               </div>
 
@@ -235,7 +243,7 @@ export function CommunicationConsole() {
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/30 animate-pulse">
                   <Signal size={64} className="mb-4" />
                   <p className="text-xs uppercase font-bold tracking-[0.3em]">নতুন সিগন্যাল শুরু করুন</p>
-                  <p className="text-[10px] mt-2 italic">Awaiting first frequency match...</p>
+                  <p className="text-[10px] mt-2 italic">Awaiting secure frequency handshake with {selectedContact.name}...</p>
                 </div>
               ) : (
                 messages.map((msg, i) => {
@@ -264,7 +272,12 @@ export function CommunicationConsole() {
                           <span className="text-[9px] font-mono text-muted-foreground">
                             {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
-                          {isMe && <Badge variant="outline" className="text-[7px] h-3.5 border-accent/40 text-accent uppercase font-mono px-1.5">{msg.status}</Badge>}
+                          {isMe && (
+                            <div className="flex items-center gap-1">
+                              <CheckCircle2 size={10} className="text-accent" />
+                              <Badge variant="outline" className="text-[7px] h-3.5 border-accent/40 text-accent uppercase font-mono px-1.5">{msg.status}</Badge>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

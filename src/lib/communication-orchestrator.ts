@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Sovereign Communication Orchestrator.
  * Manages encrypted messaging, file transfers, and status synchronization.
@@ -33,10 +34,11 @@ export class CommunicationOrchestrator {
   }
 
   /**
-   * Generates a consistent Chat ID between two users.
+   * Generates a consistent Chat ID between two users (Alphabetical sort ensures symmetry).
    */
   getChatId(uid1: string, uid2: string): string {
-    return [uid1, uid2].sort().join('_');
+    const ids = [uid1, uid2].sort();
+    return `chat_${ids[0]}_${ids[1]}`;
   }
 
   /**
