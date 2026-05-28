@@ -10,6 +10,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.email == 'rubels1k994@gmail.com' || 
+        request.auth.token.email == 'rsk755734@gmail.com' || 
         request.auth.token.role == 'admin'
       );
     }

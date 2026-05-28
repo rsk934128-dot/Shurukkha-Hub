@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -49,6 +48,8 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { AppLogo } from '@/components/ui/app-logo'
 import { CommunicationOrchestrator } from '@/lib/communication-orchestrator'
+
+const ADMIN_EMAILS = ['rubels1k994@gmail.com', 'rsk755734@gmail.com'];
 
 export default function ShurukkhaDashboard() {
   const [isOffline, setIsOffline] = useState(false)
@@ -103,7 +104,7 @@ export default function ShurukkhaDashboard() {
 
   useEffect(() => {
     if (user && firestore) {
-      const isAdmin = user.email === 'rubels1k994@gmail.com';
+      const isAdmin = ADMIN_EMAILS.includes(user.email || '');
       const userRef = doc(firestore, "users", user.uid);
       
       const fetchRole = async () => {
