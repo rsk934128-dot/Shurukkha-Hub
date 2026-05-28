@@ -265,7 +265,7 @@ export default function ShurukkhaDashboard() {
               {survivalMode && <Badge variant="destructive" className="h-5 text-[6px] md:text-[8px]">SURVIVAL</Badge>}
               <SovereignStatusWidget />
               <Avatar className="h-7 w-7 md:h-8 md:w-8 border border-primary/20 cursor-pointer" onClick={() => setActiveView('profile')}>
-                <AvatarImage src={user?.photoURL || ''} />
+                <AvatarImage src={user?.photoURL || undefined} />
                 <AvatarFallback className="bg-primary/10 text-[8px] md:text-[10px]">{user?.displayName?.substring(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
             </div>

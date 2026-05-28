@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useEffect, useState } from 'react'
@@ -117,7 +116,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
                   <div className="absolute -inset-2 bg-gradient-to-b from-primary to-accent rounded-3xl blur-md opacity-30 animate-pulse no-print" />
                   <div className="relative w-32 h-32 rounded-3xl border-2 border-primary/20 overflow-hidden bg-muted p-1">
                     <Avatar className="w-full h-full rounded-2xl">
-                      <AvatarImage src={user.photoURL || ''} className="object-cover" />
+                      <AvatarImage src={user.photoURL || undefined} className="object-cover" />
                       <AvatarFallback className="bg-primary/10 text-2xl font-headline font-bold text-primary">
                         {user.displayName?.substring(0, 1).toUpperCase()}
                       </AvatarFallback>

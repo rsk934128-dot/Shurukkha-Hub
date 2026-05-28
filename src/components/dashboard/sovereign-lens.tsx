@@ -102,7 +102,7 @@ export function SovereignLens({ isOpen, onClose }: SovereignLensProps) {
                <div className="relative mb-6">
                   <div className="absolute -inset-4 bg-primary/20 blur-2xl rounded-full animate-pulse" />
                   <Avatar className="h-32 w-32 border-4 border-primary/40 relative z-10 shadow-2xl">
-                    <AvatarImage src="" />
+                    <AvatarImage src={undefined} />
                     <AvatarFallback className="bg-primary/10 text-4xl font-headline font-bold text-primary">
                       {scannedProfile.displayName.substring(0, 1)}
                     </AvatarFallback>
@@ -115,7 +115,7 @@ export function SovereignLens({ isOpen, onClose }: SovereignLensProps) {
                <div className="text-center space-y-2 mb-8">
                   <h3 className="text-3xl font-headline font-bold tracking-tight">{scannedProfile.displayName}</h3>
                   <div className="flex items-center justify-center gap-2">
-                    <Badge className="bg-accent text-background font-bold uppercase tracking-widest px-4">
+                    <Badge className="bg-accent text-background font-bold tracking-widest px-4">
                       <Star size={12} fill="currentColor" className="mr-2" /> {scannedProfile.role}
                     </Badge>
                     <Badge variant="outline" className="border-primary/40 text-primary uppercase text-[10px]">V31.0_SOV</Badge>

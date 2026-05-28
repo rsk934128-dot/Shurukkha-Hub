@@ -192,7 +192,7 @@ export function CommunicationConsole() {
           {selectedContact && !showMobileList ? (
             <div className="flex items-center gap-2 md:gap-3">
               <Avatar className="h-8 w-8 md:h-10 md:w-10 border border-primary/40">
-                <AvatarImage src={selectedContact.avatar} />
+                <AvatarImage src={selectedContact.avatar || undefined} />
                 <AvatarFallback className="bg-primary/10 text-primary text-[10px] md:text-xs font-bold">
                   {selectedContact.name?.substring(0, 2).toUpperCase()}
                 </AvatarFallback>
@@ -262,7 +262,7 @@ export function CommunicationConsole() {
                 >
                   <div className="relative">
                     <Avatar className="h-9 w-9 border border-white/10">
-                      <AvatarImage src={res.avatar} />
+                      <AvatarImage src={res.avatar || undefined} />
                       <AvatarFallback className="text-[10px] font-bold">{res.name[0]}</AvatarFallback>
                     </Avatar>
                     {res.role === 'admin' && <div className="absolute -top-1 -right-1 bg-accent p-0.5 rounded-full"><Shield size={8} className="text-background fill-accent" /></div>}
