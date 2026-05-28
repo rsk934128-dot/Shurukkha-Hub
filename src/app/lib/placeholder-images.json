@@ -1,0 +1,35 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "hero-banner",
+      "description": "Aerial view of Sirajganj River and Char Areas",
+      "imageUrl": "https://picsum.photos/seed/42/1200/400",
+      "imageHint": "river aerial"
+    },
+    {
+      "id": "command-center-preview",
+      "description": "Sovereign Command Center Dashboard Preview",
+      "imageUrl": "https://picsum.photos/seed/43/1200/400",
+      "imageHint": "admin dashboard"
+    },
+    {
+      "id": "emergency-dispatch-view",
+      "description": "Autonomous Emergency Dispatch Operations",
+      "imageUrl": "https://picsum.photos/seed/44/1200/400",
+      "imageHint": "rescue team"
+    },
+    {
+      "id": "treasury-grid-view",
+      "description": "Sovereign Treasury & Financial Grid",
+      "imageUrl": "https://picsum.photos/seed/45/1200/400",
+      "imageHint": "financial grid"
+    },
+    {
+      "id": "security-matrix-view",
+      "description": "Imperial Security & Sentinel Matrix",
+      "imageUrl": "https://picsum.photos/seed/46/1200/400",
+      "imageHint": "cyber security"
+    }
+  ]
+}
