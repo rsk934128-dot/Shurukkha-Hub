@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState } from 'react'
-import { PlusCircle, MapPin, Camera, Send, CheckCircle2 } from 'lucide-react'
+import { PlusCircle, MapPin, Camera, Send, CheckCircle2, Loader2, MapPinned } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -10,14 +11,44 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { db } from '@/lib/firebase'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { DisasterStorage } from '@/lib/disaster-storage'
+import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/hooks/use-toast'
 
 export function IncidentReport() {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [isGettingLocation, setIsGettingLocation] = useState(false)
+  const [locationData, setLocationData] = useState<{ lat: number; lng: number; address?: string } | null>(null)
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     type: '',
     description: ''
   })
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast({ title: "ব্রাউজার সাপোর্ট করছে না", description: "আপনার ব্রাউজারটি লোকেশন সার্ভিস সাপোর্ট করে না।", variant: "destructive" })
+      return
+    }
+
+    setIsGettingLocation(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocationData({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        })
+        setIsGettingLocation(false)
+        toast({ title: "অবস্থান শনাক্ত হয়েছে", description: "আপনার ভৌগোলিক স্থানাঙ্ক সফলভাবে যুক্ত করা হয়েছে।" })
+      },
+      (error) => {
+        console.error("Location Error:", error)
+        setIsGettingLocation(false)
+        toast({ title: "লোকেশন পাওয়া যায়নি", description: "দয়া করে লোকেশন পারমিশন চেক করুন।", variant: "destructive" })
+      },
+      { enableHighAccuracy: true }
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,6 +56,7 @@ export function IncidentReport() {
 
     const reportData = {
       ...formData,
+      coordinates: locationData,
       timestamp: serverTimestamp(),
       status: 'new'
     }
@@ -52,7 +84,7 @@ export function IncidentReport() {
           <h3 className="text-xl font-headline font-bold text-accent">রিপোর্ট সফল হয়েছে</h3>
           <p className="text-sm font-body text-muted-foreground">আপনার তথ্য স্থানীয় প্রশাসনের কাছে পাঠানো হয়েছে। ধন্যবাদ।</p>
         </div>
-        <Button onClick={() => setSubmitted(false)} variant="outline" className="border-accent/30 text-accent">
+        <Button onClick={() => { setSubmitted(false); setLocationData(null); }} variant="outline" className="border-accent/30 text-accent">
           আরেকটি রিপোর্ট করুন
         </Button>
       </Card>
@@ -98,9 +130,26 @@ export function IncidentReport() {
             />
           </div>
 
+          {locationData && (
+            <div className="p-3 bg-accent/5 border border-accent/20 rounded-xl flex items-center justify-between animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <MapPinned size={14} className="text-accent" />
+                <span className="text-[10px] font-mono text-accent">Lat: {locationData.lat.toFixed(4)}, Lng: {locationData.lng.toFixed(4)}</span>
+              </div>
+              <Badge variant="outline" className="text-[8px] border-accent/30 text-accent">সংযুক্ত</Badge>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
-            <Button type="button" variant="outline" className="border-accent/20 h-11 font-body text-xs gap-2 hover:bg-accent/10">
-              <MapPin size={16} /> অবস্থান যোগ করুন
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleGetLocation}
+              disabled={isGettingLocation}
+              className={`border-accent/20 h-11 font-body text-xs gap-2 transition-all ${locationData ? 'bg-accent/10 border-accent/40' : 'hover:bg-accent/10'}`}
+            >
+              {isGettingLocation ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />} 
+              {locationData ? "অবস্থান পরিবর্তন" : "অবস্থান যোগ করুন"}
             </Button>
             <Button type="button" variant="outline" className="border-accent/20 h-11 font-body text-xs gap-2 hover:bg-accent/10">
               <Camera size={16} /> ছবি তুলুন

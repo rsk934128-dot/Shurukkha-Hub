@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { ShieldAlert } from 'lucide-react'
+import { ShieldAlert, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { db } from '@/lib/firebase'
@@ -16,13 +16,28 @@ export function SOSButton() {
   const handleSOS = async () => {
     setIsActivating(true)
     
-    // In a real app, use Geolocation API
+    // Attempt to get real location first
+    let userLocation = null;
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+      });
+      userLocation = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracy: position.coords.accuracy
+      };
+    } catch (e) {
+      console.warn("Could not get precise location for SOS. Using fallback name.");
+    }
+
     const locations = ["বেলকুচি চরাঞ্চল", "এনায়েতপুর ঘাট", "সিরাজগঞ্জ বাজার", "কাজীপুর চর"];
     const randomLocation = locations[Math.floor(Math.random() * locations.length)];
 
     const sosData = {
       timestamp: serverTimestamp(),
       location: randomLocation,
+      coordinates: userLocation,
       status: 'pending',
       type: 'জরুরি উদ্ধার প্রয়োজন (Flood/Emergency)',
       reporterId: 'anonymous_user_' + Math.floor(Math.random() * 1000)
@@ -61,7 +76,7 @@ export function SOSButton() {
             disabled={isActivating}
             className={`w-32 h-32 rounded-full border-8 border-background bg-destructive hover:bg-destructive/90 transition-all flex flex-col gap-1 items-center justify-center shadow-2xl ${isActivating ? 'scale-95 opacity-80' : 'animate-sos-pulse'}`}
           >
-            <ShieldAlert size={48} className="text-white" />
+            {isActivating ? <Loader2 size={48} className="text-white animate-spin" /> : <ShieldAlert size={48} className="text-white" />}
             <span className="font-headline font-bold text-xl tracking-tighter text-white">SOS</span>
           </Button>
         </div>
