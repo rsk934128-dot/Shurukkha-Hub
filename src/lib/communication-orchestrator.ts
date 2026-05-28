@@ -44,21 +44,22 @@ export class CommunicationOrchestrator {
    */
   async sendMessage(msg: Omit<Message, 'timestamp' | 'status' | 'isEncrypted' | 'chatId' | 'participants'>) {
     const chatId = this.getChatId(msg.senderId, msg.recipientId);
-    const messageData: Message = {
-      ...msg,
+    const messageData: any = {
+      senderId: msg.senderId,
+      recipientId: msg.recipientId,
       chatId,
       participants: [msg.senderId, msg.recipientId],
-      timestamp: new Date().toISOString(),
+      content: msg.content,
+      type: msg.type,
+      fileUrl: msg.fileUrl || null,
       status: this.isOnline ? 'sent' : 'queued',
-      isEncrypted: true
+      isEncrypted: true,
+      timestamp: serverTimestamp()
     };
 
     if (this.isOnline) {
       try {
-        await addDoc(collection(db, "messages"), {
-          ...messageData,
-          timestamp: serverTimestamp()
-        });
+        await addDoc(collection(db, "messages"), messageData);
         
         IntegrationBridge.broadcastEvent({
           type: 'OUTBOUND_SIGNAL_SENT',
@@ -67,12 +68,13 @@ export class CommunicationOrchestrator {
         });
       } catch (e) {
         console.error("[Comm] Sync failed, queuing message...");
-        DisasterStorage.addToSyncQueue('SEND_MESSAGE', messageData);
+        DisasterStorage.addToSyncQueue('SEND_MESSAGE', { ...messageData, timestamp: new Date().toISOString() });
       }
     } else {
       console.warn("[Survival Mode] Network offline. Queuing message locally.");
-      DisasterStorage.addToSyncQueue('SEND_MESSAGE', messageData);
-      DisasterStorage.saveLocalMessage(messageData);
+      const localMsg = { ...messageData, timestamp: new Date().toISOString() };
+      DisasterStorage.addToSyncQueue('SEND_MESSAGE', localMsg);
+      DisasterStorage.saveLocalMessage(localMsg);
     }
   }
 

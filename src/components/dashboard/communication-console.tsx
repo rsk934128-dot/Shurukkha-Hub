@@ -26,6 +26,7 @@ export function CommunicationConsole() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { playMessageSound } = useAudioEngine()
+  const lastMessageId = useRef<string | null>(null)
 
   useEffect(() => {
     if (!user) return;
@@ -58,7 +59,6 @@ export function CommunicationConsole() {
   useEffect(() => {
     if (!user || !selectedContact) return;
 
-    // Fast Track Query: Use chatId for lightning-fast conversation fetching
     const orchestrator = CommunicationOrchestrator.getInstance();
     const currentChatId = orchestrator.getChatId(user.uid, selectedContact.id);
 
@@ -66,16 +66,20 @@ export function CommunicationConsole() {
       collection(db, "messages"),
       where("chatId", "==", currentChatId),
       orderBy("timestamp", "asc"),
-      limit(100)
+      limit(50)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const chatMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
       
       const lastMsg = chatMsgs[chatMsgs.length - 1];
-      // Play sound only for incoming messages that are new to the state
-      if (lastMsg && lastMsg.senderId !== user.uid && !messages.find(m => m.id === lastMsg.id)) {
+      
+      // Real-time Audio Alert logic: If the message is new and not from me
+      if (lastMsg && lastMsg.id !== lastMessageId.current && lastMsg.senderId !== user.uid) {
         playMessageSound();
+        lastMessageId.current = lastMsg.id || null;
+      } else if (lastMsg) {
+        lastMessageId.current = lastMsg.id || null;
       }
 
       setMessages(chatMsgs);
@@ -89,7 +93,10 @@ export function CommunicationConsole() {
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+      const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior: 'smooth' });
+      }
     }
   }
 
@@ -199,7 +206,7 @@ export function CommunicationConsole() {
                               </div>
                               <div className="overflow-hidden">
                                 <p className="font-bold truncate max-w-[120px]">{msg.content}</p>
-                                <a href={msg.fileUrl} className="text-[8px] text-accent flex items-center gap-1 hover:underline">
+                                <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="text-[8px] text-accent flex items-center gap-1 hover:underline">
                                   <Download size={8} /> DOWNLOAD_DEOS_VAULT
                                 </a>
                               </div>
@@ -209,7 +216,9 @@ export function CommunicationConsole() {
                           )}
                         </div>
                         <div className="flex items-center gap-2 px-1">
-                          <span className="text-[8px] font-mono text-muted-foreground">{new Date(msg.timestamp?.toDate?.() || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span className="text-[8px] font-mono text-muted-foreground">
+                            {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
                           {isMe && <Badge variant="outline" className="text-[6px] h-3 border-accent/30 text-accent uppercase">{msg.status}</Badge>}
                         </div>
                       </div>
@@ -249,7 +258,8 @@ export function CommunicationConsole() {
                 </Button>
                 <Button 
                   onClick={handleSend}
-                  className="h-8 w-8 rounded-xl bg-primary text-background shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+                  disabled={!input.trim()}
+                  className="h-8 w-8 rounded-xl bg-primary text-background shadow-lg shadow-primary/20 hover:scale-105 transition-transform disabled:opacity-50"
                 >
                   <Send size={16} />
                 </Button>

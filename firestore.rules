@@ -21,16 +21,16 @@ service cloud.firestore {
 
     // Users: Users can read/write their own profile, Admins can read all
     match /users/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow read: if isAuthenticated();
       allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow list: if isAdmin() || isRole('authority');
+      allow list: if isAuthenticated();
     }
 
     // SOS Signals: Citizens can create, Authorities can manage
     match /sos_alerts/{alertId} {
       allow create: if isAuthenticated();
       allow read: if isAuthenticated();
-      allow update: if isRole('authority') || isAdmin();
+      allow update: if isAuthenticated();
       allow delete: if isAdmin();
     }
 
@@ -38,10 +38,11 @@ service cloud.firestore {
     match /messages/{messageId} {
       allow read: if isAuthenticated() && (
         request.auth.uid in resource.data.participants ||
-        (resource.data.recipientId == 'command_center' && (isAdmin() || isRole('authority'))) ||
+        resource.data.recipientId == 'command_center' ||
         isAdmin()
       );
-      allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants;
     }
 
     // WebRTC Signaling: Encrypted sessions
@@ -55,15 +56,15 @@ service cloud.firestore {
 
     // Incident Reports
     match /incidents/{incidentId} {
-      allow read: if true;
-      allow create: if true;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
       allow update, delete: if isAuthenticated() && (isAdmin() || request.auth.uid == resource.data.userId);
     }
 
     // Shelters, Domains, Integrations, Audit Trails
     match /shelters/{shelterId} { allow read: if true; allow write: if isAdmin(); }
     match /audit_trails/{logId} { allow read: if isAdmin(); allow create: if isAuthenticated(); }
-    match /suspect_profiles/{profileId} { allow read: if isAdmin() || isRole('authority'); allow write: if isAdmin(); }
+    match /suspect_profiles/{profileId} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
     match /sovereign_domains/{domainId} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
     match /integrations/{integrationId} { allow read: if isAdmin() || isRole('authority'); allow write: if isAdmin(); }
     match /partner_requests/{requestId} { allow read: if isAdmin(); allow create: if true; }

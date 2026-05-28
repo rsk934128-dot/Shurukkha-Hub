@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -35,6 +34,7 @@ export function DispatcherConsole() {
   const [activeTab, setActiveTab] = useState<'map' | 'comm'>('map')
   const videoRef = useRef<HTMLVideoElement>(null)
   const webrtcRef = useRef<WebRTCManager | null>(null)
+  const lastAlertId = useRef<string | null>(null)
   
   const { toast } = useToast()
   const { playAlertSound } = useAudioEngine()
@@ -44,9 +44,14 @@ export function DispatcherConsole() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const activeAlerts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // Check for new pending alerts to trigger sound
-      const hasNewPending = activeAlerts.some(a => a.status === 'pending' && !alerts.find(old => old.id === a.id));
-      if (hasNewPending) playAlertSound();
+      // Trigger alarm if a new alert is detected
+      if (activeAlerts.length > 0 && activeAlerts[0].id !== lastAlertId.current) {
+        if (activeAlerts[0].status === 'pending') {
+          playAlertSound();
+          toast({ title: "নতুন জরুরি সংকেত পাওয়া গেছে!", variant: "destructive" });
+        }
+        lastAlertId.current = activeAlerts[0].id;
+      }
 
       setAlerts(activeAlerts);
       
@@ -56,7 +61,7 @@ export function DispatcherConsole() {
       }
     });
     return () => unsubscribe();
-  }, [selectedAlert, alerts, playAlertSound])
+  }, [selectedAlert, playAlertSound, toast])
 
   useEffect(() => {
     if (videoRef.current && remoteStream) {
@@ -67,7 +72,6 @@ export function DispatcherConsole() {
   const handleCall = async () => {
     if (!selectedAlert) return;
     setIsCalling(true);
-    playAlertSound();
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -162,7 +166,7 @@ export function DispatcherConsole() {
                            <Badge className={`text-[7px] h-4 uppercase font-bold ${alert.status === 'pending' ? 'bg-destructive animate-pulse' : 'bg-accent text-background'}`}>
                               {alert.status}
                            </Badge>
-                           <span className="text-[8px] font-mono text-muted-foreground">[{new Date(alert.timestamp?.toDate?.()).toLocaleTimeString() || '0.00s'}]</span>
+                           <span className="text-[8px] font-mono text-muted-foreground">[{alert.timestamp?.toDate ? alert.timestamp.toDate().toLocaleTimeString() : '0.00s'}]</span>
                         </div>
                         <p className="text-[11px] font-bold text-foreground line-clamp-1">{alert.location}</p>
                         <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-tighter mt-1">{alert.type}</p>
