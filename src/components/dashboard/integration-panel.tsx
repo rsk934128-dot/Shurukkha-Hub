@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle, RefreshCcw, Swords, Target, Crosshair, Sparkles, BrainCircuit, Fingerprint, Network, Scale } from 'lucide-react'
+import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle, RefreshCcw, Swords, Target, Crosshair, Sparkles, BrainCircuit, Fingerprint, Network, Scale, Trophy } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,6 +19,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { ThreatMap } from './threat-map'
 import { PredictiveForecasting } from './predictive-forecasting'
 import { JudiciaryPanel } from './judiciary-panel'
+import { ImperialVictoryPanel } from './imperial-victory-panel'
 
 export function IntegrationPanel() {
   const [apps, setApps] = useState<any[]>([])
@@ -26,12 +28,6 @@ export function IntegrationPanel() {
   const [newApp, setNewApp] = useState({ name: '', webhook: '' })
   const [isHandshaking, setIsHandshaking] = useState(false)
   const [healingStatus, setHealingStatus] = useState(SelfHealing.getStatus())
-  
-  const discoveryMap = [
-    { id: 1, name: 'Payment Webhook', path: '/api/webhook/bkash', status: 'v25_active', redundancy: 'Primary' },
-    { id: 2, name: 'SOS Signal Hub', path: '/api/v1/sos', status: 'v25_active', redundancy: 'Backup' },
-    { id: 3, name: 'Honeypot Trap', path: '/api/v1/decoy-trap', status: 'TRAP_ACTIVE', redundancy: 'Security' }
-  ]
   
   const guardStats = SovereignGuard.getStats();
   const traffic = SovereignGuard.getLiveTraffic();
@@ -128,6 +124,7 @@ export function IntegrationPanel() {
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
             <TabsTrigger value="war-room" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap"><Swords size={12}/> ওয়ার-রুম</TabsTrigger>
+            <TabsTrigger value="victory" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><Trophy size={12}/> বিজয়</TabsTrigger>
             <TabsTrigger value="judiciary" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap"><Scale size={12}/> বিচার বিভাগ</TabsTrigger>
             <TabsTrigger value="intelligence" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap"><Skull size={12}/> ইন্টেল ইউনিট</TabsTrigger>
             <TabsTrigger value="evolution" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><BrainCircuit size={12}/> প্রেডিকশন</TabsTrigger>
@@ -159,6 +156,10 @@ export function IntegrationPanel() {
               </div>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="victory" className="flex-1 p-4 md:p-6 m-0">
+          <ImperialVictoryPanel />
         </TabsContent>
 
         <TabsContent value="judiciary" className="flex-1 p-4 md:p-6 m-0">
