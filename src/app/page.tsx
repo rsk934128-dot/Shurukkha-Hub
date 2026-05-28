@@ -28,6 +28,7 @@ import { useToast } from '@/hooks/use-toast'
 import { AutonomousOrchestrator } from '@/lib/orchestrator'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { IntegrationBridge } from '@/lib/integration-bridge'
+import { SovereignAudit } from '@/lib/sovereign-audit'
 import Link from 'next/link'
 
 export default function ShurukkhaDashboard() {
@@ -55,15 +56,8 @@ export default function ShurukkhaDashboard() {
 
     const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
 
-    // Log Phase 23.0 Milestone on first load of authority mode
-    if (userRole === 'authority') {
-      addDoc(collection(db, "audit_trails"), {
-        action: 'PHASE_23_MILESTONE_VERIFIED',
-        details: { project: '42nd_Project_Sheikh_Code_Exchange', phase: '23.0', status: 'Sovereign_Active' },
-        timestamp: serverTimestamp(),
-        performedBy: 'Imperial_Sentinel'
-      });
-    }
+    // Log Phase 23.0 Milestone on first load
+    SovereignAudit.logMilestone('Phase_23.0', 'Global Banking & Sovereign Grid Integration Complete');
 
     return () => {
       window.removeEventListener('online', handleOnline)
@@ -71,7 +65,7 @@ export default function ShurukkhaDashboard() {
       unsubscribeOrchestrator()
       clearInterval(interval);
     }
-  }, [userRole])
+  }, [])
 
   const handleAutoModeToggle = (enabled: boolean) => {
     setIsAutoMode(enabled)
