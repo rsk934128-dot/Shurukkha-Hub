@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -8,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { db } from '@/lib/firebase'
-import { collection, onSnapshot, query, where, orderBy, limit } from 'firebase/firestore'
+import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -39,15 +38,17 @@ export function JudiciaryPanel() {
   ]
 
   useEffect(() => {
+    // Proactive Fix: Move filtering for 'blacklisted' status to client-side to avoid index requirement
     const q = query(
       collection(db, "suspect_profiles"), 
-      where("status", "==", "blacklisted"),
       orderBy("timestamp", "desc"),
-      limit(20)
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setSentences(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const allProfiles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const blacklisted = allProfiles.filter((p: any) => p.status === 'blacklisted').slice(0, 20);
+      setSentences(blacklisted);
     });
 
     return () => unsubscribe();

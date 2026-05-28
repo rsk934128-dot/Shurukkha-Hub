@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label'
 import { MerchantGrowthChart } from '@/components/dashboard/merchant-growth-chart'
 import { AppLogo } from '@/components/ui/app-logo'
 import { MerchantRegistry } from './merchant-registry'
-import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore'
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
 export function BankDirectory() {
@@ -42,16 +42,20 @@ export function BankDirectory() {
   useEffect(() => {
     handleSync()
     
-    // Listen for transaction events in audit trail
+    // Resolve: Firestore Index Error - Move filtering logic to client-side
     const q = query(
       collection(db, "audit_trails"), 
-      where("action", "in", ["SETTLEMENT_COMPLETED", "INVOICE_GENERATED"]),
       orderBy("timestamp", "desc"),
-      limit(20)
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setLedgerLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const allLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Filter for specific actions relevant to the financial ledger
+      const filtered = allLogs.filter((log: any) => 
+        ["SETTLEMENT_COMPLETED", "INVOICE_GENERATED"].includes(log.action)
+      ).slice(0, 20);
+      setLedgerLogs(filtered);
     });
 
     return () => unsubscribe();
@@ -126,7 +130,7 @@ export function BankDirectory() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
-              <AppLogo size={24} />
+              <AppLogo className="w-6 h-6 md:w-8 md:h-8" />
             </div>
             <div>
               <CardTitle className="text-sm md:text-lg font-headline flex items-center gap-2 uppercase tracking-widest">
