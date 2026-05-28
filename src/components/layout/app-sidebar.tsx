@@ -48,7 +48,15 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
 
   const handleNav = (tab: string) => {
     onNavigate(tab)
+    // Automatically close sidebar on mobile after navigation
     setOpenMobile(false)
+  }
+
+  const handleLogoutClick = () => {
+    if (onLogout) {
+      onLogout()
+      setOpenMobile(false)
+    }
   }
 
   return (
@@ -176,13 +184,19 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton className="px-4 h-10 gap-3 text-muted-foreground opacity-60">
+                  <SidebarMenuButton 
+                    onClick={() => setOpenMobile(false)}
+                    className="px-4 h-10 gap-3 text-muted-foreground opacity-60"
+                  >
                     <Database size={18} />
                     <span className="font-medium">ডেটা ইন্টেলিজেন্স</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton className="px-4 h-10 gap-3 text-muted-foreground opacity-60">
+                  <SidebarMenuButton 
+                    onClick={() => setOpenMobile(false)}
+                    className="px-4 h-10 gap-3 text-muted-foreground opacity-60"
+                  >
                     <Lock size={18} />
                     <span className="font-medium">ক্রিপ্টো কি-রোটেশন</span>
                   </SidebarMenuButton>
@@ -198,7 +212,7 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton 
-                onClick={onLogout}
+                onClick={handleLogoutClick}
                 className="px-4 h-10 gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
               >
                 <LogOut size={18} />
