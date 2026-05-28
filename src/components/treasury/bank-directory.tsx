@@ -42,20 +42,31 @@ export function BankDirectory() {
   useEffect(() => {
     handleSync()
     
-    // Resolve: Firestore Index Error - Move filtering logic to client-side
+    // Client-side filtering to bypass indexing issues
     const q = query(
       collection(db, "audit_trails"), 
       orderBy("timestamp", "desc"),
-      limit(100)
+      limit(200)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const allLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Filter for specific actions relevant to the financial ledger
       const filtered = allLogs.filter((log: any) => 
         ["SETTLEMENT_COMPLETED", "INVOICE_GENERATED"].includes(log.action)
-      ).slice(0, 20);
+      ).slice(0, 50);
       setLedgerLogs(filtered);
+      
+      // Update local revenue stats based on successful settlements
+      const settlements = filtered.filter((l: any) => l.action === 'SETTLEMENT_COMPLETED');
+      if (settlements.length > 0) {
+        let totalProcessed = 12450000;
+        let totalFees = 186750;
+        settlements.forEach((s: any) => {
+          totalProcessed += (s.details?.amount || 0);
+          totalFees += (s.details?.feeCollected || 0);
+        });
+        setRevenueStats(prev => ({ ...prev, totalProcessed, totalFees }));
+      }
     });
 
     return () => unsubscribe();
@@ -89,7 +100,9 @@ export function BankDirectory() {
       })
       toast({ title: "STRESS TEST COMPLETED", description: "Ledger updated with atomic settlement." });
     } catch (e) {
-      toast({ title: "STRESS TEST FAILED", variant: "destructive" });
+      console.error("[Stress Test Error]", e);
+      toast({ title: "STRESS TEST FAILED", description: "Check terminal for error signature.", variant: "destructive" });
+      setTerminalLogs(prev => [...prev, `[FATAL_ERROR]: ${e.message || "Unknown Failure"}`]);
     } finally {
       setLoading(false)
     }
