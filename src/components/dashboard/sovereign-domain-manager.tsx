@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Globe, Server, ShieldCheck, Plus, Search, Trash2, Link, Cpu, Lock, RefreshCw, Zap, Network, Activity, Terminal, AlertTriangle, ShieldAlert } from 'lucide-react'
+import { Globe, Server, ShieldCheck, Plus, Search, Trash2, Link, Cpu, Lock, RefreshCw, Zap, Network, Activity, Terminal, AlertTriangle, ShieldAlert, Star } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +10,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { db } from '@/lib/firebase'
 import { collection, onSnapshot, query, addDoc, serverTimestamp } from 'firebase/firestore'
-import { IntegrationBridge } from '@/lib/integration-bridge'
 import { useToast } from '@/hooks/use-toast'
 
 export function SovereignDomainManager() {
@@ -193,5 +192,3 @@ export function SovereignDomainManager() {
     </Card>
   )
 }
-
-import { Star } from 'lucide-react'

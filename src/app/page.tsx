@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -58,7 +58,6 @@ export default function ShurukkhaDashboard() {
 
     const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
 
-    // Log Phase 23.0 & 24.0 Milestones on first load
     SovereignAudit.logMilestone('Phase_23.0', 'Global Banking & Sovereign Grid Integration Complete');
     SovereignAudit.logMilestone('Phase_24.0', 'Merchant Gateway Orchestration & Redundancy Matrix Active');
     SovereignAudit.logMilestone('Phase_24.5', 'Sovereign DNS Root Authority Initialized (.sheikh)');
@@ -121,35 +120,35 @@ export default function ShurukkhaDashboard() {
       <header className={`sticky top-0 z-50 border-b transition-colors duration-500 ${isLockedDown ? 'bg-destructive/20 border-destructive/40' : 'bg-background/80 border-white/5'} backdrop-blur-lg`}>
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors ${isLockedDown ? 'bg-destructive/20 border-destructive/40' : 'bg-primary/10 border-primary/20'}`}>
-              <Shield className={isLockedDown ? "text-destructive" : "text-primary"} size={24} />
+            <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center border transition-colors ${isLockedDown ? 'bg-destructive/20 border-destructive/40' : 'bg-primary/10 border-primary/20'}`}>
+              <Shield className={isLockedDown ? "text-destructive" : "text-primary"} size={20} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-headline font-bold tracking-tighter leading-none uppercase">SHURUKKHA HUB</h1>
-                <Badge variant="outline" className="h-4 text-[7px] border-primary/20 text-primary uppercase tracking-[0.2em] font-bold">
+                <h1 className="text-sm md:text-xl font-headline font-bold tracking-tighter leading-none uppercase">SHURUKKHA</h1>
+                <Badge variant="outline" className="hidden sm:flex h-4 text-[7px] border-primary/20 text-primary uppercase tracking-[0.2em] font-bold">
                   <Star size={8} fill="currentColor" className="mr-1" /> 42nd Project
                 </Badge>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">Sovereign Grid v24.5</span>
-                {isLockedDown && <Badge variant="destructive" className="h-4 text-[8px] animate-pulse">LOCKDOWN</Badge>}
+              <div className="flex items-center gap-1 md:gap-2">
+                <span className="text-[8px] md:text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">v24.5</span>
+                {isLockedDown && <Badge variant="destructive" className="h-3 md:h-4 text-[6px] md:text-[8px] animate-pulse px-1">LOCKDOWN</Badge>}
               </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-6">
-            <Link href="/partnerships">
+          <div className="flex items-center gap-2 md:gap-6">
+            <Link href="/partnerships" className="hidden sm:block">
               <Button variant="ghost" size="sm" className={`h-8 text-[10px] font-bold gap-2 ${isLockedDown ? 'text-destructive' : 'text-primary/60 hover:text-primary'}`}>
-                <Globe size={14} /> PARTNERSHIP HUB
+                <Globe size={14} /> PARTNERSHIP
               </Button>
             </Link>
 
             {userRole === 'authority' && (
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-full border border-white/5">
+              <div className="flex items-center gap-2 md:gap-4">
+                <div className="hidden md:flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-full border border-white/5">
                   <BrainCircuit size={14} className={isAutoMode ? "text-accent animate-pulse" : "text-muted-foreground"} />
-                  <Label htmlFor="auto-mode" className="text-[10px] uppercase font-bold tracking-widest cursor-pointer">Autonomous Mode</Label>
+                  <Label htmlFor="auto-mode" className="text-[10px] uppercase font-bold tracking-widest cursor-pointer">Auto</Label>
                   <Switch 
                     id="auto-mode" 
                     checked={isAutoMode} 
@@ -161,71 +160,69 @@ export default function ShurukkhaDashboard() {
                   <Button 
                     variant="destructive" 
                     size="sm" 
-                    className="h-8 px-3 text-[10px] font-bold gap-1"
+                    className="h-7 md:h-8 px-2 md:px-3 text-[8px] md:text-[10px] font-bold gap-1"
                     onClick={handleEmergencyKillSwitch}
                   >
-                    <PowerOff size={12} /> EMERGENCY STOP
+                    <PowerOff size={10} /> <span className="hidden xs:inline">STOP</span>
                   </Button>
                 )}
               </div>
             )}
             
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                {isLockedDown ? (
-                  <Badge variant="destructive" className="h-6 gap-1"><Lock size={10} /> SECURE</Badge>
-                ) : (
-                  <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-primary">
-                    {isOffline ? <WifiOff size={20} className="text-destructive" /> : <Wifi size={20} className="text-accent" />}
-                  </Button>
-                )}
-              </div>
+            <div className="flex items-center gap-1 md:gap-3">
+              {isLockedDown ? (
+                <Badge variant="destructive" className="h-6 gap-1 px-2"><Lock size={10} /> <span className="hidden xs:inline text-[8px]">SECURE</span></Badge>
+              ) : (
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                  {isOffline ? <WifiOff size={18} className="text-destructive" /> : <Wifi size={18} className="text-accent" />}
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </header>
 
       {isLockedDown && (
-        <div className="bg-destructive text-destructive-foreground py-1 text-center font-bold text-[10px] uppercase tracking-[0.5em] animate-pulse">
-          Sovereign Security Protocol Active - External Bridges Revoked
+        <div className="bg-destructive text-destructive-foreground py-1 text-center font-bold text-[8px] md:text-[10px] uppercase tracking-[0.3em] md:tracking-[0.5em] animate-pulse">
+          Sovereign Security Protocol Active
         </div>
       )}
 
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="flex-1 container mx-auto px-4 py-4 md:py-8">
         <Tabs defaultValue="citizen" value={userRole} onValueChange={(val: any) => setUserRole(val)} className="w-full">
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-3">
-                <h2 className="text-3xl font-headline font-bold tracking-tight">
-                  {userRole === 'citizen' ? 'সুরক্ষা ড্যাশবোর্ড' : 'অপারেশনাল কমান্ড সেন্টার'}
+                <h2 className="text-xl md:text-3xl font-headline font-bold tracking-tight">
+                  {userRole === 'citizen' ? 'সুরক্ষা ড্যাশবোর্ড' : 'কমান্ড সেন্টার'}
                 </h2>
                 {isLockedDown && userRole === 'authority' && (
-                  <Badge variant="outline" className="border-destructive/30 text-destructive gap-1">
-                    <Lock size={10} /> SOVEREIGN LOCK
+                  <Badge variant="outline" className="border-destructive/30 text-destructive gap-1 text-[8px] h-5">
+                    <Lock size={8} /> SOVEREIGN
                   </Badge>
                 )}
               </div>
-              <p className="text-muted-foreground text-sm font-body">
-                {userRole === 'citizen' ? 'সিরাজগঞ্জ জেলা প্রশাসনের পাবলিক সেফটি পোর্টাল' : 'জরুরি পরিস্থিতি মনিটরিং ও ডিসপ্যাচ ম্যানেজমেন্ট'}
+              <p className="text-muted-foreground text-xs md:text-sm font-body">
+                {userRole === 'citizen' ? 'সিরাজগঞ্জ পাবলিক সেফটি পোর্টাল' : 'মনিটরিং ও ডিসপ্যাচ ম্যানেজমেন্ট'}
               </p>
             </div>
-            <TabsList className="bg-muted/40 border border-white/5">
-              <TabsTrigger value="citizen" className="gap-2"><LayoutDashboard size={14}/> পাবলিক</TabsTrigger>
-              <TabsTrigger value="authority" className="gap-2"><Radio size={14}/> অথরিটি</TabsTrigger>
+            <TabsList className="bg-muted/40 border border-white/5 w-full md:w-auto grid grid-cols-2 h-10">
+              <TabsTrigger value="citizen" className="gap-2 text-xs"><LayoutDashboard size={14}/> পাবলিক</TabsTrigger>
+              <TabsTrigger value="authority" className="gap-2 text-xs"><Radio size={14}/> অথরিটি</TabsTrigger>
             </TabsList>
           </div>
 
           <TabsContent value="citizen" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
-            <div className="lg:col-span-3 space-y-6">
+            <div className="lg:col-span-3 space-y-6 order-1">
               <SOSButton />
               <AIAdviceTool />
               <DisasterFeed />
             </div>
-            <div className="lg:col-span-6 space-y-6">
+            <div className="lg:col-span-6 space-y-6 order-2">
               <RiverTelemetry />
               <ResourceMap />
             </div>
-            <div className="lg:col-span-3 space-y-6">
+            <div className="lg:col-span-3 space-y-6 order-3">
               <IncidentReport />
               <EmergencyDirectory />
             </div>
@@ -233,26 +230,25 @@ export default function ShurukkhaDashboard() {
 
           <TabsContent value="authority" className="w-full">
             <Tabs defaultValue="ops" className="w-full">
-              <TabsList className="mb-6 bg-muted/20 border border-white/5 p-1 h-12">
-                <TabsTrigger value="ops" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[10px]">১. ডিসপ্যাচ কমান্ড</TabsTrigger>
-                <TabsTrigger value="analytics" className="gap-2 h-10 px-6 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[10px]">২. হেলথ ও ফরেনসিক</TabsTrigger>
-                <TabsTrigger value="integrations" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[10px]">৩. পার্টনার ও ডোমেইন</TabsTrigger>
-                <TabsTrigger value="treasury" className="gap-2 h-10 px-6 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[10px]">৪. ট্রেজারি ও ব্যাংকিং</TabsTrigger>
+              <TabsList className="mb-6 bg-muted/20 border border-white/5 p-1 h-auto flex flex-wrap md:flex-nowrap justify-start overflow-x-auto no-scrollbar">
+                <TabsTrigger value="ops" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">১. ডিসপ্যাচ</TabsTrigger>
+                <TabsTrigger value="analytics" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">২. হেলথ</TabsTrigger>
+                <TabsTrigger value="integrations" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">৩. নেটওয়ার্ক</TabsTrigger>
+                <TabsTrigger value="treasury" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">৪. ট্রেজারি</TabsTrigger>
               </TabsList>
 
               <TabsContent value="ops" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
                 <div className="lg:col-span-8 space-y-6">
                   {isAutoMode && !isLockedDown && (
-                    <Alert className="bg-accent/10 border-accent/20">
-                      <Zap className="h-4 w-4 text-accent" />
-                      <AlertTitle className="text-xs font-bold uppercase text-accent">Autonomous Monitoring Enabled</AlertTitle>
-                      <AlertDescription className="text-[10px]">সিস্টেম এখন স্বয়ংক্রিয়ভাবে অ্যালার্ট প্রসেস করছে।</AlertDescription>
+                    <Alert className="bg-accent/10 border-accent/20 py-2">
+                      <Zap className="h-3 w-3 text-accent" />
+                      <AlertTitle className="text-[10px] font-bold uppercase text-accent">Autonomous Active</AlertTitle>
                     </Alert>
                   )}
-                  <div className="h-[calc(100vh-450px)]">
+                  <div className="h-auto md:h-[calc(100vh-450px)] min-h-[400px]">
                     <DispatcherConsole />
                   </div>
-                  <div className="h-[350px]">
+                  <div className="h-auto md:h-[350px]">
                     <RiverTelemetry />
                   </div>
                 </div>
@@ -291,9 +287,9 @@ export default function ShurukkhaDashboard() {
         </Tabs>
       </main>
 
-      <footer className="border-t border-white/5 py-8 bg-muted/20 mt-12">
+      <footer className="border-t border-white/5 py-6 md:py-8 bg-muted/20 mt-12">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-xs text-muted-foreground font-body uppercase tracking-[0.4em]">Shurukkha Sovereign Hub © ২০২৪ | সিরাজগঞ্জ সুরক্ষা মিশন-ক্রিটিক্যাল ইনফ্রাস্ট্রাকচার | 42nd Project Archive</p>
+          <p className="text-[8px] md:text-xs text-muted-foreground font-body uppercase tracking-[0.2em] md:tracking-[0.4em]">Shurukkha Sovereign Hub © ২০২৪ | সিরাজগঞ্জ সুরক্ষা | 42nd Project</p>
         </div>
       </footer>
       

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -98,106 +97,91 @@ export function BankDirectory() {
   )
 
   const steps = [
-    { id: 1, label: 'Auth Received', icon: Signal },
-    { id: 2, label: 'Tax Calculated', icon: DollarSign },
-    { id: 3, label: 'Risk Validated', icon: ShieldCheck },
-    { id: 4, label: 'Vault Updated', icon: Landmark },
-    { id: 5, label: 'Sovereign Settle', icon: Activity },
+    { id: 1, label: 'Auth', icon: Signal },
+    { id: 2, label: 'Tax', icon: DollarSign },
+    { id: 3, label: 'Risk', icon: ShieldCheck },
+    { id: 4, label: 'Vault', icon: Landmark },
+    { id: 5, label: 'Settle', icon: Activity },
   ]
 
   return (
     <Card className="bg-card border-primary/20 h-full flex flex-col overflow-hidden">
-      <CardHeader className="bg-primary/5 border-b border-primary/10">
-        <div className="flex items-center justify-between">
+      <CardHeader className="bg-primary/5 border-b border-primary/10 p-4 md:p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
-              <Landmark className="text-primary" size={28} />
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center border border-primary/20">
+              <Landmark className="text-primary" size={24} />
             </div>
             <div>
-              <CardTitle className="text-lg font-headline flex items-center gap-2">
-                GLOBAL TREASURY HUB
-                <Badge className="bg-accent/20 text-accent border-accent/30 text-[8px] h-4 gap-1">
-                  <Star size={8} fill="currentColor" /> PHASE 27.0
-                </Badge>
+              <CardTitle className="text-base md:text-lg font-headline flex items-center gap-2">
+                GLOBAL TREASURY
               </CardTitle>
-              <CardDescription className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/60">
-                Prosperity Protocol • Economic Forecasting • Fraud Recovery Core
+              <CardDescription className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] font-bold text-primary/60">
+                Phase 27.0 • Prosperity Protocol
               </CardDescription>
             </div>
           </div>
           <div className="flex gap-2">
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+            <div className="relative flex-1 md:w-64">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={12} />
               <Input 
-                placeholder="Search Registry..." 
-                className="pl-9 h-9 bg-background/50 border-white/10 text-xs"
+                placeholder="Search..." 
+                className="pl-8 h-8 md:h-9 bg-background/50 border-white/10 text-[10px] md:text-xs"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <Button size="sm" variant="outline" onClick={handleSync} disabled={loading} className="h-9 border-primary/20 text-primary gap-2">
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> SYNC VAULT
+            <Button size="sm" variant="outline" onClick={handleSync} disabled={loading} className="h-8 md:h-9 border-primary/20 text-primary gap-1 md:gap-2 px-2 md:px-3">
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> <span className="hidden xs:inline text-[10px]">SYNC</span>
             </Button>
           </div>
         </div>
       </CardHeader>
       
       <Tabs defaultValue="revenue" className="flex-1 flex flex-col">
-        <div className="px-6 py-2 bg-muted/20 border-b border-white/5">
-          <TabsList className="bg-transparent border-none p-0 h-8">
-            <TabsTrigger value="revenue" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><TrendingUp size={14}/> রেভিনিউ ও গ্রোথ</TabsTrigger>
-            <TabsTrigger value="fraud" className="text-xs gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold"><ShieldX size={14}/> ফ্রড রিকভারি</TabsTrigger>
-            <TabsTrigger value="global" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Globe size={14}/> গ্লোবাল ব্যাংকস</TabsTrigger>
-            <TabsTrigger value="local" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><Smartphone size={14}/> লোকাল লুপ</TabsTrigger>
+        <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
+          <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
+            <TabsTrigger value="revenue" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><TrendingUp size={12}/> রেভিনিউ</TabsTrigger>
+            <TabsTrigger value="fraud" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap"><ShieldX size={12}/> ফ্রড রিকভারি</TabsTrigger>
+            <TabsTrigger value="global" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap"><Globe size={12}/> গ্লোবাল ব্যাংকস</TabsTrigger>
+            <TabsTrigger value="local" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><Smartphone size={12}/> লোকাল লুপ</TabsTrigger>
           </TabsList>
         </div>
 
-        <TabsContent value="revenue" className="flex-1 p-6 m-0 space-y-6">
+        <TabsContent value="revenue" className="flex-1 p-4 md:p-6 m-0 space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-8 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="bg-primary/5 border-primary/20 p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Processed Volume</p>
-                    <div className="p-2 bg-primary/10 rounded-lg"><Wallet className="text-primary" size={20} /></div>
-                  </div>
-                  <h3 className="text-3xl font-headline font-bold text-foreground">৳{revenueStats.totalProcessed.toLocaleString()}</h3>
-                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <TrendingUp size={12} className="text-accent" /> 24% growth in cycle
-                  </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+                <Card className="bg-primary/5 border-primary/20 p-4 md:p-6 space-y-2 md:space-y-4">
+                  <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-primary truncate">Processed</p>
+                  <h3 className="text-sm md:text-2xl font-headline font-bold text-foreground">৳{revenueStats.totalProcessed.toLocaleString()}</h3>
                 </Card>
-                <Card className="bg-accent/5 border-accent/20 p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Imperial Tax</p>
-                    <div className="p-2 bg-accent/10 rounded-lg"><Star className="text-accent" size={20} /></div>
-                  </div>
-                  <h3 className="text-3xl font-headline font-bold text-accent">৳{revenueStats.totalFees.toLocaleString()}</h3>
-                  <p className="text-[10px] text-muted-foreground italic">1.5% Automatic Settle</p>
+                <Card className="bg-accent/5 border-accent/20 p-4 md:p-6 space-y-2 md:space-y-4">
+                  <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-accent truncate">Imperial Tax</p>
+                  <h3 className="text-sm md:text-2xl font-headline font-bold text-accent">৳{revenueStats.totalFees.toLocaleString()}</h3>
                 </Card>
-                <Card className="bg-muted/20 border-white/10 p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Growth Score</p>
-                    <div className="p-2 bg-muted/40 rounded-lg"><Target className="text-muted-foreground" size={20} /></div>
-                  </div>
-                  <h3 className="text-3xl font-headline font-bold text-foreground">92/100</h3>
-                  <p className="text-[10px] text-muted-foreground">Optimal Performance</p>
+                <Card className="bg-muted/20 border-white/10 p-4 md:p-6 space-y-2 md:space-y-4 col-span-2 md:col-span-1">
+                  <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Growth Score</p>
+                  <h3 className="text-sm md:text-2xl font-headline font-bold text-foreground">92/100</h3>
                 </Card>
               </div>
-              <MerchantGrowthChart />
+              <div className="overflow-hidden">
+                <MerchantGrowthChart />
+              </div>
             </div>
             
             <div className="lg:col-span-4 space-y-6">
               <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl space-y-4">
-                <h4 className="text-sm font-headline font-bold uppercase tracking-widest flex items-center gap-2">
+                <h4 className="text-[10px] md:text-sm font-headline font-bold uppercase tracking-widest flex items-center gap-2">
                   <Activity size={16} className="text-primary" /> Market Trends
                 </h4>
                 <div className="space-y-3">
                   {marketTrends.map((t, i) => (
-                    <div key={i} className="flex justify-between items-center p-3 bg-black/40 rounded-xl border border-white/5">
-                      <span className="text-xs font-bold">{t.sector}</span>
+                    <div key={i} className="flex justify-between items-center p-2 md:p-3 bg-black/40 rounded-xl border border-white/5">
+                      <span className="text-[10px] md:text-xs font-bold">{t.sector}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-accent font-bold">{t.growth}</span>
-                        <Badge variant="outline" className="text-[8px] h-4 uppercase">{t.trend}</Badge>
+                        <span className="text-[10px] md:text-xs text-accent font-bold">{t.growth}</span>
+                        <Badge variant="outline" className="text-[6px] md:text-[8px] h-4 uppercase">{t.trend}</Badge>
                       </div>
                     </div>
                   ))}
@@ -207,92 +191,63 @@ export function BankDirectory() {
           </div>
         </TabsContent>
 
-        <TabsContent value="fraud" className="flex-1 p-6 m-0 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-destructive/5 border-destructive/20 p-6 space-y-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-destructive">Total Frozen Funds</p>
-              <h3 className="text-3xl font-headline font-bold text-destructive">৳{fraudStats.totalFrozen.toLocaleString()}</h3>
+        <TabsContent value="fraud" className="flex-1 p-4 md:p-6 m-0 space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+            <Card className="bg-destructive/5 border-destructive/20 p-4 md:p-6 space-y-2 md:space-y-4">
+              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-destructive truncate">Frozen</p>
+              <h3 className="text-sm md:text-2xl font-headline font-bold text-destructive">৳{fraudStats.totalFrozen.toLocaleString()}</h3>
             </Card>
-            <Card className="bg-accent/5 border-accent/20 p-6 space-y-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Recovery Success</p>
-              <h3 className="text-3xl font-headline font-bold text-accent">{fraudStats.recoveryRate}</h3>
+            <Card className="bg-accent/5 border-accent/20 p-4 md:p-6 space-y-2 md:space-y-4">
+              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-accent truncate">Recovery</p>
+              <h3 className="text-sm md:text-2xl font-headline font-bold text-accent">{fraudStats.recoveryRate}</h3>
             </Card>
-            <Card className="bg-muted/20 border-white/10 p-6 space-y-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active Investigations</p>
-              <h3 className="text-3xl font-headline font-bold text-foreground">{fraudStats.activeCases}</h3>
+            <Card className="bg-muted/20 border-white/10 p-4 md:p-6 space-y-2 md:space-y-4 col-span-2 md:col-span-1">
+              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Cases</p>
+              <h3 className="text-sm md:text-2xl font-headline font-bold text-foreground">{fraudStats.activeCases}</h3>
             </Card>
-          </div>
-
-          <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl">
-            <h4 className="text-sm font-headline font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-              <ShieldAlert size={16} className="text-destructive" /> Active Fraud Holds
-            </h4>
-            <div className="space-y-3">
-              {FraudRecovery.activeHolds.length === 0 ? (
-                <div className="text-center py-12 opacity-30 italic text-xs">No active holds in the current ledger.</div>
-              ) : (
-                FraudRecovery.activeHolds.map((h, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center border border-destructive/20">
-                        <Lock size={14} className="text-destructive" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold">TXN: {h.id}</p>
-                        <p className="text-[9px] text-muted-foreground">{h.reason}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs font-bold text-destructive">৳{h.amount.toLocaleString()}</p>
-                      <Badge className="bg-destructive/20 text-destructive text-[7px] h-4">{h.status}</Badge>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="global" className="flex-1 p-0 m-0 overflow-hidden">
           <ScrollArea className="h-[500px]">
-            <Table>
-              <TableHeader className="bg-muted/30 sticky top-0 z-10">
-                <TableRow>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Country</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Bank Name</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Status</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Handshake ID</TableHead>
-                  <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredBanks.map((bank) => (
-                  <TableRow key={bank.id} className="group hover:bg-primary/5 border-white/5">
-                    <TableCell><span className="text-xs font-bold">{bank.country}</span></TableCell>
-                    <TableCell><span className="text-sm font-headline font-medium">{bank.bankName}</span></TableCell>
-                    <TableCell><Badge variant="outline">{bank.status}</Badge></TableCell>
-                    <TableCell><code className="text-[10px]">{bank.handshakeId}</code></TableCell>
-                    <TableCell className="text-right"><Button size="sm" variant="ghost" disabled={!bank.pushAvailable}>PUSH</Button></TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                  <TableRow>
+                    <TableHead className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Country</TableHead>
+                    <TableHead className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Bank Name</TableHead>
+                    <TableHead className="hidden md:table-cell text-[10px] font-bold uppercase tracking-widest">Status</TableHead>
+                    <TableHead className="text-right text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Action</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredBanks.map((bank) => (
+                    <TableRow key={bank.id} className="group hover:bg-primary/5 border-white/5">
+                      <TableCell><span className="text-[10px] md:text-xs font-bold">{bank.country}</span></TableCell>
+                      <TableCell><span className="text-[10px] md:text-sm font-headline font-medium truncate max-w-[80px] md:max-w-none block">{bank.bankName}</span></TableCell>
+                      <TableCell className="hidden md:table-cell"><Badge variant="outline" className="text-[8px]">{bank.status}</Badge></TableCell>
+                      <TableCell className="text-right"><Button size="sm" variant="ghost" className="h-7 text-[8px]" disabled={!bank.pushAvailable}>PUSH</Button></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="local" className="flex-1 p-6 m-0 space-y-6">
+        <TabsContent value="local" className="flex-1 p-4 md:p-6 m-0 space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-12">
-              <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20">
-                <div className="flex items-center justify-between mb-6">
-                  <h4 className="text-sm font-headline font-bold uppercase tracking-widest flex items-center gap-2">
-                    <Activity size={18} className="text-primary animate-pulse" />
-                    Sovereign Settlement Visualizer
+              <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 overflow-x-auto no-scrollbar">
+                <div className="flex items-center justify-between mb-6 min-w-[300px]">
+                  <h4 className="text-[10px] md:text-sm font-headline font-bold uppercase tracking-widest flex items-center gap-2">
+                    <Activity size={16} className="text-primary animate-pulse" />
+                    Settlement Visualizer
                   </h4>
-                  <Badge variant="outline" className="border-accent/40 text-accent font-mono text-[9px]">ENGINE_V27_ACTIVE</Badge>
+                  <Badge variant="outline" className="border-accent/40 text-accent font-mono text-[8px]">V27</Badge>
                 </div>
                 
-                <div className="relative flex justify-between items-center px-4">
+                <div className="relative flex justify-between items-center px-4 min-w-[400px]">
                   <div className="absolute top-1/2 left-0 right-0 h-px bg-white/10 -translate-y-1/2 -z-10" />
                   {steps.map((step, idx) => {
                     const Icon = step.icon;
@@ -300,10 +255,10 @@ export function BankDirectory() {
                     const isCurrent = activeStep === step.id;
                     return (
                       <div key={step.id} className="flex flex-col items-center gap-2 relative">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isCompleted ? 'bg-primary border-primary text-background' : isCurrent ? 'bg-muted border-accent text-accent animate-pulse' : 'bg-card border-white/5 text-muted-foreground'}`}>
-                          <Icon size={20} />
+                        <div className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isCompleted ? 'bg-primary border-primary text-background' : isCurrent ? 'bg-muted border-accent text-accent animate-pulse' : 'bg-card border-white/5 text-muted-foreground'}`}>
+                          <Icon size={16} />
                         </div>
-                        <span className={`text-[9px] font-bold uppercase tracking-tighter text-center max-w-[80px] ${isCompleted ? 'text-primary' : 'text-muted-foreground'}`}>
+                        <span className={`text-[7px] md:text-[9px] font-bold uppercase tracking-tighter text-center max-w-[60px] md:max-w-[80px] ${isCompleted ? 'text-primary' : 'text-muted-foreground'}`}>
                           {step.label}
                         </span>
                       </div>
@@ -315,28 +270,28 @@ export function BankDirectory() {
 
             <div className="lg:col-span-8">
               <Card className="bg-black/40 border-accent/20 overflow-hidden">
-                <CardHeader className="bg-accent/5 border-b border-accent/10 py-3 flex flex-row items-center justify-between">
-                  <CardTitle className="text-xs font-headline font-bold text-accent uppercase tracking-widest flex items-center gap-2">
-                    <Terminal size={14} /> Revenue Engine Terminal
+                <CardHeader className="bg-accent/5 border-b border-accent/10 py-3 p-4 flex flex-row items-center justify-between">
+                  <CardTitle className="text-[10px] font-headline font-bold text-accent uppercase tracking-widest flex items-center gap-2">
+                    <Terminal size={12} /> ENGINE Terminal
                   </CardTitle>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleWebhookTest} disabled={loading} className="h-7 text-[9px] bg-primary text-background font-bold gap-2">
-                      <Zap size={10} fill="currentColor" /> TEST WEBHOOK
+                    <Button size="sm" onClick={handleWebhookTest} disabled={loading} className="h-6 md:h-7 text-[8px] bg-primary text-background font-bold px-2">
+                      WEBHOOK
                     </Button>
-                    <Button size="sm" onClick={handleDummyTest} disabled={loading} className="h-7 text-[9px] bg-accent text-background font-bold gap-2">
-                      <Play size={10} fill="currentColor" /> RUN REVENUE TEST
+                    <Button size="sm" onClick={handleDummyTest} disabled={loading} className="h-6 md:h-7 text-[8px] bg-accent text-background font-bold px-2">
+                      RUN TEST
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <ScrollArea className="h-[250px] bg-black/60 p-4">
+                  <ScrollArea className="h-[200px] md:h-[250px] bg-black/60 p-3 md:p-4">
                     {terminalLogs.length === 0 ? (
-                      <p className="text-[10px] font-mono text-muted-foreground italic">Waiting for imperial revenue command...</p>
+                      <p className="text-[9px] md:text-[10px] font-mono text-muted-foreground italic">Waiting for command...</p>
                     ) : (
                       <div className="space-y-1">
                         {terminalLogs.map((log, i) => (
-                          <div key={i} className="text-[10px] font-mono text-accent/80 leading-relaxed">
-                            <span className="text-accent mr-2">&gt;</span> {log}
+                          <div key={i} className="text-[9px] md:text-[10px] font-mono text-accent/80 leading-relaxed">
+                            <span className="text-accent mr-1 md:mr-2">&gt;</span> {log}
                           </div>
                         ))}
                       </div>
@@ -344,31 +299,6 @@ export function BankDirectory() {
                   </ScrollArea>
                 </CardContent>
               </Card>
-            </div>
-            
-            <div className="lg:col-span-4">
-              <div className="p-4 bg-muted/20 border border-white/5 rounded-xl space-y-4">
-                <h4 className="text-xs font-headline font-bold uppercase tracking-widest text-primary">Revenue Engine Stats</h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center text-[10px]">
-                    <span className="text-muted-foreground">Standard Fee Rate</span>
-                    <span className="text-accent font-bold">1.5%</span>
-                  </div>
-                  <div className="flex justify-between items-center text-[10px]">
-                    <span className="text-muted-foreground">Atomic Profit Sync</span>
-                    <span className="text-accent font-bold">4ms</span>
-                  </div>
-                  <div className="flex justify-between items-center text-[10px]">
-                    <span className="text-muted-foreground">Imperial Audit Status</span>
-                    <span className="text-primary font-bold">VERIFIED</span>
-                  </div>
-                </div>
-                <div className="pt-4 border-t border-white/5">
-                  <p className="text-[9px] text-muted-foreground italic leading-relaxed">
-                    প্রতিটি সফল ট্রানজেকশন থেকে দেড় শতাংশ (১.৫%) সার্ভিস ফি আপনার ট্রেজারিতে স্বয়ংক্রিয়ভাবে সংরক্ষিত হচ্ছে।
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
         </TabsContent>
