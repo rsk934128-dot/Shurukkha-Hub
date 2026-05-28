@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -19,6 +19,7 @@ import { SovereignDomainManager } from '@/components/dashboard/sovereign-domain-
 import { BankDirectory } from '@/components/treasury/bank-directory'
 import { AlertCenter } from '@/components/dashboard/alert-center'
 import { SovereignStatusWidget } from '@/components/dashboard/sovereign-status-widget'
+import { AuditPanel } from '@/components/dashboard/audit-panel'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -111,7 +112,7 @@ export default function ShurukkhaDashboard() {
 
     const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
 
-    SovereignAudit.logMilestone('Phase_28.0', 'Imperial Multi-Layered Authentication & Zero-Trust Matrix Active');
+    SovereignAudit.logMilestone('Phase_30.0', 'Imperial Access Audit & Auto-Lockdown Engine Live');
 
     return () => {
       window.removeEventListener('online', handleOnline)
@@ -197,7 +198,7 @@ export default function ShurukkhaDashboard() {
                 </Badge>
               </div>
               <div className="flex items-center gap-1 md:gap-2">
-                <span className="text-[8px] md:text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">v28.0</span>
+                <span className="text-[8px] md:text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">v30.0</span>
                 {isLockedDown && <Badge variant="destructive" className="h-3 md:h-4 text-[6px] md:text-[8px] animate-pulse px-1">LOCKDOWN</Badge>}
               </div>
             </div>
@@ -302,8 +303,9 @@ export default function ShurukkhaDashboard() {
               <TabsList className="mb-6 bg-muted/20 border border-white/5 p-1 h-auto flex flex-wrap md:flex-nowrap justify-start overflow-x-auto no-scrollbar">
                 <TabsTrigger value="ops" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">১. ডিসপ্যাচ</TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">২. হেলথ</TabsTrigger>
-                <TabsTrigger value="integrations" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">৩. নেটওয়ার্ক</TabsTrigger>
-                <TabsTrigger value="treasury" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">৪. ট্রেজারি</TabsTrigger>
+                <TabsTrigger value="audits" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">৩. অডিট</TabsTrigger>
+                <TabsTrigger value="integrations" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">৪. নেটওয়ার্ক</TabsTrigger>
+                <TabsTrigger value="treasury" className="gap-2 h-10 px-4 whitespace-nowrap data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[9px] flex-1 md:flex-none">৫. ট্রেজারি</TabsTrigger>
               </TabsList>
 
               <TabsContent value="ops" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
@@ -329,6 +331,10 @@ export default function ShurukkhaDashboard() {
 
               <TabsContent value="analytics" className="space-y-6 mt-0">
                 <SystemHealth />
+              </TabsContent>
+
+              <TabsContent value="audits" className="space-y-6 mt-0">
+                <AuditPanel />
               </TabsContent>
 
               <TabsContent value="integrations" className="space-y-6 mt-0">
