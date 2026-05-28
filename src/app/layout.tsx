@@ -2,41 +2,39 @@
 'use client';
 import { initializeFirebase, FirebaseClientProvider } from '@/firebase';
 import './globals.css';
-import type { Metadata } from 'next';
 
 const { firebaseApp, firestore, auth } = initializeFirebase();
-
-// Note: Metadata must be exported from a Server Component or a static file.
-// Since layout.tsx is 'use client', we define basic tags here, 
-// but for full SEO we would normally use a separate file. 
-// However, standard OG tags are added via the head for immediate visibility.
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // SVG Favicon using the AppLogo path
+  const faviconSvg = `
+    <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>
+      <path d='M50 5L15 20V45C15 70 50 95 50 95C50 95 85 70 85 45V20L50 5Z' fill='#7597FF'/>
+      <path d='M35 50C40 45 45 55 50 50C55 45 60 55 65 50' stroke='white' stroke-width='5' stroke-linecap='round'/>
+      <circle cx='50' cy='35' r='8' fill='white'/>
+    </svg>
+  `;
+  const faviconDataUri = `data:image/svg+xml;base64,${typeof window !== 'undefined' ? btoa(faviconSvg) : ''}`;
+
   return (
     <html lang="bn" className="dark">
       <head>
-        {/* Primary Meta Tags */}
         <title>Shurukkha Hub | সিরাজগঞ্জ সুরক্ষা 🛡️</title>
         <meta name="title" content="Shurukkha Hub | সিরাজগঞ্জ সুরক্ষা 🛡️" />
         <meta name="description" content="সিরাজগঞ্জ জেলা প্রশাসনের জন্য একটি সার্বভৌম এআই-চালিত জরুরি ও আর্থিক পরিকাঠামো। Mission-Critical Sovereign Infrastructure." />
-
+        
+        {/* Sovereign Favicon */}
+        <link rel="icon" href={`data:image/svg+xml,${encodeURIComponent(faviconSvg)}`} />
+        
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://core.sheikh" />
         <meta property="og:title" content="Shurukkha Hub | সিরাজগঞ্জ সুরক্ষা 🛡️" />
         <meta property="og:description" content="এআই-চালিত দুর্যোগ ব্যবস্থাপনা এবং সভারেন পেমেন্ট গ্রিডের এক অপূর্ব সমন্বয়।" />
         <meta property="og:image" content="https://picsum.photos/seed/42/1200/630" />
-
-        {/* Twitter */}
-        <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://core.sheikh" />
-        <meta property="twitter:title" content="Shurukkha Hub | সিরাজগঞ্জ সুরক্ষা 🛡️" />
-        <meta property="twitter:description" content="সিরাজগঞ্জের ডিজিটাল সার্বভৌমত্বের নতুন দিগন্ত।" />
-        <meta property="twitter:image" content="https://picsum.photos/seed/42/1200/630" />
 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
