@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -21,7 +20,8 @@ import {
   UserCircle,
   SearchCode,
   Eye,
-  Share2
+  Share2,
+  MessageSquare
 } from "lucide-react"
 
 import {
@@ -54,7 +54,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
 
   const handleNav = (tab: string) => {
     onNavigate(tab)
-    // Automatically close sidebar on mobile after navigation
     setOpenMobile(false)
   }
 
@@ -112,6 +111,17 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   <UserCircle size={18} className={activeTab === 'profile' ? "text-accent" : "text-muted-foreground"} />
                   <span className="font-medium">প্রোফাইল আইডি</span>
                   <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent uppercase font-bold">SOVEREIGN</Badge>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  isActive={activeTab === 'messages'} 
+                  onClick={() => handleNav('messages')}
+                  className="px-4 h-10 gap-3"
+                >
+                  <MessageSquare size={18} className={activeTab === 'messages' ? "text-primary" : "text-muted-foreground"} />
+                  <span className="font-medium">মেসেজ সেন্টার</span>
+                  <Badge className="ml-auto bg-primary/20 text-primary text-[8px] h-4">LIVE</Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -23,6 +23,7 @@ import { AuditPanel } from '@/components/dashboard/audit-panel'
 import { ImperialOverview } from '@/components/dashboard/imperial-overview'
 import { SovereignIDCard } from '@/components/dashboard/sovereign-id-card'
 import { IncidentReviewBoard } from '@/components/dashboard/incident-review-board'
+import { CommunicationConsole } from '@/components/dashboard/communication-console'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -207,15 +208,11 @@ export default function ShurukkhaDashboard() {
   const handleLogout = async () => {
     if (auth) {
       try {
-        // Clear all session related data
         sessionStorage.clear()
         localStorage.removeItem('sovereign_session_token')
         localStorage.removeItem('sovereign_session_expiry')
-        
         await signOut(auth)
         toast({ title: "সফলভাবে লগআউট করা হয়েছে" })
-        
-        // Use window.location to ensure a hard refresh for auth state
         window.location.href = '/login';
       } catch (e) {
         toast({ title: "লগআউট ব্যর্থ হয়েছে", variant: "destructive" })
@@ -225,7 +222,7 @@ export default function ShurukkhaDashboard() {
 
   const handleSidebarNavigate = (view: string) => {
     setActiveView(view);
-    if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile'].includes(view)) {
+    if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile', 'messages'].includes(view)) {
       setActiveSubTab(view);
     }
   }
@@ -284,12 +281,12 @@ export default function ShurukkhaDashboard() {
                     <Smartphone size={12} /> CITIZEN SHIELD
                   </Button>
                   <Button 
-                    variant={activeView !== 'citizen' ? 'default' : 'outline'} 
+                    variant={activeView === 'messages' ? 'default' : 'outline'} 
                     size="sm" 
-                    onClick={() => setActiveView('ops')}
+                    onClick={() => setActiveView('messages')}
                     className="h-8 text-[8px] font-bold gap-1 rounded-full border-primary/20"
                   >
-                    <ShieldAlert size={12} /> COMMANDER
+                    <MessageSquare size={12} /> MESSAGES
                   </Button>
                 </div>
                 {survivalMode && (
@@ -311,24 +308,7 @@ export default function ShurukkhaDashboard() {
           </header>
 
           <main className="flex-1 container mx-auto px-4 py-4 md:py-8 overflow-x-hidden">
-            {(userRole === 'admin' || userRole === 'authority') && activeView !== 'profile' && activeView !== 'citizen' && <ImperialOverview />}
-
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-xl md:text-3xl font-headline font-bold tracking-tight">
-                    {activeView === 'citizen' ? 'সুরক্ষা সিটিজেন শিল্ড' : activeView === 'profile' ? 'সার্বভৌম পরিচয়পত্র' : 
-                     activeView === 'intelligence' ? 'ইন্টেলিজেন্স রিভিউ বোর্ড' : 'কমান্ড সেন্টার'}
-                  </h2>
-                </div>
-                <p className="text-muted-foreground text-xs md:text-sm font-body">
-                  {activeView === 'citizen' ? 'সরাসরি প্রশাসনকে সিগন্যাল পাঠান' : 
-                   activeView === 'profile' ? 'আপনার রাজকীয় পরিচয় ও ফরেনসিক তথ্য' : 
-                   activeView === 'intelligence' ? 'নাগরিকদের পাঠানো ফরেনসিক রিপোর্টের গভীর বিশ্লেষণ' :
-                   'DEOS অটোনোমাস ডিসপ্যাচ গ্রিড'}
-                </p>
-              </div>
-            </div>
+            {(userRole === 'admin' || userRole === 'authority') && activeView !== 'profile' && activeView !== 'citizen' && activeView !== 'messages' && <ImperialOverview />}
 
             {activeView === 'citizen' && (
               <div className="max-w-md mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-5">
@@ -341,18 +321,18 @@ export default function ShurukkhaDashboard() {
                   <AIAdviceTool />
                   <IncidentReport />
                 </div>
-                <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl flex items-center justify-between">
-                   <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-accent/10 rounded-full flex items-center justify-center">
-                        <SignalHigh className="text-accent animate-pulse" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold">Signal Status: Strong</p>
-                        <p className="text-[10px] text-muted-foreground">Connected via core.sheikh</p>
-                      </div>
-                   </div>
-                   <Badge variant="outline" className="text-[8px] border-accent/30 text-accent">ENCRYPTED</Badge>
-                </div>
+                <Button 
+                  onClick={() => setActiveView('messages')}
+                  className="w-full h-12 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-2xl gap-3 font-bold"
+                >
+                  <MessageSquare size={20} /> কন্ট্রোল রুমের সাথে কথা বলুন
+                </Button>
+              </div>
+            )}
+
+            {activeView === 'messages' && (
+              <div className="h-[calc(100vh-180px)] max-w-5xl mx-auto w-full">
+                <CommunicationConsole />
               </div>
             )}
 
@@ -362,7 +342,7 @@ export default function ShurukkhaDashboard() {
               </div>
             )}
 
-            {(activeView !== 'citizen' && activeView !== 'profile') && (
+            {(activeView !== 'citizen' && activeView !== 'profile' && activeView !== 'messages') && (
               <div className="w-full">
                 <Tabs value={activeSubTab} onValueChange={handleSidebarNavigate} className="w-full">
                   <TabsContent value="ops" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">

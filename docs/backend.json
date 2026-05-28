@@ -17,7 +17,8 @@
         "lastLogin": { "type": "string", "format": "date-time" },
         "twoFactorEnabled": { "type": "boolean", "default": false },
         "twoFactorSecret": { "type": "string", "description": "Encrypted TOTP Secret" },
-        "recoveryCodes": { "type": "array", "items": { "type": "string" } }
+        "recoveryCodes": { "type": "array", "items": { "type": "string" } },
+        "deviceFingerprint": { "type": "string" }
       },
       "required": ["role"]
     },
@@ -50,61 +51,21 @@
       },
       "required": ["status", "timestamp", "location"]
     },
-    "Responder": {
-      "title": "Emergency Responder",
-      "description": "Information about available emergency teams.",
+    "Message": {
+      "title": "Secure Message",
+      "description": "Encrypted communication between nodes.",
       "type": "object",
       "properties": {
-        "name": { "type": "string" },
-        "type": { "type": "string", "enum": ["Police", "Fire", "Medical", "Volunteer"] },
-        "status": { "type": "string", "enum": ["available", "busy"] },
-        "currentLocation": { "type": "string" }
-      }
-    },
-    "IntegrationApp": {
-      "title": "Third-party Integration",
-      "description": "External apps authorized to consume Shurukkha Hub events.",
-      "type": "object",
-      "properties": {
-        "appName": { "type": "string" },
-        "apiKey": { "type": "string" },
-        "webhookUrl": { "type": "string" },
-        "status": { "type": "string", "enum": ["active", "revoked"] },
-        "subscribedEvents": { 
-          "type": "array", 
-          "items": { "type": "string" } 
-        },
-        "partnershipLevel": { "type": "string", "enum": ["Standard", "Imperial", "Sovereign"] }
-      }
-    },
-    "SovereignDomain": {
-      "title": "Sovereign Domain",
-      "description": "Private DNS records for the sovereign infrastructure.",
-      "type": "object",
-      "properties": {
-        "domainName": { "type": "string" },
-        "extension": { "type": "string", "enum": [".sheikh", ".surukkha", ".imperial"] },
-        "targetIp": { "type": "string" },
-        "status": { "type": "string", "enum": ["active", "propagating", "locked"] },
-        "dnsType": { "type": "string", "enum": ["A", "CNAME", "SOA"] },
-        "lastResolved": { "type": "string", "format": "date-time" }
-      }
-    },
-    "SuspectProfile": {
-      "title": "Suspect Profile",
-      "description": "Captured intelligence on potential attackers identified by the Guard Engine.",
-      "type": "object",
-      "properties": {
-        "ipAddress": { "type": "string" },
-        "fingerprint": { "type": "string", "description": "Unique device hash" },
-        "linkedIdentities": { "type": "array", "items": { "type": "string" }, "description": "Other IPs sharing this fingerprint" },
-        "userAgent": { "type": "string" },
-        "threatLevel": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
-        "violationCount": { "type": "number" },
-        "lastIncident": { "type": "string", "format": "date-time" },
-        "capturedAt": { "type": "string", "enum": ["gatekeeper", "honeypot", "deep_inspection"] },
-        "status": { "type": "string", "enum": ["monitored", "blacklisted"] }
-      }
+        "senderId": { "type": "string" },
+        "recipientId": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["text", "file", "voice"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["sent", "delivered", "read", "queued"] },
+        "fileUrl": { "type": "string" },
+        "isEncrypted": { "type": "boolean" }
+      },
+      "required": ["senderId", "recipientId", "content", "timestamp"]
     }
   },
   "auth": {
@@ -119,21 +80,17 @@
       "schema": "SOSAlert",
       "description": "Active emergency distress signals with forensic timeline."
     },
-    "/responders/{responderId}": {
-      "schema": "Responder",
-      "description": "Directory of emergency response teams."
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Secure account-to-account communication logs."
     },
-    "/integrations/{appId}": {
-      "schema": "IntegrationApp",
-      "description": "Registry of authorized partner applications."
+    "/incidents/{incidentId}": {
+      "schema": "object",
+      "description": "Public and private incident reports with forensic evidence."
     },
-    "/sovereign_domains/{domainId}": {
-      "schema": "SovereignDomain",
-      "description": "Private DNS records for the sovereign network."
-    },
-    "/suspect_profiles/{profileId}": {
-      "schema": "SuspectProfile",
-      "description": "Captured threat intelligence log with identity correlation."
+    "/audit_trails/{logId}": {
+      "schema": "object",
+      "description": "Immutable registry of security and system events."
     }
   }
 }

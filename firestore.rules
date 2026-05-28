@@ -12,11 +12,23 @@ service cloud.firestore {
     }
 
     // SOS Signals: Citizens can create, Authorities can manage
-    match /sos_signals/{signalId} {
-      allow create: if true; // Allow anonymous for extreme emergencies
-      allow read: if isAuthenticated() && (isRole('authority') || isRole('admin'));
+    match /sos_alerts/{alertId} {
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated();
       allow update: if isRole('authority') || isRole('admin');
       allow delete: if isRole('admin');
+    }
+
+    // Messages: Account to Account secure communication
+    match /messages/{messageId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.senderId || 
+        request.auth.uid == resource.data.recipientId || 
+        resource.data.recipientId == 'command_center' ||
+        isRole('authority') || 
+        isRole('admin')
+      );
+      allow create: if isAuthenticated();
     }
 
     // Incident Reports: Public read, User/Authority write
@@ -46,6 +58,12 @@ service cloud.firestore {
       allow read: if isRole('admin');
       allow create: if isAuthenticated();
       allow update, delete: if false;
+    }
+
+    // Suspect Profiles
+    match /suspect_profiles/{profileId} {
+      allow read: if isRole('admin') || isRole('authority');
+      allow write: if isRole('admin');
     }
   }
 }
