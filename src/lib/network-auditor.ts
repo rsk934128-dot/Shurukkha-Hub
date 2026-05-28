@@ -6,7 +6,6 @@
  */
 
 import { IntegrationBridge } from './integration-bridge';
-import { SovereignIntelligence } from './sovereign-intelligence';
 
 export type NodeStatus = 'AUTHORIZED' | 'PENDING' | 'DENIED' | 'TIMEOUT' | 'REPAIRING' | 'HEALTHY' | 'CIRCUIT_OPEN';
 
@@ -20,6 +19,15 @@ export interface NetworkNode {
   isOptimal?: boolean;
   load: number; // Node traffic load (%)
   errorCount: number;
+}
+
+export interface RegionalTraffic {
+  region: string;
+  transactions: number;
+  activeNodes: number;
+  avgLatency: number;
+  x: number; // For Heatmap Positioning
+  y: number; // For Heatmap Positioning
 }
 
 export const NetworkAuditor = {
@@ -46,6 +54,18 @@ export const NetworkAuditor = {
     });
 
     return baseNodes;
+  },
+
+  /**
+   * Returns regional traffic data for the Global Heatmap
+   */
+  getGlobalTrafficData: (): RegionalTraffic[] => {
+    return [
+      { region: 'Asia Pacific', transactions: 12450, activeNodes: 18, avgLatency: 4, x: 75, y: 40 },
+      { region: 'Europe', transactions: 8900, activeNodes: 12, avgLatency: 12, x: 45, y: 30 },
+      { region: 'North America', transactions: 9500, activeNodes: 8, avgLatency: 15, x: 15, y: 35 },
+      { region: 'Middle East', transactions: 3200, activeNodes: 4, avgLatency: 8, x: 55, y: 45 },
+    ];
   },
 
   /**

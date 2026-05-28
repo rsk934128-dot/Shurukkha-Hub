@@ -1,11 +1,12 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Smartphone, ShieldCheck, Globe, Zap, Landmark, ArrowLeftRight, Cpu, Activity, ShieldAlert, Wifi, Server, TrendingUp, BarChart3, Star } from 'lucide-react'
+import { Smartphone, ShieldCheck, Globe, Zap, Landmark, ArrowLeftRight, Cpu, Activity, ShieldAlert, Wifi, Server, TrendingUp, BarChart3, Star, Map } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { NetworkAuditor, NetworkNode } from '@/lib/network-auditor'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { GlobalHeatmap } from './global-heatmap'
 
 export function SovereignNetworkMap() {
   const [pulse, setPulse] = useState<any>(null)
@@ -36,7 +37,7 @@ export function SovereignNetworkMap() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-headline flex items-center gap-2 uppercase tracking-widest">
             <Cpu className="text-primary" size={16} />
-            SOVEREIGN NETWORK ARCHITECTURE (Phase 24.5)
+            SOVEREIGN NETWORK ARCHITECTURE (Phase 25.0)
           </CardTitle>
           <div className="flex gap-2">
             {pulse && (
@@ -55,6 +56,7 @@ export function SovereignNetworkMap() {
         <div className="px-6 py-2 bg-muted/20 border-b border-white/5">
           <TabsList className="bg-transparent border-none p-0 h-8">
             <TabsTrigger value="map" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Globe size={12}/> Architecture Map</TabsTrigger>
+            <TabsTrigger value="heatmap" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><Map size={12}/> Global Traffic</TabsTrigger>
             <TabsTrigger value="metrics" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><BarChart3 size={12}/> Growth Metrics</TabsTrigger>
           </TabsList>
         </div>
@@ -105,6 +107,10 @@ export function SovereignNetworkMap() {
                </div>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="heatmap" className="p-6 m-0">
+          <GlobalHeatmap />
         </TabsContent>
 
         <TabsContent value="metrics" className="p-6 m-0 space-y-6">
