@@ -52,7 +52,7 @@ export default function LoginPage() {
         performHandshake()
       }
     }
-  }, [user, loading, router])
+  }, [user, loading, router, isHandshaking, show2FA])
 
   const performHandshake = async () => {
     if (!user || !firestore) return
@@ -156,14 +156,15 @@ export default function LoginPage() {
           console.error("Redirect attempt failed:", redirectError);
           setIsSigningIn(false)
         }
-      } else if (error.code !== 'auth/cancelled-popup-request') {
+      } else if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+        // User closed the popup, just reset loading state without showing error toast
+        setIsSigningIn(false)
+      } else {
         toast({
           title: "লগইন ব্যর্থ",
           description: error.message || "গুগল লগইন সম্পন্ন করা সম্ভব হয়নি।",
           variant: "destructive"
         })
-        setIsSigningIn(false)
-      } else {
         setIsSigningIn(false)
       }
     }
