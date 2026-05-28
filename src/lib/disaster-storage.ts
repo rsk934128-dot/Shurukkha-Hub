@@ -9,7 +9,8 @@ const STORAGE_KEYS = {
   ADVICE_HISTORY: 'shurukkha_advice_history',
   INCIDENT_REPORTS: 'shurukkha_reports',
   SOS_STATUS: 'shurukkha_sos_active',
-  SYNC_QUEUE: 'shurukkha_sync_queue'
+  SYNC_QUEUE: 'shurukkha_sync_queue',
+  LOCAL_MESSAGES: 'shurukkha_local_chat'
 };
 
 export const DisasterStorage = {
@@ -36,7 +37,7 @@ export const DisasterStorage = {
     if (typeof window === 'undefined') return;
     const queue = DisasterStorage.getSyncQueue();
     const entry = {
-      id: 'q_' + Date.now(),
+      id: 'q_' + Date.now() + '_' + Math.random().toString(36).substring(7),
       action,
       payload,
       timestamp: new Date().toISOString()
@@ -55,7 +56,20 @@ export const DisasterStorage = {
     localStorage.removeItem(STORAGE_KEYS.SYNC_QUEUE);
   },
 
-  // Legacy report storage (maintained for compatibility)
+  // Chat Local Persistence for Offline Mode
+  saveLocalMessage: (msg: any) => {
+    if (typeof window === 'undefined') return;
+    const messages = DisasterStorage.getLocalMessages();
+    localStorage.setItem(STORAGE_KEYS.LOCAL_MESSAGES, JSON.stringify([...messages, msg].slice(-50)));
+  },
+
+  getLocalMessages: (): any[] => {
+    if (typeof window === 'undefined') return [];
+    const stored = localStorage.getItem(STORAGE_KEYS.LOCAL_MESSAGES);
+    return stored ? JSON.parse(stored) : [];
+  },
+
+  // Legacy report storage
   saveReport: (report: any) => {
     if (typeof window === 'undefined') return;
     const reports = DisasterStorage.getReports();

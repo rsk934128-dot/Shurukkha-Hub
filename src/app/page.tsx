@@ -44,6 +44,7 @@ import { useRouter } from 'next/navigation'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { AppLogo } from '@/components/ui/app-logo'
+import { CommunicationOrchestrator } from '@/lib/communication-orchestrator'
 
 export default function ShurukkhaDashboard() {
   const [isOffline, setIsOffline] = useState(false)
@@ -128,6 +129,8 @@ export default function ShurukkhaDashboard() {
     const handleConnectivityChange = () => {
       const online = navigator.onLine;
       setIsOffline(!online);
+      CommunicationOrchestrator.getInstance().setConnectivity(online);
+      
       if (online) {
         setSurvivalMode(false);
         syncOfflineData();
