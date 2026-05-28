@@ -1,11 +1,14 @@
+
 /**
  * @fileOverview Adaptive Threat Intelligence Engine.
  * Implements self-learning blacklisting and attacker profiling.
+ * Updated: Engages Counter-Intelligence offensive logic.
  */
 
 import { db } from './firebase';
 import { collection, addDoc, getDocs, query, where, updateDoc, doc, serverTimestamp, limit } from 'firebase/firestore';
 import { SelfHealing } from './self-healing';
+import { CounterIntelligence } from './counter-intelligence';
 
 export interface ThreatAnalysis {
   ip: string;
@@ -25,6 +28,9 @@ export const IntelligenceEngine = {
       const suspectsRef = collection(db, "suspect_profiles");
       const q = query(suspectsRef, where("ipAddress", "==", analysis.ip), limit(1));
       const snapshot = await getDocs(q);
+
+      // Engaged Offensive Counter-Intel
+      await CounterIntelligence.applyLatencyTrap(analysis.ip);
 
       // Trigger Self-Healing if threat is from a deep inspection or honeypot
       if (analysis.source === 'honeypot' || analysis.source === 'deep_inspection') {
@@ -58,7 +64,7 @@ export const IntelligenceEngine = {
         });
       }
 
-      console.log(`[Intelligence Engine] Attacker at ${analysis.ip} successfully profiled.`);
+      console.log(`[Intelligence Engine] Attacker at ${analysis.ip} engaged and neutralized.`);
     } catch (error) {
       console.error("[Intelligence Engine] Failed to profile attacker.", error);
     }

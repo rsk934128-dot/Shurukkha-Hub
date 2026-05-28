@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle, RefreshCcw } from 'lucide-react'
+import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle, RefreshCcw, Swords, Target, Crosshair } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +16,7 @@ import { SovereignGuard } from '@/lib/sovereign-guard'
 import { SelfHealing } from '@/lib/self-healing'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { ThreatMap } from './threat-map'
 
 export function IntegrationPanel() {
   const [apps, setApps] = useState<any[]>([])
@@ -102,7 +104,7 @@ export function IntegrationPanel() {
               SOVEREIGN API COMMAND CENTER
             </CardTitle>
             <CardDescription className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/60">
-              API Interceptor • Adaptive Guard • Honeypot Matrix
+              API Interceptor • Adaptive Guard • Counter-Intelligence Matrix
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -121,16 +123,62 @@ export function IntegrationPanel() {
         </div>
       </CardHeader>
       
-      <Tabs defaultValue="guard" className="flex-1 flex flex-col">
+      <Tabs defaultValue="war-room" className="flex-1 flex flex-col">
         <div className="px-6 py-2 bg-muted/20 border-b border-white/5">
           <TabsList className="bg-transparent border-none p-0 h-8">
+            <TabsTrigger value="war-room" className="text-xs gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold"><Swords size={14}/> ইম্পেরিয়াল ওয়ার-রুম</TabsTrigger>
             <TabsTrigger value="guard" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><ShieldX size={14}/> গার্ড ও ইন্টারসেপ্টর</TabsTrigger>
-            <TabsTrigger value="intelligence" className="text-xs gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold"><Skull size={14}/> ইন্টেলিজেন্স ইউনিট</TabsTrigger>
+            <TabsTrigger value="intelligence" className="text-xs gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold"><Skull size={14}/> ইন্টেলিজেন্স</TabsTrigger>
             <TabsTrigger value="apps" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Globe size={14}/> পার্টনার্স</TabsTrigger>
             <TabsTrigger value="discovery" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><Search size={14}/> ডিকয় ও ট্র্যাপ</TabsTrigger>
-            <TabsTrigger value="future" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Rocket size={14}/> ফিউচার প্রো</TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="war-room" className="flex-1 p-6 m-0 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-8">
+              <ThreatMap />
+            </div>
+            <div className="lg:col-span-4 space-y-6">
+              <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl space-y-4">
+                <h4 className="text-xs font-headline font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                  <Target size={14} /> COUNTER-INTEL STATS
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="text-muted-foreground">Latency Traps Active</span>
+                    <span className="text-accent font-bold">14 Active</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="text-muted-foreground">Logic Loops Triggered</span>
+                    <span className="text-accent font-bold">42 Instances</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="text-muted-foreground">Offensive Response Mode</span>
+                    <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-[7px] h-4">ENGAGED</Badge>
+                  </div>
+                </div>
+                <div className="pt-4 border-t border-white/5">
+                  <p className="text-[9px] text-muted-foreground italic leading-relaxed">
+                    আক্রমণকারীদের আইপি এখন সভারেন লজিক্যাল লুপে আটকে আছে। তাদের রিসোর্স আমাদের সিস্টেমে লস্ট হচ্ছে।
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-muted/20 border border-white/5 rounded-xl space-y-2">
+                <h4 className="text-xs font-headline font-bold uppercase tracking-widest flex items-center gap-2">
+                  <ShieldCheck size={14} className="text-accent" /> PURITY SIGNATURE
+                </h4>
+                <div className="p-2 bg-black/40 rounded border border-white/5">
+                  <code className="text-[8px] text-accent/70 font-mono break-all">
+                    SIG: sig_sha256_rsa_v2_sovereign_pure_42nd_project...
+                  </code>
+                </div>
+                <p className="text-[8px] text-muted-foreground">সকল আউটগোয়িং রেসপন্স এখন ইম্পেরিয়াল সিগনেচার দ্বারা সুরক্ষিত।</p>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
 
         <TabsContent value="guard" className="flex-1 p-6 space-y-6 m-0">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -323,32 +371,6 @@ export function IntegrationPanel() {
                 <Badge variant="outline" className={`text-[8px] h-5 gap-1 ${ep.status === 'TRAP_ACTIVE' ? 'border-destructive/40 text-destructive animate-pulse' : 'border-accent/40 text-accent'}`}>
                   {ep.status === 'TRAP_ACTIVE' ? <AlertTriangle size={10} /> : <CheckCircle2 size={10} />} {ep.status}
                 </Badge>
-              </div>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="future" className="flex-1 p-6 m-0 space-y-6">
-          <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
-            <h4 className="text-xs font-headline font-bold text-primary uppercase tracking-widest flex items-center gap-2 mb-2">
-              <Rocket size={18} /> FUTURE READINESS ROADMAP
-            </h4>
-            <p className="text-[10px] text-muted-foreground">সাম্রাজ্যের পরবর্তী ৩টি বড় মাইলস্টোন এবং টু-ওয়ে সিঙ্ক লজিক।</p>
-          </div>
-          <div className="grid gap-4">
-            {[
-              { phase: '25.0', title: 'Direct Settlement & Merchant Funding', desc: 'বিকাশ বা অন্যান্য গেটওয়ের সাথে সরাসরি সেটেলমেন্ট লজিক।' },
-              { phase: '26.0', title: 'Two-Way Outbound Data Sync', desc: 'আমাদের সিস্টেম থেকে পার্টনার অ্যাপে স্বয়ংক্রিয় সিগন্যাল পাঠানো।' },
-              { phase: '27.0', title: 'Predictive Traffic Analysis', desc: 'গ্লোবাল পেমেন্ট রাউটিংয়ের জন্য এআই চালিত পূর্বাভাস।' }
-            ].map((milestone, idx) => (
-              <div key={idx} className="p-4 bg-muted/20 border border-white/5 rounded-2xl flex items-center gap-4 group hover:border-primary/30 transition-all">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 font-headline font-bold text-primary">
-                  {milestone.phase}
-                </div>
-                <div>
-                  <h3 className="text-sm font-headline font-bold">{milestone.title}</h3>
-                  <p className="text-[10px] text-muted-foreground">{milestone.desc}</p>
-                </div>
               </div>
             ))}
           </div>
