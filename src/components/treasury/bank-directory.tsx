@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play, UserCheck, ShieldAlert, Cpu, Activity, Signal, Loader2, DollarSign, TrendingUp, Wallet } from 'lucide-react'
+import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play, UserCheck, ShieldAlert, Cpu, Activity, Signal, Loader2, DollarSign, TrendingUp, Wallet, Target, TrendingDown, ShieldX } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -9,32 +10,33 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { StripeBankSync, BankNode } from '@/lib/stripe-bank-sync'
 import { PaymentHandler } from '@/lib/payment-handler'
+import { FraudRecovery } from '@/lib/fraud-recovery-protocol'
+import { EconomicForecaster } from '@/lib/economic-forecaster'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
+import { MerchantGrowthChart } from '@/components/dashboard/merchant-growth-chart'
 
 export function BankDirectory() {
   const [banks, setBanks] = useState<BankNode[]>([])
-  const [localGateways, setLocalGateways] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [terminalLogs, setTerminalLogs] = useState<string[]>([])
   const [activeStep, setActiveStep] = useState(0)
+  const [fraudStats, setFraudStats] = useState(FraudRecovery.getStats())
+  const [marketTrends, setMarketTrends] = useState(EconomicForecaster.getMarketTrends())
+  
   const [revenueStats, setRevenueStats] = useState({
     totalProcessed: 12450000,
     totalFees: 186750,
     activeMerchants: 42
   })
-  const [merchantForm, setMerchantForm] = useState({
-    name: 'Shurukkha Hub Official',
-    callback: 'https://hub.shurukkha.gov.bd/api/webhook/bkash'
-  })
+  
   const { toast } = useToast()
 
   useEffect(() => {
     handleSync()
-    setLocalGateways(PaymentHandler.getLocalGatewayStatus())
   }, [])
 
   const handleSync = async () => {
@@ -42,6 +44,7 @@ export function BankDirectory() {
     try {
       const data = await StripeBankSync.fetchGlobalBanks()
       setBanks(data)
+      setFraudStats(FraudRecovery.getStats())
     } catch (e) {
       toast({ title: "SYNC FAILED", variant: "destructive" })
     } finally {
@@ -114,11 +117,11 @@ export function BankDirectory() {
               <CardTitle className="text-lg font-headline flex items-center gap-2">
                 GLOBAL TREASURY HUB
                 <Badge className="bg-accent/20 text-accent border-accent/30 text-[8px] h-4 gap-1">
-                  <Star size={8} fill="currentColor" /> PHASE 26.0
+                  <Star size={8} fill="currentColor" /> PHASE 27.0
                 </Badge>
               </CardTitle>
               <CardDescription className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/60">
-                Sovereign Revenue Engine • Atomic Settlement • Imperial Tax Loop
+                Prosperity Protocol • Economic Forecasting • Fraud Recovery Core
               </CardDescription>
             </div>
           </div>
@@ -142,69 +145,110 @@ export function BankDirectory() {
       <Tabs defaultValue="revenue" className="flex-1 flex flex-col">
         <div className="px-6 py-2 bg-muted/20 border-b border-white/5">
           <TabsList className="bg-transparent border-none p-0 h-8">
-            <TabsTrigger value="revenue" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><TrendingUp size={14}/> রেভিনিউ ড্যাশবোর্ড</TabsTrigger>
+            <TabsTrigger value="revenue" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><TrendingUp size={14}/> রেভিনিউ ও গ্রোথ</TabsTrigger>
+            <TabsTrigger value="fraud" className="text-xs gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold"><ShieldX size={14}/> ফ্রড রিকভারি</TabsTrigger>
             <TabsTrigger value="global" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Globe size={14}/> গ্লোবাল ব্যাংকস</TabsTrigger>
-            <TabsTrigger value="local" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><Smartphone size={14}/> লোকাল লুপ (Revenue Test)</TabsTrigger>
-            <TabsTrigger value="merchant" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><UserCheck size={14}/> পার্টনার ও মার্চেন্ট</TabsTrigger>
+            <TabsTrigger value="local" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><Smartphone size={14}/> লোকাল লুপ</TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="revenue" className="flex-1 p-6 m-0 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-primary/5 border-primary/20 p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Total Processed Volume</p>
-                <div className="p-2 bg-primary/10 rounded-lg"><Wallet className="text-primary" size={20} /></div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="bg-primary/5 border-primary/20 p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Processed Volume</p>
+                    <div className="p-2 bg-primary/10 rounded-lg"><Wallet className="text-primary" size={20} /></div>
+                  </div>
+                  <h3 className="text-3xl font-headline font-bold text-foreground">৳{revenueStats.totalProcessed.toLocaleString()}</h3>
+                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    <TrendingUp size={12} className="text-accent" /> 24% growth in cycle
+                  </p>
+                </Card>
+                <Card className="bg-accent/5 border-accent/20 p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Imperial Tax</p>
+                    <div className="p-2 bg-accent/10 rounded-lg"><Star className="text-accent" size={20} /></div>
+                  </div>
+                  <h3 className="text-3xl font-headline font-bold text-accent">৳{revenueStats.totalFees.toLocaleString()}</h3>
+                  <p className="text-[10px] text-muted-foreground italic">1.5% Automatic Settle</p>
+                </Card>
+                <Card className="bg-muted/20 border-white/10 p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Growth Score</p>
+                    <div className="p-2 bg-muted/40 rounded-lg"><Target className="text-muted-foreground" size={20} /></div>
+                  </div>
+                  <h3 className="text-3xl font-headline font-bold text-foreground">92/100</h3>
+                  <p className="text-[10px] text-muted-foreground">Optimal Performance</p>
+                </Card>
               </div>
-              <h3 className="text-3xl font-headline font-bold text-foreground">৳{revenueStats.totalProcessed.toLocaleString()}</h3>
-              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                <TrendingUp size={12} className="text-accent" /> 24% increase from last cycle
-              </p>
+              <MerchantGrowthChart />
+            </div>
+            
+            <div className="lg:col-span-4 space-y-6">
+              <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl space-y-4">
+                <h4 className="text-sm font-headline font-bold uppercase tracking-widest flex items-center gap-2">
+                  <Activity size={16} className="text-primary" /> Market Trends
+                </h4>
+                <div className="space-y-3">
+                  {marketTrends.map((t, i) => (
+                    <div key={i} className="flex justify-between items-center p-3 bg-black/40 rounded-xl border border-white/5">
+                      <span className="text-xs font-bold">{t.sector}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-accent font-bold">{t.growth}</span>
+                        <Badge variant="outline" className="text-[8px] h-4 uppercase">{t.trend}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="fraud" className="flex-1 p-6 m-0 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="bg-destructive/5 border-destructive/20 p-6 space-y-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-destructive">Total Frozen Funds</p>
+              <h3 className="text-3xl font-headline font-bold text-destructive">৳{fraudStats.totalFrozen.toLocaleString()}</h3>
             </Card>
             <Card className="bg-accent/5 border-accent/20 p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Total Imperial Tax (Profit)</p>
-                <div className="p-2 bg-accent/10 rounded-lg"><Star className="text-accent" size={20} /></div>
-              </div>
-              <h3 className="text-3xl font-headline font-bold text-accent">৳{revenueStats.totalFees.toLocaleString()}</h3>
-              <p className="text-[10px] text-muted-foreground italic">Automated 1.5% commission active.</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Recovery Success</p>
+              <h3 className="text-3xl font-headline font-bold text-accent">{fraudStats.recoveryRate}</h3>
             </Card>
             <Card className="bg-muted/20 border-white/10 p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active Merchants</p>
-                <div className="p-2 bg-muted/40 rounded-lg"><Building2 className="text-muted-foreground" size={20} /></div>
-              </div>
-              <h3 className="text-3xl font-headline font-bold text-foreground">{revenueStats.activeMerchants}</h3>
-              <p className="text-[10px] text-muted-foreground">Sirajganj Region Expansion</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active Investigations</p>
+              <h3 className="text-3xl font-headline font-bold text-foreground">{fraudStats.activeCases}</h3>
             </Card>
           </div>
 
           <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl">
             <h4 className="text-sm font-headline font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Activity size={16} className="text-primary" /> Live Revenue Stream
+              <ShieldAlert size={16} className="text-destructive" /> Active Fraud Holds
             </h4>
             <div className="space-y-3">
-              {[
-                { merchant: 'Sirajganj Textile Hub', amount: '৳৪৫,০০০', fee: '৳৬৭৫', time: '২ মি. আগে' },
-                { merchant: 'Jamuna Bridge Logistics', amount: '৳১,২০,০০০', fee: '৳১,৮০০', time: '১২ মি. আগে' },
-                { merchant: 'Belkuchi Saree Emporium', amount: '৳৫,২০০', fee: '৳৭৮', time: '৪৫ মি. আগে' }
-              ].map((tx, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center border border-accent/20">
-                      <Zap size={14} className="text-accent" />
+              {FraudRecovery.activeHolds.length === 0 ? (
+                <div className="text-center py-12 opacity-30 italic text-xs">No active holds in the current ledger.</div>
+              ) : (
+                FraudRecovery.activeHolds.map((h, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center border border-destructive/20">
+                        <Lock size={14} className="text-destructive" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold">TXN: {h.id}</p>
+                        <p className="text-[9px] text-muted-foreground">{h.reason}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold">{tx.merchant}</p>
-                      <p className="text-[9px] text-muted-foreground">{tx.time}</p>
+                    <div className="text-right">
+                      <p className="text-xs font-bold text-destructive">৳{h.amount.toLocaleString()}</p>
+                      <Badge className="bg-destructive/20 text-destructive text-[7px] h-4">{h.status}</Badge>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs font-bold text-foreground">{tx.amount}</p>
-                    <p className="text-[9px] text-accent font-bold">Fee: {tx.fee}</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </TabsContent>
@@ -245,7 +289,7 @@ export function BankDirectory() {
                     <Activity size={18} className="text-primary animate-pulse" />
                     Sovereign Settlement Visualizer
                   </h4>
-                  <Badge variant="outline" className="border-accent/40 text-accent font-mono text-[9px]">ENGINE_V26_ACTIVE</Badge>
+                  <Badge variant="outline" className="border-accent/40 text-accent font-mono text-[9px]">ENGINE_V27_ACTIVE</Badge>
                 </div>
                 
                 <div className="relative flex justify-between items-center px-4">
@@ -327,31 +371,6 @@ export function BankDirectory() {
               </div>
             </div>
           </div>
-        </TabsContent>
-
-        <TabsContent value="merchant" className="flex-1 p-6 m-0">
-          <Card className="bg-card border-primary/20 max-w-2xl mx-auto">
-            <CardHeader className="bg-primary/5 border-b border-primary/10">
-              <CardTitle className="text-sm font-headline font-bold uppercase tracking-widest">মার্চেন্ট অনবোর্ডিং পোর্টাল</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <form onSubmit={(e) => { e.preventDefault(); handleDummyTest(); }} className="space-y-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest">মার্চেন্ট বা প্রজেক্টের নাম</Label>
-                    <Input value={merchantForm.name} onChange={e => setMerchantForm({...merchantForm, name: e.target.value})} className="bg-muted/40 border-white/10" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest">রেভিনিউ শেয়ারিং রেট (%)</Label>
-                    <Input value="1.5% (Imperial Standard)" disabled className="bg-muted/40 border-white/10 font-mono text-xs" />
-                  </div>
-                </div>
-                <Button type="submit" disabled={loading} className="w-full h-12 bg-primary text-background font-bold text-lg gap-2">
-                  অটোনোমাস এগ্রিমেন্ট সক্রিয় করুন
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </Card>

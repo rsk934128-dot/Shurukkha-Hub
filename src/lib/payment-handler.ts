@@ -1,12 +1,15 @@
+
 /**
  * @fileOverview Sovereign Payment Handler for Local & Global Settlements.
- * Updated Phase 26.0: Merchant Settlement & Revenue Engine.
- * Implements automated fee calculation (Imperial Tax) for monetization.
+ * Updated Phase 27.0: Prosperity Protocol Integration.
+ * Implements automated fee calculation (Imperial Tax), AI Risk Analysis, and Fraud Recovery integration.
  */
 
 import { IntegrationBridge } from './integration-bridge';
 import { db } from './firebase';
-import { collection, addDoc, serverTimestamp, setDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { FraudRecovery } from './fraud-recovery-protocol';
+import { EconomicForecaster } from './economic-forecaster';
 
 export interface PaymentIntent {
   amount: number;
@@ -14,11 +17,6 @@ export interface PaymentIntent {
   source: 'CARD' | 'BANK' | 'VIRTUAL_ACCOUNT';
   target: 'BKASH' | 'LOCAL_BANK' | 'TREASURY' | 'GLOBAL_PAYPAL' | 'WISE_SOVEREIGN';
   merchantId: string;
-}
-
-export interface MerchantRegistration {
-  merchantName: string;
-  callbackUrl: string;
 }
 
 export interface AtomicReceipt {
@@ -34,7 +32,6 @@ export interface AtomicReceipt {
 }
 
 export class PaymentHandler {
-  // Imperial Service Fee Rate (e.g., 1.5%)
   private static IMPERIAL_FEE_RATE = 0.015;
 
   /**
@@ -47,18 +44,12 @@ export class PaymentHandler {
     return 'LOW';
   }
 
-  /**
-   * Calculates the Net Amount and Fee for the transaction
-   */
   static calculateSettlement(amount: number) {
     const fee = amount * this.IMPERIAL_FEE_RATE;
     const netAmount = amount - fee;
     return { fee, netAmount };
   }
 
-  /**
-   * Generates a Cryptographic Atomic Receipt with Fee Data
-   */
   static generateReceipt(intent: PaymentIntent, txnId: string): AtomicReceipt {
     const { fee, netAmount } = this.calculateSettlement(intent.amount);
     const receiptData = {
@@ -77,20 +68,15 @@ export class PaymentHandler {
     };
   }
 
-  /**
-   * Initiates an Atomic local/global settlement with Revenue logic.
-   */
   static async initiateSettlement(intent: PaymentIntent) {
     console.log(`[Atomic Treasury] Initiating Settlement for ${intent.amount} ${intent.currency}...`);
     
     const risk = PaymentHandler.predictRisk(intent);
+    
     if (risk === 'CRITICAL') {
-      await IntegrationBridge.broadcastEvent({
-        type: 'GLOBAL_FRAUD_ALERT',
-        payload: { intent, reason: 'High-risk merchant identified' },
-        timestamp: new Date().toISOString()
-      });
-      throw new Error("Transaction BLOCKED by AI Fraud Engine.");
+      // Engage Fraud Recovery Protocol
+      FraudRecovery.freezeFunds('txn_failed_' + Date.now(), intent.amount, 'CRITICAL_RISK_MERCHANT');
+      throw new Error("Transaction BLOCKED by AI Fraud Engine. Funds HELD for recovery.");
     }
 
     const token = IntegrationBridge.generateEphemeralToken();
@@ -113,7 +99,10 @@ export class PaymentHandler {
       
       const receipt = PaymentHandler.generateReceipt(intent, settlementId);
       
-      // Save to Sovereign Audit & Revenue Ledger
+      // Prosperity Protocol: Economic Insight
+      const insight = EconomicForecaster.getMerchantInsight(intent.merchantId, intent.amount);
+      console.log(`[Economic Engine] Merchant Insight: Growth Score ${insight.growthScore}%`);
+
       await addDoc(collection(db, "audit_trails"), {
         action: 'SETTLEMENT_COMPLETED',
         details: { 
@@ -123,14 +112,15 @@ export class PaymentHandler {
           netSettled: receipt.netAmount,
           currency: intent.currency, 
           risk, 
-          receipt 
+          receipt,
+          merchantInsight: insight
         },
         signature: IntegrationBridge.generateSignature({ settlementId, status: 'SUCCESS' }),
         timestamp: serverTimestamp(),
         performedBy: 'sovereign_revenue_engine_v1'
       });
 
-      return { success: true, settlementId, receipt, risk };
+      return { success: true, settlementId, receipt, risk, insight };
     } catch (e) {
       console.error("[Payment Handler] Settlement failed", e);
       throw e;
@@ -156,12 +146,17 @@ export class PaymentHandler {
     const risk = PaymentHandler.predictRisk(intent);
     onLog(`[AI_RESULT]: Risk Score: ${risk} ✅ CLEAN`);
 
+    // Economic Forecasting Hook
+    onLog("[ECONOMIC_FORECASTER]: Generating Merchant Growth Insight...");
+    const insight = EconomicForecaster.getMerchantInsight(intent.merchantId, intent.amount);
+    onLog(`[INSIGHT]: Growth Score: ${insight.growthScore}% | Predicted 24% surge next cycle.`);
+
     const settlementId = 'set_test_rev_' + Math.random().toString(36).substr(2, 8);
     const receipt = PaymentHandler.generateReceipt(intent, settlementId);
     
     await addDoc(collection(db, "audit_trails"), {
       action: 'REVENUE_GENERATED_TEST',
-      details: { intent, fee, netAmount, settlementId, risk, receipt },
+      details: { intent, fee, netAmount, settlementId, risk, receipt, merchantInsight: insight },
       signature: IntegrationBridge.generateSignature({ settlementId, status: 'VERIFIED' }),
       timestamp: serverTimestamp(),
       performedBy: 'sovereign_revenue_engine'
@@ -169,24 +164,5 @@ export class PaymentHandler {
 
     onLog(`[RESULT]: রেভিনিউ জেনারেটেড। সম্রাট আপনার ট্রেজারিতে ${fee} BDT কর জমা হয়েছে।`);
     return { success: true, settlementId, receipt };
-  }
-
-  static getLocalGatewayStatus() {
-    return [
-      { id: 'gw-bkash', name: 'bKash Anycast Hook', status: 'ACTIVE', type: 'MFS', latency: '4ms' },
-      { id: 'gw-nagad', name: 'Nagad Anycast Bridge', status: 'ACTIVE', type: 'MFS', latency: '6ms' },
-      { id: 'gw-paypal', name: 'PayPal Global Grid', status: 'ACTIVE', type: 'CROSS_BORDER', latency: '18ms' },
-    ];
-  }
-
-  static async registerMerchant(form: MerchantRegistration) {
-    const merchantId = 'mid_' + Math.random().toString(36).substring(2, 10);
-    await addDoc(collection(db, "audit_trails"), {
-      action: 'MERCHANT_REGISTERED',
-      details: { ...form, merchantId },
-      timestamp: serverTimestamp(),
-      performedBy: 'imperial_onboarding'
-    });
-    return { merchantId };
   }
 }
