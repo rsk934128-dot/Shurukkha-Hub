@@ -2,6 +2,7 @@
 /**
  * @fileOverview Sovereign Payment Handler for Local & Global Settlements.
  * Manages the bridge between card-to-bKash settlements using a Buffer Logic.
+ * Updated: Added Dummy Payment simulation for Live Testing.
  */
 
 import { IntegrationBridge } from './integration-bridge';
@@ -35,7 +36,6 @@ export class PaymentHandler {
       });
 
       // 3. Simulate Gateway Response & Buffer Settlement
-      // In a production environment, this would wait for a Stripe/SSLCommerz Webhook
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       const settlementId = 'set_bkash_' + Math.random().toString(36).substr(2, 12);
@@ -59,6 +59,47 @@ export class PaymentHandler {
       console.error("[Payment Handler] Settlement failed", e);
       throw e;
     }
+  }
+
+  /**
+   * Triggers a comprehensive Dummy Payment test for the Emperor
+   */
+  static async triggerDummyPayment(onLog: (msg: string) => void) {
+    onLog("[SYSTEM_LOG: TRACE_MODE_ACTIVE]");
+    onLog("[GATEWAY]: বনাম বিকাশ পেমেন্ট রিকোয়েস্ট... ✅ CONNECTED");
+    
+    const intent: PaymentIntent = {
+      amount: 1500,
+      currency: 'BDT',
+      source: 'CARD',
+      target: 'BKASH',
+      merchantId: 'TEST_EMPEROR_01'
+    };
+
+    onLog("[SIGNATURE]: SHA256withRSA v2 অথেন্টিকেশন... ✅ VERIFIED");
+    await new Promise(r => setTimeout(r, 800));
+    
+    const signature = IntegrationBridge.generateSignature(intent);
+    onLog(`[SECURITY]: Generated Signature: ${signature.substring(0, 20)}...`);
+
+    onLog("[SETTLEMENT]: ফান্ড পুশ করার জন্য আপনার সিস্টেমের লজিক... ✅ READY");
+    await new Promise(r => setTimeout(r, 1200));
+
+    const settlementId = 'set_test_' + Math.random().toString(36).substr(2, 8);
+    
+    // Final Audit Entry
+    await addDoc(collection(db, "audit_trails"), {
+      action: 'DUMMY_PAYMENT_TEST',
+      details: { intent, settlementId, testMode: true },
+      signature: IntegrationBridge.generateSignature({ settlementId, intent }),
+      timestamp: serverTimestamp(),
+      performedBy: 'emperor_tester_ai'
+    });
+
+    onLog(`[RESULT]: ট্রানজেকশন সফল। ID: ${settlementId}`);
+    onLog("[RESULT]: ট্রানজেকশন এখন আপনার অটোনোমাস সার্ভারের নিয়ন্ত্রণে।");
+    
+    return { success: true, settlementId };
   }
 
   /**

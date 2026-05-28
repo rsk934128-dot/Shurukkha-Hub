@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, CreditCard, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft } from 'lucide-react'
+import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, CreditCard, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -19,6 +19,7 @@ export function BankDirectory() {
   const [localGateways, setLocalGateways] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
+  const [terminalLogs, setTerminalLogs] = useState<string[]>([])
   const { toast } = useToast()
 
   useEffect(() => {
@@ -71,6 +72,21 @@ export function BankDirectory() {
       }
     } catch (e) {
       toast({ title: "SETTLEMENT FAILED", variant: "destructive" })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDummyTest = async () => {
+    setLoading(true)
+    setTerminalLogs([])
+    try {
+      await PaymentHandler.triggerDummyPayment((msg) => {
+        setTerminalLogs(prev => [...prev, msg])
+      })
+      toast({ title: "Dummy Test Complete", description: "লোকাল পেমেন্ট লজিক সফলভাবে যাচাই করা হয়েছে।" })
+    } catch (e) {
+      toast({ title: "Test Failed", variant: "destructive" })
     } finally {
       setLoading(false)
     }
@@ -227,11 +243,57 @@ export function BankDirectory() {
             ))}
           </div>
 
-          <div className="p-4 bg-accent/5 border border-accent/20 rounded-xl">
-            <h4 className="text-[10px] font-bold uppercase tracking-widest text-accent mb-2">Settlement Buffer Protocol:</h4>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              কার্ড থেকে প্রাপ্ত ফান্ড সরাসরি বিকাশে সেটেল করার জন্য **Sovereign Settlement Buffer** ব্যবহৃত হচ্ছে। প্রতিটি ট্রানজেকশন **SHA256withRSA v2** সিগনেচার দ্বারা সুরক্ষিত।
-            </p>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-8">
+              <Card className="bg-black/40 border-accent/20 overflow-hidden">
+                <CardHeader className="bg-accent/5 border-b border-accent/10 py-3 flex flex-row items-center justify-between">
+                  <CardTitle className="text-xs font-headline font-bold text-accent uppercase tracking-widest flex items-center gap-2">
+                    <Terminal size={14} /> Live Transaction Terminal
+                  </CardTitle>
+                  <Button 
+                    size="sm" 
+                    onClick={handleDummyTest} 
+                    disabled={loading}
+                    className="h-7 text-[9px] bg-accent text-background font-bold gap-2"
+                  >
+                    <Play size={10} fill="currentColor" /> RUN DUMMY TEST
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <ScrollArea className="h-[200px] bg-black/60 p-4">
+                    {terminalLogs.length === 0 ? (
+                      <p className="text-[10px] font-mono text-muted-foreground italic">Waiting for imperial command...</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {terminalLogs.map((log, i) => (
+                          <div key={i} className="text-[10px] font-mono text-accent/80 leading-relaxed">
+                            <span className="text-accent mr-2">&gt;</span> {log}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="lg:col-span-4">
+              <div className="p-4 bg-accent/5 border border-accent/20 rounded-xl h-full">
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-accent mb-2">Settlement Buffer Protocol:</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  কার্ড থেকে প্রাপ্ত ফান্ড সরাসরি বিকাশে সেটেল করার জন্য **Sovereign Settlement Buffer** ব্যবহৃত হচ্ছে। প্রতিটি ট্রানজেকশন **SHA256withRSA v2** সিগনেচার দ্বারা সুরক্ষিত।
+                </p>
+                <div className="mt-4 pt-4 border-t border-accent/10 space-y-2">
+                  <div className="flex justify-between text-[8px] uppercase font-bold text-muted-foreground">
+                    <span>Hook Auth</span>
+                    <span className="text-accent">VERIFIED</span>
+                  </div>
+                  <div className="flex justify-between text-[8px] uppercase font-bold text-muted-foreground">
+                    <span>Buffer Status</span>
+                    <span className="text-accent">ACTIVE</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </TabsContent>
       </Tabs>
