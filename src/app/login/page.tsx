@@ -2,12 +2,20 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { Shield, Globe, Lock, LogIn, Loader2, Key, Fingerprint, Star, Zap, ArrowRight, ArrowLeft, Mail, Eye, EyeOff } from 'lucide-react'
+import { Shield, Globe, Lock, LogIn, Loader2, Key, Fingerprint, Star, Zap, ArrowRight, ArrowLeft, Mail, Eye, EyeOff, UserPlus, User } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth, useUser, useFirestore } from '@/firebase'
-import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword } from 'firebase/auth'
+import { 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithRedirect, 
+  getRedirectResult, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  updateProfile 
+} from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { AuthGuard } from '@/lib/auth-guard'
 import { DeviceValidator } from '@/lib/device-fingerprint-validator'
@@ -26,7 +34,9 @@ export default function LoginPage() {
   
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [isRegistering, setIsRegistering] = useState(false)
   const [isHandshaking, setIsHandshaking] = useState(false)
   const [isSigningIn, setIsSigningIn] = useState(false)
   const [authMethod, setAuthMethod] = useState<'google' | 'email'>('email')
@@ -144,17 +154,30 @@ export default function LoginPage() {
     }
   }
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!auth || !email || !password) return
+    if (isRegistering && !displayName) {
+      toast({ title: "নাম প্রয়োজন", description: "দয়া করে আপনার নাম প্রদান করুন।", variant: "destructive" })
+      return
+    }
+    
     setIsSigningIn(true)
     
     try {
-      await signInWithEmailAndPassword(auth, email, password)
-      toast({ title: "সফল লগইন", description: "আপনার জিমেইল পরিচয় যাচাই করা হয়েছে।" })
+      if (isRegistering) {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+        await updateProfile(userCredential.user, { displayName: displayName })
+        toast({ title: "নিবন্ধন সফল", description: "আপনার রাজকীয় পরিচয় তৈরি করা হয়েছে।" })
+      } else {
+        await signInWithEmailAndPassword(auth, email, password)
+        toast({ title: "সফল লগইন", description: "আপনার জিমেইল পরিচয় যাচাই করা হয়েছে।" })
+      }
     } catch (error: any) {
-      console.error("Email Login Error:", error.code)
+      console.error("Email Auth Error:", error.code)
       let msg = "ইমেইল বা পাসওয়ার্ড ভুল হয়েছে।"
+      if (error.code === 'auth/email-already-in-use') msg = "এই ইমেইলটি ইতিমধ্যে নিবন্ধিত।"
+      if (error.code === 'auth/weak-password') msg = "পাসওয়ার্ডটি অন্তত ৬ ডিজিটের হতে হবে।"
       if (error.code === 'auth/user-not-found') msg = "এই ইমেইলে কোনো অ্যাকাউন্ট পাওয়া যায়নি।"
       if (error.code === 'auth/wrong-password') msg = "ভুল পাসওয়ার্ড। আবার চেষ্টা করুন।"
       
@@ -202,7 +225,7 @@ export default function LoginPage() {
           <div className="space-y-1">
             <CardTitle className="text-3xl font-headline font-bold tracking-tight uppercase">SHURUKKHA HUB</CardTitle>
             <CardDescription className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/60">
-              {isHandshaking ? "Establishing Sovereign Handshake..." : handshakeComplete ? "Handshake Complete" : "Sovereign Identity Access"}
+              {isHandshaking ? "Establishing Sovereign Handshake..." : handshakeComplete ? "Handshake Complete" : isRegistering ? "Register New Identity" : "Sovereign Identity Access"}
             </CardDescription>
           </div>
         </CardHeader>
@@ -232,7 +255,23 @@ export default function LoginPage() {
           ) : (
             <>
               {authMethod === 'email' ? (
-                <form onSubmit={handleEmailLogin} className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                <form onSubmit={handleEmailAuth} className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                  {isRegistering && (
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">আপনার নাম</label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                        <Input 
+                          type="text"
+                          placeholder="আপনার পূর্ণ নাম লিখুন"
+                          value={displayName}
+                          onChange={(e) => setDisplayName(e.target.value)}
+                          required={isRegistering}
+                          className="bg-background/50 border-primary/20 pl-10 h-12 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">জিমেইল এড্রেস</label>
                     <div className="relative">
@@ -273,8 +312,19 @@ export default function LoginPage() {
                     disabled={isSigningIn}
                     className="w-full h-14 bg-primary text-background font-bold text-lg rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all"
                   >
-                    {isSigningIn ? <Loader2 size={20} className="animate-spin" /> : "সাম্রাজ্যে প্রবেশ করুন"}
+                    {isSigningIn ? <Loader2 size={20} className="animate-spin" /> : (isRegistering ? "নিবন্ধন সম্পন্ন করুন" : "সাম্রাজ্যে প্রবেশ করুন")}
                   </Button>
+                  
+                  <div className="text-center">
+                    <button 
+                      type="button"
+                      onClick={() => setIsRegistering(!isRegistering)}
+                      className="text-[10px] uppercase font-bold text-primary hover:underline tracking-widest"
+                    >
+                      {isRegistering ? "ইতিমধ্যে অ্যাকাউন্ট আছে? লগইন করুন" : "নতুন অ্যাকাউন্ট তৈরি করতে চান? এখানে টিপুন"}
+                    </button>
+                  </div>
+
                   <div className="flex items-center gap-4 py-2">
                     <div className="h-px bg-white/5 flex-1" />
                     <span className="text-[10px] uppercase font-bold text-muted-foreground">অথবা</span>
