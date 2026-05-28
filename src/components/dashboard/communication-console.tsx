@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { CommunicationOrchestrator, Message } from '@/lib/communication-orchestrator'
 import { db } from '@/lib/firebase'
 import { useUser } from '@/firebase'
-import { collection, query, orderBy, limit, onSnapshot, where, getDocs } from 'firebase/firestore'
+import { collection, query, orderBy, limit, onSnapshot, where, getDocs, or } from 'firebase/firestore'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 
 const COMMAND_CENTER_CONTACT = { id: 'command_center', name: "Sovereign Command", role: "Authority", status: 'online', avatar: '' }
@@ -30,7 +30,6 @@ export function CommunicationConsole() {
   useEffect(() => {
     if (!user) return;
 
-    // Fetch other users for "Account to Account" discovery
     const fetchUsers = async () => {
       const q = query(collection(db, "users"), limit(20));
       const snap = await getDocs(q);
@@ -54,11 +53,13 @@ export function CommunicationConsole() {
   useEffect(() => {
     if (!user || !selectedContact) return;
 
-    // Listen for messages between current user and selected contact
-    // Or messages sent to command_center if selectedContact is command_center
+    // Fixed Query: Fetch messages where user is sender OR recipient
     const q = query(
       collection(db, "messages"),
-      where("recipientId", "in", [user.uid, selectedContact.id]),
+      or(
+        where("senderId", "==", user.uid),
+        where("recipientId", "==", user.uid)
+      ),
       orderBy("timestamp", "asc"),
       limit(50)
     );
@@ -66,14 +67,13 @@ export function CommunicationConsole() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const allMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
       
-      // Filter for specific conversation
+      // Local filtering for specific conversation
       const filtered = allMsgs.filter(m => 
         (m.senderId === user.uid && m.recipientId === selectedContact.id) ||
         (m.senderId === selectedContact.id && m.recipientId === user.uid) ||
         (selectedContact.id === 'command_center' && m.recipientId === 'command_center' && m.senderId === user.uid)
       );
 
-      // Trigger sound if last message is incoming and new
       const lastMsg = filtered[filtered.length - 1];
       if (lastMsg && lastMsg.senderId !== user.uid && !messages.find(m => m.id === lastMsg.id)) {
         playMessageSound();
@@ -81,6 +81,8 @@ export function CommunicationConsole() {
 
       setMessages(filtered);
       setTimeout(scrollToBottom, 100);
+    }, (err) => {
+      console.error("[Chat Query] Permission Error:", err);
     });
 
     return () => unsubscribe();
@@ -141,7 +143,6 @@ export function CommunicationConsole() {
       </CardHeader>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Left: Contact List */}
         <div className="w-20 md:w-64 border-r border-white/5 flex flex-col bg-black/20">
           <div className="p-3 border-b border-white/5 hidden md:block">
             <div className="relative">
@@ -171,7 +172,6 @@ export function CommunicationConsole() {
           </ScrollArea>
         </div>
 
-        {/* Right: Chat Window */}
         <div className="flex-1 flex flex-col relative">
           <ScrollArea ref={scrollRef} className="flex-1 p-6">
             <div className="space-y-6">
@@ -221,7 +221,6 @@ export function CommunicationConsole() {
             </div>
           </ScrollArea>
 
-          {/* Chat Input */}
           <div className="p-4 bg-muted/20 border-t border-white/5 backdrop-blur-md">
             <div className="flex items-center gap-3 bg-black/40 border border-white/10 rounded-2xl p-2 px-4 shadow-inner">
               <input 
