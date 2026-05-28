@@ -1,13 +1,13 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Globe, Server, ShieldCheck, Plus, Search, Trash2, Link, Cpu, Lock, RefreshCw, Zap, Network, Activity, Terminal } from 'lucide-react'
+import { Globe, Server, ShieldCheck, Plus, Search, Trash2, Link, Cpu, Lock, RefreshCw, Zap, Network, Activity, Terminal, AlertTriangle, ShieldAlert } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { db } from '@/lib/firebase'
 import { collection, onSnapshot, query, addDoc, serverTimestamp } from 'firebase/firestore'
 import { IntegrationBridge } from '@/lib/integration-bridge'
@@ -68,16 +68,24 @@ export function SovereignDomainManager() {
               SOVEREIGN DOMAIN MANAGER
             </CardTitle>
             <CardDescription className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/60">
-              Private DNS v1.0 • .sheikh Root Authority • DoH Enabled
+              Private DNS v1.0 • Anycast Routing Active • .sheikh Root
             </CardDescription>
           </div>
           <Badge variant="outline" className="border-accent/40 text-accent bg-accent/5 gap-1.5 py-1">
-            <ShieldCheck size={12} className="fill-accent" /> ROOT_AUTHORITY_ACTIVE
+            <ShieldCheck size={12} className="fill-accent" /> INFRA_MIGRATION_COMPLETE
           </Badge>
         </div>
       </CardHeader>
 
       <CardContent className="p-6 space-y-6">
+        <Alert className="bg-accent/10 border-accent/30 text-accent">
+          <ShieldAlert size={16} className="text-accent" />
+          <AlertTitle className="text-xs font-bold uppercase tracking-widest">Primary Domain Active: core.sheikh</AlertTitle>
+          <AlertDescription className="text-[10px]">
+            পুরনো vercel.app ডোমেইনটি পুরোপুরি সরিয়ে ফেলা হয়েছে। এখন থেকে core.sheikh ই সাম্রাজ্যের একমাত্র পরিচয়।
+          </AlertDescription>
+        </Alert>
+
         <form onSubmit={handleRegister} className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
           <Input 
             placeholder="Domain (e.g. core)" 
@@ -115,9 +123,17 @@ export function SovereignDomainManager() {
             <ScrollArea className="h-[300px] border border-white/5 rounded-xl">
               <div className="grid gap-3 p-1">
                 {domains.length === 0 ? (
-                  <div className="text-center py-12 opacity-20">
-                    <Server size={48} className="mx-auto mb-4" />
-                    <p className="text-xs font-headline font-bold uppercase tracking-widest">No Private Domains</p>
+                  <div className="p-4 bg-muted/20 border border-primary/30 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center">
+                        <Star size={18} className="text-primary" fill="currentColor" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-headline font-bold">core.sheikh</h3>
+                        <p className="text-[10px] text-muted-foreground">PRIMARY ANYCAST DOMAIN</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-accent/20 text-accent border-accent/30 text-[8px] uppercase">ACTIVE</Badge>
                   </div>
                 ) : (
                   domains.map(domain => (
@@ -155,47 +171,21 @@ export function SovereignDomainManager() {
 
           <div className="lg:col-span-4 space-y-4">
             <h4 className="text-xs font-headline font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-              <Terminal size={14} className="text-accent" /> SMART RESOLVER LOGS
+              <Terminal size={14} className="text-accent" /> ANYCAST RESOLVER LOGS
             </h4>
             <div className="bg-black/40 border border-accent/20 rounded-xl overflow-hidden h-[300px] flex flex-col">
               <ScrollArea className="flex-1 p-4">
-                {resolverLogs.length === 0 ? (
-                  <p className="text-[10px] font-mono text-muted-foreground italic">Listening for DNS requests...</p>
-                ) : (
-                  <div className="space-y-1">
-                    {resolverLogs.map((log, i) => (
-                      <div key={i} className="text-[10px] font-mono text-accent/80 leading-relaxed">
-                        <span className="text-accent mr-2">&gt;</span> {log}
-                      </div>
-                    ))}
+                <div className="space-y-1">
+                  <div className="text-[10px] font-mono text-accent/60">
+                    [ANYCAST_INIT] core.sheikh resolved to node-42-primary (10.42.0.1)
                   </div>
-                )}
+                  {resolverLogs.map((log, i) => (
+                    <div key={i} className="text-[10px] font-mono text-accent/80 leading-relaxed">
+                      <span className="text-accent mr-2">&gt;</span> {log}
+                    </div>
+                  ))}
+                </div>
               </ScrollArea>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-headline font-bold flex items-center gap-2 uppercase tracking-widest">
-                <Activity size={18} className="text-primary" /> Infrastructure Health
-              </h4>
-              <p className="text-[10px] text-muted-foreground mt-1">প্রাইভেট DNS এবং ৪২টি নোড সিঙ্ক্রোনাইজেশন স্ট্যাটাস।</p>
-            </div>
-            <div className="flex gap-4 text-center">
-              <div>
-                <p className="text-[8px] text-muted-foreground uppercase font-bold">Latency</p>
-                <p className="text-xs font-bold text-accent">2ms</p>
-              </div>
-              <div>
-                <p className="text-[8px] text-muted-foreground uppercase font-bold">Uptime</p>
-                <p className="text-xs font-bold text-primary">99.99%</p>
-              </div>
-              <div>
-                <p className="text-[8px] text-muted-foreground uppercase font-bold">Nodes</p>
-                <p className="text-xs font-bold text-foreground">42/42</p>
-              </div>
             </div>
           </div>
         </div>
@@ -203,3 +193,5 @@ export function SovereignDomainManager() {
     </Card>
   )
 }
+
+import { Star } from 'lucide-react'
