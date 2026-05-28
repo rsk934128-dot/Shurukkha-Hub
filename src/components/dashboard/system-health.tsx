@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Activity, Zap, ShieldCheck, TrendingUp, BrainCircuit, Play, Loader2, AlertTriangle, Users, Database, ShieldAlert, Bug, ScrollText, Lock, CheckCircle2, ShieldQuestion, FileSearch, ShieldX, Camera, RefreshCw, FileText, Download, BarChart4, Signal, Globe } from 'lucide-react'
+import { Activity, Zap, ShieldCheck, TrendingUp, BrainCircuit, Play, Loader2, AlertTriangle, Users, Database, ShieldAlert, Bug, ScrollText, Lock, CheckCircle2, ShieldQuestion, FileSearch, ShieldX, Camera, RefreshCw, FileText, Download, BarChart4, Signal, Globe, Landmark, TrendingDown } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +15,7 @@ import { collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot 
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { IntegrationBridge } from '@/lib/integration-bridge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { ImpactAnalyzer, ImpactReport } from '@/lib/impact-analyzer'
 
 const FORENSIC_DATA = [
   { name: '00:00', intensity: 20, safety: 98, latency: 45 },
@@ -30,8 +31,8 @@ export function SystemHealth() {
   const [isSimulating, setIsSimulating] = useState(false)
   const [isSnapshotting, setIsSnapshotting] = useState(false)
   const [simulationResult, setSimulationResult] = useState<PredictiveSimulationOutput | null>(null)
+  const [impactReport, setImpactReport] = useState<ImpactReport | null>(null)
   const [auditLogs, setAuditLogs] = useState<any[]>([])
-  const [isLocked, setIsLocked] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -54,9 +55,13 @@ export function SystemHealth() {
         }
       })
       setSimulationResult(result)
+      
+      const impact = await ImpactAnalyzer.analyzeImpact('Extreme', 'সিরাজগঞ্জ সদর ও বেলকুচি');
+      setImpactReport(impact);
+
       toast({
         title: "Disaster Simulation Successful",
-        description: "বন্যা পরিস্থিতির ভবিষ্যত ঝুঁকি বিশ্লেষণ সম্পন্ন হয়েছে।",
+        description: "বন্যা পরিস্থিতি এবং আর্থিক প্রভাব বিশ্লেষণ সম্পন্ন হয়েছে।",
       })
     } catch (e) {
       toast({ title: "Simulation Failed", variant: "destructive" })
@@ -179,6 +184,28 @@ export function SystemHealth() {
                     </div>
                   </div>
 
+                  {impactReport && (
+                    <div className="p-4 bg-accent/5 rounded-xl border border-accent/20">
+                      <h4 className="text-xs font-bold uppercase mb-4 flex items-center gap-2 text-accent">
+                        <Landmark size={16} /> ফিনান্সিয়াল ইমপ্যাক্ট সিমুলেশন
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                         <div className="space-y-1">
+                            <p className="text-[9px] uppercase font-bold text-muted-foreground">সম্ভাব্য ক্ষয়ক্ষতি</p>
+                            <p className="text-xl font-headline font-bold text-foreground">৳{(impactReport.estimatedDamage / 10000000).toFixed(1)} কোটি</p>
+                         </div>
+                         <div className="space-y-1">
+                            <p className="text-[9px] uppercase font-bold text-muted-foreground">প্রভাবিত নাগরিক</p>
+                            <p className="text-xl font-headline font-bold text-foreground">{impactReport.affectedCitizens.toLocaleString()} জন</p>
+                         </div>
+                         <div className="space-y-1">
+                            <p className="text-[9px] uppercase font-bold text-muted-foreground">প্রয়োজনীয় পুনর্বাসন বাজেট</p>
+                            <p className="text-xl font-headline font-bold text-accent">৳{(impactReport.requiredRehabBudget / 10000000).toFixed(1)} কোটি</p>
+                         </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-4 bg-muted/20 rounded-xl border border-white/5">
                       <h4 className="text-xs font-bold uppercase mb-2 flex items-center gap-2 text-primary">
@@ -209,43 +236,6 @@ export function SystemHealth() {
                   <p className="text-xs">ডেটা বিশ্লেষণ শুরু করতে 'সিমুলেশন' বাটনে ক্লিক করুন</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-white/5 overflow-hidden">
-            <CardHeader className="bg-primary/5 border-b border-white/5 py-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-headline flex items-center gap-2 uppercase tracking-widest">
-                <ScrollText className="text-primary" size={16} /> অডিট রেজিস্ট্রি (Immutable Global Ledger)
-              </CardTitle>
-              <Badge variant="outline" className="border-accent/40 text-accent font-mono text-[8px]">SHA256_RSA_V2_ACTIVE</Badge>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[300px]">
-                <div className="p-4 space-y-2">
-                  {auditLogs.map((log) => (
-                    <div key={log.id} className="p-3 bg-muted/20 border border-white/5 rounded-xl flex items-start justify-between group hover:bg-muted/40 transition-all">
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-[7px] h-4 uppercase border-primary/30 text-primary">
-                            {log.action}
-                          </Badge>
-                          <span className="text-[8px] text-muted-foreground font-mono">
-                            {log.timestamp?.toDate?.()?.toLocaleString('bn-BD') || 'Pending...'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="flex items-center gap-1.5 p-1.5 bg-black/40 rounded border border-white/5 flex-1 overflow-hidden">
-                            <Lock size={10} className="text-accent shrink-0" />
-                            <code className="text-[8px] text-accent/70 font-mono truncate">
-                              SIG: {log.signature}
-                            </code>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
             </CardContent>
           </Card>
         </div>

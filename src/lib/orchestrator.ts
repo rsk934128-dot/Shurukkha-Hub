@@ -1,7 +1,7 @@
 /**
  * @fileOverview Autonomous Orchestrator for Shurukkha Hub.
  * Coordinates between SOS triggers, AI flows, and the Dispatcher console.
- * UPDATED Phase 31.0: Added Autonomous Flood Evacuation Alerts.
+ * UPDATED Phase 31.0: Added Drone Deployment and Impact Analysis.
  */
 
 import { db } from './firebase';
@@ -10,6 +10,8 @@ import { suggestResponder } from '@/ai/flows/suggest-responder-flow';
 import { generateFloodSurvivalAdvice } from '@/ai/flows/generate-flood-survival-advice';
 import { IntegrationBridge } from './integration-bridge';
 import { FloodDataService } from './flood-data-service';
+import { DroneService } from './drone-service';
+import { ImpactAnalyzer } from './impact-analyzer';
 
 const MOCK_RESPONDERS = [
   { id: 'r1', name: "সদর থানা টিম এ", type: "Police", location: "সিরাজগঞ্জ বাজার", status: "available", gear: ["First-Aid", "Radio"] },
@@ -69,9 +71,27 @@ export class AutonomousOrchestrator {
 
         if (advice.automaticAlertTriggered) {
           await this.broadcastGlobalEvacuation(advice);
+          
+          // Phase 31.0: Deploy Drones for Ground Verification
+          const area = advice.predictiveAnalytics?.hotspots[0] || "Various Locations";
+          await DroneService.deployToLocation(area);
+
+          // Phase 31.0: Run Financial Impact Simulation
+          const impact = await ImpactAnalyzer.analyzeImpact(advice.riskLevel, area);
+          await this.recordImpactAudit(impact);
         }
       }
     }, 60000); // Check every minute
+  }
+
+  private static async recordImpactAudit(impact: any) {
+    await addDoc(collection(db, "audit_trails"), {
+      action: 'FINANCIAL_IMPACT_SIMULATED',
+      details: impact,
+      signature: IntegrationBridge.generateSignature(impact),
+      timestamp: serverTimestamp(),
+      performedBy: 'Imperial_Economic_AI'
+    });
   }
 
   private static async broadcastGlobalEvacuation(advice: any) {

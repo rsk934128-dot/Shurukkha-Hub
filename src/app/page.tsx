@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -150,7 +150,7 @@ export default function ShurukkhaDashboard() {
     }, 1000);
 
     const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
-    SovereignAudit.logMilestone('Phase_31.0', 'Engineering Milestone: DEOS Command Center Active');
+    SovereignAudit.logMilestone('Phase_31.0', 'Engineering Milestone: Sovereign Shield Expansion Active');
 
     return () => {
       window.removeEventListener('online', handleConnectivityChange)
@@ -264,23 +264,32 @@ export default function ShurukkhaDashboard() {
               </div>
               
               <div className="flex items-center gap-2 md:gap-6 flex-1 justify-end">
+                <div className="flex items-center gap-1">
+                  <Button 
+                    variant={activeView === 'citizen' ? 'default' : 'outline'} 
+                    size="sm" 
+                    onClick={() => setActiveView('citizen')}
+                    className="h-8 text-[8px] font-bold gap-1 rounded-full border-primary/20"
+                  >
+                    <Smartphone size={12} /> CITIZEN SHIELD
+                  </Button>
+                  <Button 
+                    variant={activeView !== 'citizen' ? 'default' : 'outline'} 
+                    size="sm" 
+                    onClick={() => setActiveView('ops')}
+                    className="h-8 text-[8px] font-bold gap-1 rounded-full border-primary/20"
+                  >
+                    <ShieldAlert size={12} /> COMMANDER
+                  </Button>
+                </div>
                 {survivalMode && (
                   <Badge variant="destructive" className="animate-pulse gap-1 text-[8px] h-6 px-2">
                     <SignalLow size={10} /> SURVIVAL_MODE
                   </Badge>
                 )}
-                <Link href="/welcome" className="hidden lg:block">
-                  <Button variant="outline" size="sm" className="h-8 border-accent/20 text-accent gap-2 text-[10px] font-bold uppercase tracking-widest bg-accent/5 hover:bg-accent/10">
-                    <Sparkles size={14} /> ফিচার ট্যুর
-                  </Button>
-                </Link>
                 <SovereignStatusWidget />
                 {user && (
                   <div className="flex items-center gap-3">
-                    <div className="hidden sm:block text-right cursor-pointer" onClick={() => handleSidebarNavigate('profile')}>
-                      <p className="text-[10px] font-bold leading-none">{user.displayName}</p>
-                      <p className="text-[8px] text-primary uppercase tracking-widest font-bold">{userRole === 'admin' ? 'SUPREME ADMIN' : userRole}</p>
-                    </div>
                     <Avatar className="h-8 w-8 border border-primary/20 cursor-pointer" onClick={() => handleSidebarNavigate('profile')}>
                       <AvatarImage src={user.photoURL || ''} />
                       <AvatarFallback className="bg-primary/10 text-[10px]">{user.displayName?.substring(0, 2).toUpperCase()}</AvatarFallback>
@@ -292,35 +301,43 @@ export default function ShurukkhaDashboard() {
           </header>
 
           <main className="flex-1 container mx-auto px-4 py-4 md:py-8 overflow-x-hidden">
-            {(userRole === 'admin' || userRole === 'authority') && activeView !== 'profile' && <ImperialOverview />}
+            {(userRole === 'admin' || userRole === 'authority') && activeView !== 'profile' && activeView !== 'citizen' && <ImperialOverview />}
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-3">
                   <h2 className="text-xl md:text-3xl font-headline font-bold tracking-tight">
-                    {activeView === 'citizen' ? 'সুরক্ষা ড্যাশবোর্ড' : activeView === 'profile' ? 'সার্বভৌম পরিচয়পত্র' : 'কমান্ড সেন্টার'}
+                    {activeView === 'citizen' ? 'সুরক্ষা সিটিজেন শিল্ড' : activeView === 'profile' ? 'সার্বভৌম পরিচয়পত্র' : 'কমান্ড সেন্টার'}
                   </h2>
                 </div>
                 <p className="text-muted-foreground text-xs md:text-sm font-body">
-                  {activeView === 'citizen' ? 'সিরাজগঞ্জ পাবলিক সেফটি পোর্টাল' : activeView === 'profile' ? 'আপনার রাজকীয় পরিচয় ও ফরেনসিক তথ্য' : 'DEOS অটোনোমাস ডিসপ্যাচ গ্রিড'}
+                  {activeView === 'citizen' ? 'সরাসরি প্রশাসনকে সিগন্যাল পাঠান' : activeView === 'profile' ? 'আপনার রাজকীয় পরিচয় ও ফরেনসিক তথ্য' : 'DEOS অটোনোমাস ডিসপ্যাচ গ্রিড'}
                 </p>
               </div>
             </div>
 
             {activeView === 'citizen' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
-                <div className="lg:col-span-3 space-y-6 order-1">
-                  <SOSButton />
+              <div className="max-w-md mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-5">
+                <div className="text-center space-y-2">
+                  <Badge className="bg-primary/20 text-primary border-primary/40 uppercase tracking-[0.2em] font-bold text-[10px] px-4 py-1">Secure Sovereign Interface</Badge>
+                  <p className="text-xs text-muted-foreground italic">আপনার প্রতিটি সিগন্যাল সরাসরি ৪২টি নোডের মাধ্যমে কন্ট্রোল রুমে পৌঁছাবে।</p>
+                </div>
+                <SOSButton />
+                <div className="grid grid-cols-1 gap-6">
                   <AIAdviceTool />
-                  <DisasterFeed />
-                </div>
-                <div className="lg:col-span-6 space-y-6 order-2">
-                  <RiverTelemetry />
-                  <ResourceMap />
-                </div>
-                <div className="lg:col-span-3 space-y-6 order-3">
                   <IncidentReport />
-                  <EmergencyDirectory />
+                </div>
+                <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl flex items-center justify-between">
+                   <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-accent/10 rounded-full flex items-center justify-center">
+                        <SignalHigh className="text-accent animate-pulse" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold">Signal Status: Strong</p>
+                        <p className="text-[10px] text-muted-foreground">Connected via core.sheikh</p>
+                      </div>
+                   </div>
+                   <Badge variant="outline" className="text-[8px] border-accent/30 text-accent">ENCRYPTED</Badge>
                 </div>
               </div>
             )}
