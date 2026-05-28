@@ -21,6 +21,7 @@ import { BankDirectory } from '@/components/treasury/bank-directory'
 import { AlertCenter } from '@/components/dashboard/alert-center'
 import { SovereignStatusWidget } from '@/components/dashboard/sovereign-status-widget'
 import { AuditPanel } from '@/components/dashboard/audit-panel'
+import { ImperialOverview } from '@/components/dashboard/imperial-overview'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -90,12 +91,9 @@ export default function ShurukkhaDashboard() {
 
   useEffect(() => {
     if (user && firestore) {
-      // Imperial Decree: Hardcoded Admin Assignment
       const isAdmin = user.email === 'rubels1k994@gmail.com';
-      
       const userRef = doc(firestore, "users", user.uid);
       
-      // Fetch role first to avoid overwriting manually set roles (except for the admin decree)
       getDoc(userRef).then(snap => {
         const data = snap.data();
         const currentRole = isAdmin ? 'admin' : (data?.role || 'citizen');
@@ -110,7 +108,6 @@ export default function ShurukkhaDashboard() {
           deviceFingerprint: DeviceValidator.generateFingerprint()
         }, { merge: true });
 
-        // Set default view based on role
         if (currentRole === 'admin' || currentRole === 'authority') {
           setActiveView('ops');
         }
@@ -134,7 +131,6 @@ export default function ShurukkhaDashboard() {
     }, 1000);
 
     const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
-
     SovereignAudit.logMilestone('Phase_31.0', 'Admin Decree: rubels1k994@gmail.com Elevated to Sovereign Admin');
 
     return () => {
@@ -150,9 +146,7 @@ export default function ShurukkhaDashboard() {
     AutonomousOrchestrator.setAutoMode(enabled)
     toast({
       title: enabled ? "Autonomous Mode Enabled" : "Manual Mode Enabled",
-      description: enabled 
-        ? "সিস্টেম এখন স্বয়ংক্রিয়ভাবে ডিসপ্যাচ ম্যানেজ করবে।" 
-        : "কর্তৃপক্ষকে এখন ম্যানুয়ালি ডিসপ্যাচ হ্যান্ডেল করতে হবে।",
+      description: enabled ? "সিস্টেম এখন স্বয়ংক্রিয়ভাবে ডিসপ্যাচ ম্যানেজ করবে।" : "কর্তৃপক্ষকে এখন ম্যানুয়ালি ডিসপ্যাচ হ্যান্ডেল করতে হবে।",
       variant: enabled ? "default" : "outline"
     })
   }
@@ -168,7 +162,6 @@ export default function ShurukkhaDashboard() {
   const syncOfflineData = async () => {
     const reports = DisasterStorage.getReports()
     if (reports.length === 0 || !firestore) return
-
     setIsSyncing(true)
     try {
       for (const report of reports) {
@@ -252,14 +245,11 @@ export default function ShurukkhaDashboard() {
                     <Sparkles size={14} /> ফিচার ট্যুর
                   </Button>
                 </Link>
-                
                 <div className="hidden xl:flex items-center gap-2 px-3 py-1 bg-accent/5 border border-accent/20 rounded-full">
                   <Lock size={12} className="text-accent" />
                   <span className="text-[9px] font-mono text-accent uppercase tracking-tighter">Encrypted_Session_Active</span>
                 </div>
-                
                 <SovereignStatusWidget />
-                
                 {user ? (
                   <div className="flex items-center gap-3">
                     <div className="hidden sm:block text-right">
@@ -281,30 +271,20 @@ export default function ShurukkhaDashboard() {
                     </Button>
                   </Link>
                 )}
-
                 {(userRole === 'authority' || userRole === 'admin') && (
                   <div className="hidden md:flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-full border border-white/5">
                     <BrainCircuit size={14} className={isAutoMode ? "text-accent animate-pulse" : "text-muted-foreground"} />
                     <Label htmlFor="auto-mode" className="text-[10px] uppercase font-bold tracking-widest cursor-pointer">Auto</Label>
-                    <Switch 
-                      id="auto-mode" 
-                      checked={isAutoMode} 
-                      onCheckedChange={handleAutoModeToggle}
-                      className="scale-75 data-[state=checked]:bg-accent" 
-                    />
+                    <Switch id="auto-mode" checked={isAutoMode} onCheckedChange={handleAutoModeToggle} className="scale-75 data-[state=checked]:bg-accent" />
                   </div>
                 )}
               </div>
             </div>
           </header>
 
-          {isLockedDown && (
-            <div className="bg-destructive text-destructive-foreground py-1 text-center font-bold text-[8px] md:text-[10px] uppercase tracking-[0.3em] md:tracking-[0.5em] animate-pulse">
-              Sovereign Security Protocol Active
-            </div>
-          )}
-
           <main className="flex-1 container mx-auto px-4 py-4 md:py-8 overflow-x-hidden">
+            {(userRole === 'admin' || userRole === 'authority') && <ImperialOverview />}
+
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-3">
@@ -364,15 +344,12 @@ export default function ShurukkhaDashboard() {
                       <EmergencyDirectory />
                     </div>
                   </TabsContent>
-
                   <TabsContent value="analytics" className="space-y-6 mt-0">
                     <SystemHealth />
                   </TabsContent>
-
                   <TabsContent value="audits" className="space-y-6 mt-0">
                     <AuditPanel />
                   </TabsContent>
-
                   <TabsContent value="integrations" className="space-y-6 mt-0">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                       <div className="lg:col-span-12">
@@ -389,7 +366,6 @@ export default function ShurukkhaDashboard() {
                       </div>
                     </div>
                   </TabsContent>
-
                   <TabsContent value="treasury" className="space-y-6 mt-0">
                     <BankDirectory />
                   </TabsContent>
@@ -405,7 +381,6 @@ export default function ShurukkhaDashboard() {
           </footer>
         </div>
       </div>
-      
       <AlertCenter />
       <Toaster />
     </SidebarProvider>
