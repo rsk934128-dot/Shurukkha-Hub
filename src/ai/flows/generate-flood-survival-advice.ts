@@ -6,6 +6,8 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { SelfHealing } from '@/lib/self-healing';
+import { DataIntegrityGuardian } from '@/lib/data-integrity-guardian';
 
 const ShelterSchema = z.object({
   name: z.string().describe('আশ্রয়কেন্দ্রের নাম'),
@@ -38,6 +40,7 @@ const GenerateFloodSurvivalAdviceOutputSchema = z.object({
   safetyMeasures: z.array(z.string()).describe('পালনযোগ্য নিরাপত্তা ব্যবস্থা'),
   automaticAlertTriggered: z.boolean().describe('সিস্টেম থেকে অটোমেটিক এলার্ট ট্রিগার হয়েছে কিনা'),
   isLocalFallback: z.boolean().optional().describe('এপিআই ত্রুটির কারণে লোকাল মোডে জেনারেট হয়েছে কিনা'),
+  integrityReport: z.any().optional().describe('Data integrity check for local mode'),
 });
 export type GenerateFloodSurvivalAdviceOutput = z.infer<
   typeof GenerateFloodSurvivalAdviceOutputSchema
@@ -84,6 +87,8 @@ const generateFloodSurvivalAdviceFlow = ai.defineFlow(
         throw new Error('Flood Intelligence Engine failed to generate output.');
       }
 
+      SelfHealing.setAIStatus('ONLINE');
+
       if (output.riskLevel === 'Extreme') {
         console.log(`[EMERGENCY TRIGGER] Automated dispatch for ${input.currentLocation} initiated.`);
         output.automaticAlertTriggered = true;
@@ -92,6 +97,7 @@ const generateFloodSurvivalAdviceFlow = ai.defineFlow(
       return output;
     } catch (error) {
       console.warn(`[Sovereign Fallback] AI Engine offline (Forbidden/Limit). Executing Local Logic...`);
+      SelfHealing.setAIStatus('LOCAL_MODE');
       
       // Autonomous Fallback Logic
       const waterDiff = input.jamunaWaterLevel - input.dangerLevelThreshold;
@@ -104,7 +110,7 @@ const generateFloodSurvivalAdviceFlow = ai.defineFlow(
       const isEvacuation = riskLevel === 'High' || riskLevel === 'Extreme';
       const recommendedShelter = input.nearbyShelters[0]?.name || "নিকটস্থ উঁচু স্থান";
 
-      return {
+      const localResult: any = {
         riskLevel,
         advice: `[Sovereign Local Mode] পানির স্তর বর্তমানে ${input.jamunaWaterLevel} মি., যা বিপদসীমার ${waterDiff > 0 ? 'উপরে' : 'নিচে'}। জরুরি ভিত্তিতে প্রস্তুতি নিন।`,
         isEvacuationRecommended: isEvacuation,
@@ -120,8 +126,11 @@ const generateFloodSurvivalAdviceFlow = ai.defineFlow(
           "শুকনো খাবার ও বিশুদ্ধ পানি মজুত করুন।"
         ],
         automaticAlertTriggered: riskLevel === 'Extreme',
-        isLocalFallback: true
+        isLocalFallback: true,
+        integrityReport: DataIntegrityGuardian.verifyFloodAdvice(input.jamunaWaterLevel, riskLevel)
       };
+
+      return localResult;
     }
   }
 );

@@ -1,12 +1,14 @@
 /**
  * @fileOverview Autonomous Self-Healing Module.
  * Monitors system integrity and initiates automated countermeasures.
+ * Updated: Tracks AI Engine status (Cloud vs Local Fallback).
  */
 
-export type HealingStatus = 'OPTIMAL' | 'REPAIRING' | 'HARDENED' | 'MAINTENANCE';
+export type HealingStatus = 'OPTIMAL' | 'REPAIRING' | 'HARDENED' | 'MAINTENANCE' | 'LOCAL_FALLBACK';
 
 export const SelfHealing = {
   status: 'OPTIMAL' as HealingStatus,
+  aiStatus: 'ONLINE' as 'ONLINE' | 'LOCAL_MODE',
   lastIncident: null as string | null,
   activeCountermeasures: [] as string[],
 
@@ -36,8 +38,21 @@ export const SelfHealing = {
     };
   },
 
+  /**
+   * Updates the global AI Engine status.
+   */
+  setAIStatus: (status: 'ONLINE' | 'LOCAL_MODE') => {
+    SelfHealing.aiStatus = status;
+    if (status === 'LOCAL_MODE') {
+      SelfHealing.status = 'LOCAL_FALLBACK';
+    } else {
+      SelfHealing.status = 'OPTIMAL';
+    }
+  },
+
   getStatus: () => ({
     status: SelfHealing.status,
+    aiStatus: SelfHealing.aiStatus,
     activeCountermeasures: SelfHealing.activeCountermeasures,
     lastIncident: SelfHealing.lastIncident
   })

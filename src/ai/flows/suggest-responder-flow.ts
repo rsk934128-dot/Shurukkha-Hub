@@ -7,6 +7,8 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { SelfHealing } from '@/lib/self-healing';
+import { DataIntegrityGuardian } from '@/lib/data-integrity-guardian';
 
 const ResponderSchema = z.object({
   id: z.string(),
@@ -29,6 +31,7 @@ const SuggestResponderOutputSchema = z.object({
   priority: z.enum(['Low', 'Medium', 'High', 'Critical']).describe('Urgency level'),
   estimatedArrivalTime: z.string().describe('ETA to the location'),
   isLocalFallback: z.boolean().optional(),
+  integrityReport: z.any().optional(),
 });
 export type SuggestResponderOutput = z.infer<typeof SuggestResponderOutputSchema>;
 
@@ -71,9 +74,11 @@ const suggestResponderFlow = ai.defineFlow(
       if (!output) {
         throw new Error('Responder Dispatch Engine failed to generate output.');
       }
+      SelfHealing.setAIStatus('ONLINE');
       return output;
     } catch (error) {
       console.warn(`[Dispatch Fallback] AI Offline. Executing Heuristic Dispatching...`);
+      SelfHealing.setAIStatus('LOCAL_MODE');
       
       // Logical fallback: Match SOS type to Responder type
       let bestResponder = input.availableResponders[0];
@@ -94,7 +99,8 @@ const suggestResponderFlow = ai.defineFlow(
         reasoning: `[Sovereign Fallback] ইমার্জেন্সি টাইপ '${input.sosType}' অনুযায়ী ${bestResponder.name} (${bestResponder.type}) টিমকে সবচেয়ে উপযুক্ত মনে করা হয়েছে।`,
         priority: priority as any,
         estimatedArrivalTime: "১০-১৫ মিনিট",
-        isLocalFallback: true
+        isLocalFallback: true,
+        integrityReport: DataIntegrityGuardian.verifyResponder(input.sosType, bestResponder.type)
       };
     }
   }

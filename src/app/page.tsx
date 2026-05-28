@@ -18,6 +18,7 @@ import { SovereignNetworkMap } from '@/components/dashboard/sovereign-network-ma
 import { SovereignDomainManager } from '@/components/dashboard/sovereign-domain-manager'
 import { BankDirectory } from '@/components/treasury/bank-directory'
 import { AlertCenter } from '@/components/dashboard/alert-center'
+import { SovereignStatusWidget } from '@/components/dashboard/sovereign-status-widget'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -138,6 +139,8 @@ export default function ShurukkhaDashboard() {
           </div>
           
           <div className="flex items-center gap-2 md:gap-6">
+            <SovereignStatusWidget />
+            
             <Link href="/partnerships" className="hidden sm:block">
               <Button variant="ghost" size="sm" className={`h-8 text-[10px] font-bold gap-2 ${isLockedDown ? 'text-destructive' : 'text-primary/60 hover:text-primary'}`}>
                 <Globe size={14} /> PARTNERSHIP
