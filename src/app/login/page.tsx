@@ -49,7 +49,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (user && !loading && !isHandshaking && !show2FA && !showBiometric && !showSecurityKey) {
       if (AuthGuard.isValidSession()) {
-        router.push('/')
+        router.push('/dashboard')
       } else {
         performHandshake()
       }
@@ -97,7 +97,7 @@ export default function LoginPage() {
           title: "Sovereign Handshake ACTIVE",
           description: "আপনার সেশন এনক্রিপ্ট করা হয়েছে।",
         })
-        router.push('/')
+        router.push('/dashboard')
       } else {
         throw new Error("Handshake Denied")
       }
@@ -110,7 +110,7 @@ export default function LoginPage() {
           title: "OFFLINE MODE ACTIVE",
           description: "সার্ভারের সাথে সংযোগ নেই, লোকাল সেশন ব্যবহার করা হচ্ছে।",
         })
-        router.push('/')
+        router.push('/dashboard')
       } else {
         toast({
           title: "AUTH_FAILURE",
@@ -138,7 +138,7 @@ export default function LoginPage() {
       if (data.status === 'VERIFIED') {
         AuthGuard.establishSession(data.upgradeToken);
         toast({ title: "2FA ভেরিফিকেশন সফল", description: "সাম্রাজ্যে স্বাগতম।" });
-        router.push('/');
+        router.push('/dashboard');
         return true;
       }
       return false;
@@ -156,7 +156,7 @@ export default function LoginPage() {
       AuthGuard.establishSession(fakeToken);
       localStorage.setItem('sovereign_device_id', DeviceValidator.generateFingerprint());
       toast({ title: "বায়োমেট্রিক প্রবেশ সফল", description: "আপনার ডিভাইস সার্বভৌমভাবে স্বীকৃত হয়েছে।" });
-      router.push('/');
+      router.push('/dashboard');
     }
   }
 
@@ -166,7 +166,7 @@ export default function LoginPage() {
     AuthGuard.establishSession(fakeToken);
     localStorage.setItem('sovereign_device_id', DeviceValidator.generateFingerprint());
     toast({ title: "সিকিউরিটি কী শনাক্ত হয়েছে", description: "ইম্পেরিয়াল অ্যাক্সেস গ্র্যান্ট করা হয়েছে।" });
-    router.push('/');
+    router.push('/dashboard');
   }
 
   const handleGoogleLogin = async () => {

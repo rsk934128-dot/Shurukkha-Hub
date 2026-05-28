@@ -1,385 +1,395 @@
+
 "use client"
 
-import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode, MessageSquare } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { 
+  Shield, 
+  Zap, 
+  BrainCircuit, 
+  Landmark, 
+  Globe, 
+  ArrowRight, 
+  CheckCircle2, 
+  Waves, 
+  Radio, 
+  Lock,
+  ArrowLeft,
+  Cpu,
+  Star,
+  Activity,
+  ShieldAlert,
+  Server,
+  Fingerprint,
+  Swords,
+  ChevronRight,
+  Sparkles
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { SOSButton } from '@/components/dashboard/sos-button'
-import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
-import { AIAdviceTool } from '@/components/intelligence/ai-advice-tool'
-import { EmergencyDirectory } from '@/components/dashboard/emergency-directory'
-import { IncidentReport } from '@/components/dashboard/incident-report'
-import { ResourceMap } from '@/components/dashboard/resource-map'
-import { DisasterFeed } from '@/components/dashboard/disaster-feed'
-import { DispatcherConsole } from '@/components/dashboard/dispatcher-console'
-import { IntegrationPanel } from '@/components/dashboard/integration-panel'
-import { SystemHealth } from '@/components/dashboard/system-health'
-import { NetworkStatusBoard } from '@/components/dashboard/network-status-board'
-import { SovereignNetworkMap } from '@/components/dashboard/sovereign-network-map'
-import { SovereignDomainManager } from '@/components/dashboard/sovereign-domain-manager'
-import { BankDirectory } from '@/components/treasury/bank-directory'
-import { AlertCenter } from '@/components/dashboard/alert-center'
-import { SovereignStatusWidget } from '@/components/dashboard/sovereign-status-widget'
-import { AuditPanel } from '@/components/dashboard/audit-panel'
-import { ImperialOverview } from '@/components/dashboard/imperial-overview'
-import { SovereignIDCard } from '@/components/dashboard/sovereign-id-card'
-import { IncidentReviewBoard } from '@/components/dashboard/incident-review-board'
-import { CommunicationConsole } from '@/components/dashboard/communication-console'
-import { Toaster } from '@/components/ui/toaster'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
-import { DisasterStorage } from '@/lib/disaster-storage'
-import { useFirestore, useUser, useAuth } from '@/firebase'
-import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc } from 'firebase/firestore'
-import { useToast } from '@/hooks/use-toast'
-import { AutonomousOrchestrator } from '@/lib/orchestrator'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { IntegrationBridge } from '@/lib/integration-bridge'
-import { SovereignAudit } from '@/lib/sovereign-audit'
 import Link from 'next/link'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { signOut } from 'firebase/auth'
-import { AuthGuard } from '@/lib/auth-guard'
-import { DeviceValidator } from '@/lib/device-fingerprint-validator'
-import { useRouter } from 'next/navigation'
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
-import { AppSidebar } from '@/components/layout/app-sidebar'
 import { AppLogo } from '@/components/ui/app-logo'
-import { CommunicationOrchestrator } from '@/lib/communication-orchestrator'
+import { useUser } from '@/firebase'
 
-export default function ShurukkhaDashboard() {
-  const [isOffline, setIsOffline] = useState(false)
-  const [userRole, setUserRole] = useState<'citizen' | 'authority' | 'admin'>('citizen')
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [isAutoMode, setIsAutoMode] = useState(false)
-  const [isLockedDown, setIsLockedDown] = useState(false)
-  const [sessionValid, setSessionValid] = useState(true)
-  const [activeView, setActiveView] = useState('citizen')
-  const [activeSubTab, setActiveSubTab] = useState('ops')
-  const [survivalMode, setSurvivalMode] = useState(false)
-  
-  const firestore = useFirestore()
-  const auth = useAuth()
-  const { user, loading: authLoading } = useUser()
-  const { toast } = useToast()
-  const router = useRouter()
+export default function WelcomeLanding() {
+  const [scrolled, setScrolled] = useState(false)
+  const { user } = useUser()
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login')
-      return
-    }
-
-    if (user && !AuthGuard.isValidSession()) {
-      setSessionValid(false)
-      toast({
-        title: "সেশন শেষ হয়েছে",
-        description: "নিরাপত্তার স্বার্থে আবার লগইন করুন।",
-        variant: "destructive"
-      })
-      router.push('/login')
-    }
-
-    const storedFp = localStorage.getItem('sovereign_device_id')
-    if (storedFp && !DeviceValidator.validateIntegrity(storedFp)) {
-      handleEmergencyKillSwitch()
-      toast({
-        title: "SECURITY VIOLATION",
-        description: "অননুমোদিত ডিভাইস শনাক্ত হয়েছে। সিস্টেম লকডাউন করা হচ্ছে।",
-        variant: "destructive"
-      })
-    }
-  }, [user, authLoading, router])
-
-  useEffect(() => {
-    if (user && firestore) {
-      const isAdmin = user.email === 'rubels1k994@gmail.com';
-      const userRef = doc(firestore, "users", user.uid);
-      
-      const fetchRole = async () => {
-        try {
-          const snap = await getDoc(userRef);
-          const data = snap.data();
-          const currentRole = isAdmin ? 'admin' : (data?.role || 'citizen');
-          setUserRole(currentRole as any);
-
-          setDoc(userRef, {
-            displayName: user.displayName,
-            email: user.email,
-            photoURL: user.photoURL,
-            role: currentRole,
-            lastLogin: new Date().toISOString(),
-            deviceFingerprint: DeviceValidator.generateFingerprint()
-          }, { merge: true });
-
-          if (currentRole === 'admin' || currentRole === 'authority') {
-            setActiveView('ops');
-          }
-        } catch (e) {
-          console.warn("[Dashboard] Role fetch failed. Defaulting to citizen/cached role.");
-          const currentRole = isAdmin ? 'admin' : 'citizen';
-          setUserRole(currentRole as any);
-        }
-      };
-
-      fetchRole();
-    }
-  }, [user, firestore])
-
-  useEffect(() => {
-    const handleConnectivityChange = () => {
-      const online = navigator.onLine;
-      setIsOffline(!online);
-      CommunicationOrchestrator.getInstance().setConnectivity(online);
-      
-      if (online) {
-        setSurvivalMode(false);
-        syncOfflineData();
-      } else {
-        setSurvivalMode(true);
-        toast({
-          title: "SURVIVAL MODE ACTIVE",
-          description: "ইন্টারনেট নেই। অফলাইন কিউয়িং শুরু হয়েছে।",
-          variant: "destructive"
-        });
-      }
-    };
-    
-    window.addEventListener('online', handleConnectivityChange)
-    window.addEventListener('offline', handleConnectivityChange)
-    handleConnectivityChange();
-    
-    const interval = setInterval(() => {
-      setIsLockedDown(IntegrationBridge.isLocked);
-    }, 1000);
-
-    const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
-    SovereignAudit.logMilestone('Phase_31.0', 'Engineering Milestone: Sovereign Shield Expansion Active');
-
-    return () => {
-      window.removeEventListener('online', handleConnectivityChange)
-      window.removeEventListener('offline', handleConnectivityChange)
-      unsubscribeOrchestrator()
-      clearInterval(interval);
-    }
+    const handleScroll = () => setScrolled(window.scrollY > 50)
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const handleAutoModeToggle = (enabled: boolean) => {
-    setIsAutoMode(enabled)
-    AutonomousOrchestrator.setAutoMode(enabled)
-    toast({
-      title: enabled ? "Autonomous Mode Enabled" : "Manual Mode Enabled",
-      description: enabled ? "সিস্টেম এখন স্বয়ংক্রিয়ভাবে ডিসপ্যাচ ম্যানেজ করবে।" : "কর্তৃপক্ষকে এখন ম্যানুয়ালি ডিসপ্যাচ হ্যান্ডেল করতে হবে।",
-      variant: enabled ? "default" : "outline"
-    })
-  }
-
-  const handleEmergencyKillSwitch = () => {
-    setIsAutoMode(false)
-    AutonomousOrchestrator.setAutoMode(false)
-    IntegrationBridge.setLockdown(true)
-    sessionStorage.clear()
-    localStorage.removeItem('sovereign_session_token')
-    router.push('/login')
-  }
-
-  const syncOfflineData = async () => {
-    const reports = DisasterStorage.getReports()
-    if (reports.length === 0 || !firestore) return
-    setIsSyncing(true)
-    try {
-      for (const report of reports) {
-        await addDoc(collection(firestore, "incidents"), {
-          ...report,
-          timestamp: serverTimestamp(),
-          syncedFromOffline: true
-        })
-      }
-      DisasterStorage.clearReports()
-      toast({ title: "অফলাইন ডেটা সিঙ্ক সফল" })
-    } catch (e) {
-      console.error("Sync Failed", e)
-    } finally {
-      setIsSyncing(false)
-    }
-  }
-
-  const handleLogout = async () => {
-    if (auth) {
-      try {
-        sessionStorage.clear()
-        localStorage.removeItem('sovereign_session_token')
-        localStorage.removeItem('sovereign_session_expiry')
-        await signOut(auth)
-        toast({ title: "সফলভাবে লগআউট করা হয়েছে" })
-        window.location.href = '/login';
-      } catch (e) {
-        toast({ title: "লগআউট ব্যর্থ হয়েছে", variant: "destructive" })
-      }
-    }
-  }
-
-  const handleSidebarNavigate = (view: string) => {
-    setActiveView(view);
-    if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile', 'messages'].includes(view)) {
-      setActiveSubTab(view);
-    }
-  }
-
-  if (authLoading || (user && !sessionValid)) {
-    return (
-      <div className="min-h-screen bg-[#05070a] flex flex-col items-center justify-center gap-8">
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary/20 blur-3xl animate-pulse rounded-full" />
-          <AppLogo size={120} className="animate-sos-pulse relative z-10" />
-        </div>
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex items-center gap-2">
-            <Loader2 className="animate-spin text-primary" size={16} />
-            <p className="text-[10px] uppercase tracking-[0.4em] font-bold text-primary animate-pulse">Establishing Sovereign Handshake...</p>
-          </div>
-          <p className="text-[8px] text-muted-foreground font-mono">PROJECT_ID: 42ND_ARCHIVE | v31.0</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <SidebarProvider>
-      <div className={`flex min-h-screen w-full text-foreground transition-all duration-500 ${isLockedDown ? 'grayscale-[0.5] contrast-125' : ''}`}>
-        <AppSidebar userRole={userRole} onNavigate={handleSidebarNavigate} onLogout={handleLogout} activeTab={activeView} />
-        
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className={`sticky top-0 z-40 border-b transition-colors duration-500 ${isLockedDown ? 'bg-destructive/20 border-destructive/40' : 'bg-background/80 border-white/5'} backdrop-blur-lg`}>
-            <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <SidebarTrigger className="h-10 w-10 md:hidden" />
-                <AppLogo size={32} variant={isLockedDown ? 'accent' : 'default'} className="md:w-10 md:h-10" />
-                <div className="hidden xs:block">
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-sm md:text-xl font-headline font-bold tracking-tighter leading-none uppercase">SHURUKKHA</h1>
-                    <Badge variant="outline" className="hidden lg:flex h-4 text-[7px] border-primary/20 text-primary uppercase tracking-[0.2em] font-bold">
-                      <Star size={8} fill="currentColor" className="mr-1" /> 42nd Project
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-1 md:gap-2">
-                    <span className="text-[8px] md:text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">v31.0_SOVEREIGN</span>
-                    {isLockedDown && <Badge variant="destructive" className="h-3 md:h-4 text-[6px] md:text-[8px] animate-pulse px-1">LOCKDOWN</Badge>}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2 md:gap-6 flex-1 justify-end">
-                <div className="flex items-center gap-1">
-                  <Button 
-                    variant={activeView === 'citizen' ? 'default' : 'outline'} 
-                    size="sm" 
-                    onClick={() => setActiveView('citizen')}
-                    className="h-8 text-[8px] font-bold gap-1 rounded-full border-primary/20"
-                  >
-                    <Smartphone size={12} /> CITIZEN SHIELD
-                  </Button>
-                  <Button 
-                    variant={activeView === 'messages' ? 'default' : 'outline'} 
-                    size="sm" 
-                    onClick={() => setActiveView('messages')}
-                    className="h-8 text-[8px] font-bold gap-1 rounded-full border-primary/20"
-                  >
-                    <MessageSquare size={12} /> MESSAGES
-                  </Button>
-                </div>
-                {survivalMode && (
-                  <Badge variant="destructive" className="animate-pulse gap-1 text-[8px] h-6 px-2">
-                    <SignalLow size={10} /> SURVIVAL_MODE
-                  </Badge>
-                )}
-                <SovereignStatusWidget />
-                {user && (
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8 border border-primary/20 cursor-pointer" onClick={() => handleSidebarNavigate('profile')}>
-                      <AvatarImage src={user.photoURL || ''} />
-                      <AvatarFallback className="bg-primary/10 text-[10px]">{user.displayName?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                  </div>
-                )}
+    <div className="min-h-screen bg-[#05070a] text-foreground font-body overflow-x-hidden selection:bg-primary/30">
+      {/* Immersive Background Effects */}
+      <div className="fixed inset-0 bg-primary/5 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] pointer-events-none z-0" />
+      <div className="fixed top-0 left-0 w-full h-[800px] bg-gradient-to-b from-primary/10 via-transparent to-transparent pointer-events-none z-0" />
+      
+      {/* Huge Background Watermark */}
+      <div className="fixed top-1/4 -right-48 opacity-[0.02] rotate-12 pointer-events-none z-0">
+        <AppLogo size={1000} />
+      </div>
+
+      {/* Persistent Navigation */}
+      <nav className={`fixed top-0 w-full z-[100] transition-all duration-500 border-b ${scrolled ? 'bg-background/80 backdrop-blur-xl border-white/10 py-4' : 'bg-transparent border-transparent py-8'}`}>
+        <div className="container mx-auto px-6 flex justify-between items-center">
+          <div className="flex items-center gap-3 group cursor-pointer">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 blur-xl group-hover:blur-2xl transition-all rounded-full" />
+              <AppLogo size={48} className="relative z-10" />
+            </div>
+            <div>
+              <h1 className="text-xl font-headline font-bold tracking-tighter uppercase leading-none">SHURUKKHA HUB</h1>
+              <p className="text-[8px] text-primary/60 uppercase font-bold tracking-[0.3em] mt-1">Sovereign Infrastructure</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-6">
+            <div className="hidden lg:flex items-center gap-8 mr-8">
+              {['Home', 'Modules', 'Security', 'Anycast'].map((item) => (
+                <a key={item} href={`#${item.toLowerCase()}`} className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground hover:text-primary transition-colors">
+                  {item}
+                </a>
+              ))}
+            </div>
+            <Link href={user ? "/dashboard" : "/login"}>
+              <Button className="h-10 px-6 bg-primary text-background font-bold text-xs rounded-full gap-2 shadow-[0_0_20px_rgba(117,151,255,0.3)] hover:scale-105 transition-transform active:scale-95">
+                {user ? "OPEN DASHBOARD" : "ENTER EMPIRE"} <ArrowRight size={14} />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      <main className="relative z-10">
+        {/* Hero Section */}
+        <section id="home" className="container mx-auto px-6 pt-52 pb-40 text-center relative">
+          <div className="flex justify-center mb-12 animate-in zoom-in duration-1000">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-primary/20 blur-3xl animate-pulse rounded-full group-hover:bg-primary/30 transition-all" />
+              <AppLogo size={200} className="animate-sos-pulse relative z-10" />
+              <div className="absolute -top-4 -right-4">
+                 <Badge variant="outline" className="border-accent/40 text-accent py-1 px-4 gap-2 animate-bounce bg-accent/5 uppercase font-bold tracking-widest text-[10px]">
+                   <Star size={12} fill="currentColor" /> PHASE 31.0 SOVEREIGN
+                 </Badge>
               </div>
             </div>
-          </header>
+          </div>
+          
+          <h2 className="text-6xl md:text-9xl font-headline font-bold leading-tight mb-8 tracking-tighter animate-in slide-in-from-bottom-10 duration-700">
+            সিরাজগঞ্জ সুরক্ষা: <br />
+            <span className="text-primary bg-clip-text">সার্বভৌমত্বের</span> নতুন দিগন্ত
+          </h2>
+          
+          <p className="max-w-2xl mx-auto text-muted-foreground text-lg md:text-2xl mb-16 leading-relaxed font-light animate-in slide-in-from-bottom-20 duration-1000">
+            এটি কেবল একটি অ্যাপ নয়; এটি একটি ডিস্ট্রিক্ট-স্কেল মিশন-ক্রিটিকাল ইমার্জেন্সি ইনফ্রাস্ট্রাকচার। 
+            এআই-চালিত দুর্যোগ ব্যবস্থাপনা এবং সভারেন পেমেন্ট গ্রিডের এক অপূর্ব সমন্বয়।
+          </p>
+          
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-8 animate-in slide-in-from-bottom-24 duration-1000">
+            <Link href={user ? "/dashboard" : "/login"} className="w-full sm:w-auto">
+              <Button size="lg" className="h-20 px-12 bg-primary text-background font-bold text-2xl rounded-[2.5rem] gap-4 w-full shadow-[0_0_60px_rgba(117,151,255,0.4)] transition-all hover:scale-105 active:scale-95 group">
+                {user ? "ড্যাশবোর্ডে ফিরে যান" : "সাম্রাজ্যে প্রবেশ করুন"} <Zap size={28} className="fill-current group-hover:rotate-12 transition-transform" />
+              </Button>
+            </Link>
+            <Button size="lg" variant="outline" className="h-20 px-12 border-white/10 font-bold text-2xl rounded-[2.5rem] gap-4 w-full sm:w-auto bg-white/5 hover:bg-white/10 transition-all border-dashed">
+              ফিচারগুলো দেখুন <ChevronRight size={28} />
+            </Button>
+          </div>
 
-          <main className="flex-1 container mx-auto px-4 py-4 md:py-8 overflow-x-hidden">
-            {(userRole === 'admin' || userRole === 'authority') && activeView !== 'profile' && activeView !== 'citizen' && activeView !== 'messages' && <ImperialOverview />}
+          <div className="mt-24 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto border-t border-white/5 pt-12 opacity-50">
+             {[
+               { label: 'Latency', val: '0.004ms' },
+               { label: 'Uptime', val: 'Sovereign' },
+               { label: 'Grid Nodes', val: '42' },
+               { label: 'Integrity', val: '100%' }
+             ].map((stat, idx) => (
+               <div key={idx} className="text-center">
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-primary/60">{stat.label}</p>
+                  <p className="text-xl font-headline font-bold text-foreground mt-1">{stat.val}</p>
+               </div>
+             ))}
+          </div>
+        </section>
 
-            {activeView === 'citizen' && (
-              <div className="max-w-md mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-5">
-                <div className="text-center space-y-2">
-                  <Badge className="bg-primary/20 text-primary border-primary/40 uppercase tracking-[0.2em] font-bold text-[10px] px-4 py-1">Secure Sovereign Interface</Badge>
-                  <p className="text-xs text-muted-foreground italic">আপনার প্রতিটি সিগন্যাল সরাসরি ৪২টি নোডের মাধ্যমে কন্ট্রোল রুমে পৌঁছাবে।</p>
+        {/* Feature Showcase Grid */}
+        <section id="modules" className="container mx-auto px-6 py-40 border-t border-white/5 relative bg-white/[0.01]">
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/grid.png')] opacity-10 pointer-events-none" />
+          
+          <div className="text-center mb-32">
+            <Badge variant="outline" className="mb-4 border-primary/20 text-primary py-1 px-4 uppercase tracking-[0.3em] font-bold text-[10px]">Command Center Core</Badge>
+            <h3 className="text-4xl md:text-6xl font-headline font-bold mb-6 uppercase tracking-widest">অজেয় প্রতিরক্ষা মডিউল</h3>
+            <div className="w-32 h-1.5 bg-gradient-to-r from-transparent via-primary to-transparent mx-auto rounded-full" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            {/* Module 1: Flood Intelligence */}
+            <FeatureCard 
+              icon={Waves}
+              title="River Intelligence"
+              tag="AI Powered"
+              desc="যমুনা নদীর রিয়েল-টাইম পানির স্তর মনিটরিং এবং জেমিনি ২.৫ ফ্ল্যাশ এআই ব্যবহার করে জীবন রক্ষাকারী লোকাল ফ্লাড অ্যাডভাইস জেনারেশন।"
+              cases={["লোকাল ফ্লাড অ্যাডভাইস", "বিপদসীমা সতর্কতা", "অফলাইন ইন্টেলিজেন্স"]}
+              color="text-cyan-400"
+              glow="shadow-cyan-500/20"
+            />
+
+            {/* Module 2: SOS & Dispatch */}
+            <FeatureCard 
+              icon={Radio}
+              title="Autonomous Dispatcher"
+              tag="Mission Critical"
+              desc="এক ক্লিকে SOS ট্রিগার এবং এআই-চালিত অটোনোমাস ডিসপ্যাচ ইঞ্জিন যা সঠিক রেসপন্ডারকে ঘটনাস্থলে দ্রুত পাঠিয়ে দেয়।"
+              cases={["১-ক্লিক ইমার্জেন্সি রেসকিউ", "স্মার্ট রেসপন্ডার সিলেকশন", "লাইভ ভিডিও HUD"]}
+              color="text-red-400"
+              glow="shadow-red-500/20"
+            />
+
+            {/* Module 3: Sovereign Economy */}
+            <FeatureCard 
+              icon={Landmark}
+              title="Sovereign Treasury"
+              tag="Imperial Tax"
+              desc="১.৫% সার্ভিস ফি সহ মার্চেন্ট ট্রানজেকশন ইঞ্জিন। স্ট্রাইপ এবং বিকাশ ইন্টিগ্রেশনের মাধ্যমে ১৫৫+ দেশের ব্যাংকিং নোড কানেক্টিভিটি।"
+              cases={["অটোমেটেড রেভিনিউ কালেকশন", "গ্লোবাল ব্যাংকিং ডিরেক্টরি", "এটমিক সেটলমেন্ট"]}
+              color="text-amber-400"
+              glow="shadow-amber-500/20"
+            />
+
+            {/* Module 4: Imperial Security */}
+            <FeatureCard 
+              icon={Lock}
+              title="Sentinel Matrix"
+              tag="RSA v2 Bridge"
+              desc="SHA256withRSA ডিজিটাল সিগনেচার এবং টিওটিপি (Google Authenticator) দ্বারা সুরক্ষিত ইমিউটেবল অডিট ট্রেইল ও সিকিউরিটি গার্ড।"
+              cases={["২-স্তরীয় সুরক্ষা (2FA)", "ডিজিটাল ফরেনসিক স্ন্যাপশট", "অটো-লকডাউন প্রোটোকল"]}
+              color="text-blue-400"
+              glow="shadow-blue-500/20"
+            />
+
+            {/* Module 5: Intelligence Unit */}
+            <FeatureCard 
+              icon={BrainCircuit}
+              title="Counter Intelligence"
+              tag="Offensive Mode"
+              desc="আক্রমণকারীদের ডিজিটাল ডিএনএ (Fingerprint) ম্যাপ করা এবং তাদের বিরুদ্ধে অটোনোমাস কাউন্টার-স্ট্রাইক ও লজিক ট্র্যাপ সক্রিয় করা।"
+              cases={["সন্দেহভাজন প্রোফাইলিং", "আইডেন্টিটি কোরিলেশন", "লাইভ থ্রেট ভেক্টর ম্যাপ"]}
+              color="text-purple-400"
+              glow="shadow-purple-500/20"
+            />
+
+            {/* Module 6: Global Grid */}
+            <FeatureCard 
+              icon={Globe}
+              title="Anycast Network"
+              tag="Project 42"
+              desc="৪২টি ডিস্ট্রিবিউটেড নোডের মাধ্যমে core.sheikh ডোমেইন পরিচালনা এবং সেল্ফ-হিলিং নেটওয়ার্ক অটোমেশন।"
+              cases={["প্রাইভেট DNS ম্যানেজমেন্ট", "নোড হেলথ মনিটরিং", "লো-ল্যাটেন্সি গ্লোবাল ব্রিজ"]}
+              color="text-green-400"
+              glow="shadow-green-500/20"
+            />
+          </div>
+        </section>
+
+        {/* Technical Specification Section */}
+        <section id="security" className="container mx-auto px-6 py-40 relative">
+          <div className="max-w-5xl mx-auto">
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+                <div className="space-y-8">
+                   <div className="space-y-4">
+                      <h4 className="text-primary font-bold uppercase tracking-[0.4em] text-xs flex items-center gap-3">
+                         <Shield size={18} /> IMPERIAL SECURITY PROTOCOL
+                      </h4>
+                      <h3 className="text-4xl md:text-6xl font-headline font-bold leading-tight">
+                         আপনার সাম্রাজ্য, <br />
+                         আপনার <span className="text-primary italic">নিয়ম</span>।
+                      </h3>
+                   </div>
+                   <p className="text-muted-foreground text-lg leading-relaxed font-light">
+                      আমরা কোনো সাধারণ হোস্টিং বা ক্লাউড ব্যবহার করি না। আপনার প্রতিটি ডেটা ৪২টি ডিস্ট্রিবিউটেড নোডে এনক্রিপ্ট হয়ে জমা থাকে। এটি এমন এক সার্বভৌম নেটওয়ার্ক যা কোনো বাহ্যিক আক্রমণ বা সেন্সরশিপের ঊর্ধ্বে।
+                   </p>
+                   <div className="grid gap-6">
+                      {[
+                        { icon: Fingerprint, title: "Identity Fingerprinting", desc: "ডিভাইস আইডি এবং বায়োমেট্রিক দিয়ে প্রতিটি সেশন ভেরিফাই করা হয়।" },
+                        { icon: Server, title: "Decentralized Ledger", desc: "কোনো সেন্ট্রাল সার্ভার নেই, পুরো নেটওয়ার্কই আপনার সার্ভার।" },
+                        { icon: Activity, title: "Zero-Latency Dispatch", desc: "মিলি-সেকেন্ডের ব্যবধানে আপনার নির্দেশ মাঠপর্যায়ে পৌঁছে যায়।" }
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex gap-5 items-start">
+                           <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary border border-primary/20 shrink-0">
+                              <item.icon size={24} />
+                           </div>
+                           <div>
+                              <h5 className="font-headline font-bold text-lg">{item.title}</h5>
+                              <p className="text-sm text-muted-foreground">{item.desc}</p>
+                           </div>
+                        </div>
+                      ))}
+                   </div>
                 </div>
-                <SOSButton />
-                <div className="grid grid-cols-1 gap-6">
-                  <AIAdviceTool />
-                  <IncidentReport />
+
+                <div className="relative group">
+                   <div className="absolute -inset-10 bg-primary/20 blur-[100px] animate-pulse rounded-full opacity-50" />
+                   <Card className="bg-card/40 backdrop-blur-3xl border-primary/20 rounded-[3rem] overflow-hidden shadow-2xl relative z-10 p-2">
+                      <div className="aspect-square bg-slate-950 rounded-[2.5rem] relative flex items-center justify-center overflow-hidden border border-white/5">
+                         <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] opacity-20" />
+                         <AppLogo size={350} className="opacity-80" />
+                         <div className="absolute bottom-10 left-10 right-10">
+                            <div className="p-6 bg-black/60 backdrop-blur-md rounded-3xl border border-white/10 flex items-center justify-between">
+                               <div className="flex items-center gap-4">
+                                  <div className="w-10 h-10 bg-accent/20 rounded-xl flex items-center justify-center">
+                                     <Cpu className="text-accent animate-pulse" />
+                                  </div>
+                                  <div>
+                                     <p className="text-[10px] font-bold text-accent uppercase tracking-widest">System Integrity</p>
+                                     <p className="text-lg font-headline font-bold">100.0% PURE</p>
+                                  </div>
+                               </div>
+                               <Badge className="bg-accent text-background font-bold">ACTIVE</Badge>
+                            </div>
+                         </div>
+                      </div>
+                   </Card>
                 </div>
-                <Button 
-                  onClick={() => setActiveView('messages')}
-                  className="w-full h-12 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-2xl gap-3 font-bold"
-                >
-                  <MessageSquare size={20} /> কন্ট্রোল রুমের সাথে কথা বলুন
-                </Button>
-              </div>
-            )}
+             </div>
+          </div>
+        </section>
 
-            {activeView === 'messages' && (
-              <div className="h-[calc(100vh-180px)] max-w-5xl mx-auto w-full">
-                <CommunicationConsole />
+        {/* Global Grid Stats Section */}
+        <section id="anycast" className="container mx-auto px-6 py-40 border-t border-white/5 bg-primary/[0.02]">
+           <div className="max-w-4xl mx-auto text-center space-y-20">
+              <div className="space-y-6">
+                 <h3 className="text-3xl md:text-5xl font-headline font-bold uppercase tracking-widest">Global Anycast Distribution</h3>
+                 <p className="text-muted-foreground text-lg max-w-2xl mx-auto">সিরাজগঞ্জ সুরক্ষা এখন একটি বৈশ্বিক নোড নেটওয়ার্কের মাধ্যমে পরিচালিত। আপনার প্রতিটি রিকোয়েস্ট নিকটতম সভারেন নোড থেকে প্রসেস হয়।</p>
               </div>
-            )}
 
-            {activeView === 'profile' && (
-              <div className="max-w-4xl mx-auto">
-                <SovereignIDCard user={user} role={userRole} />
-              </div>
-            )}
-
-            {(activeView !== 'citizen' && activeView !== 'profile' && activeView !== 'messages') && (
-              <div className="w-full">
-                <Tabs value={activeSubTab} onValueChange={handleSidebarNavigate} className="w-full">
-                  <TabsContent value="ops" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
-                    <div className="lg:col-span-12 space-y-6 h-[calc(100vh-250px)]">
-                      <DispatcherConsole />
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="intelligence" className="space-y-6 mt-0">
-                    <IncidentReviewBoard />
-                  </TabsContent>
-                  <TabsContent value="analytics" className="space-y-6 mt-0">
-                    <SystemHealth />
-                  </TabsContent>
-                  <TabsContent value="audits" className="space-y-6 mt-0">
-                    <AuditPanel />
-                  </TabsContent>
-                  <TabsContent value="integrations" className="space-y-6 mt-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                      <div className="lg:col-span-12">
-                        <SovereignNetworkMap />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                 {[
+                   { icon: Globe, label: 'Global Nodes', val: '42' },
+                   { icon: Zap, label: 'Execution', val: '0.004ms' },
+                   { icon: ShieldAlert, label: 'Threat Blocks', val: '1.2M+' },
+                   { icon: Server, label: 'Core Version', val: 'v31.0' }
+                 ].map((stat, i) => (
+                   <div key={i} className="space-y-4 group">
+                      <div className="w-20 h-20 bg-card/60 border border-white/10 rounded-[2rem] flex items-center justify-center mx-auto group-hover:border-primary/40 transition-all duration-500 shadow-xl">
+                        <stat.icon className="text-primary group-hover:scale-110 transition-transform" size={32} />
                       </div>
-                      <div className="lg:col-span-12">
-                        <SovereignDomainManager />
+                      <div className="space-y-1">
+                         <p className="text-2xl font-headline font-bold">{stat.val}</p>
+                         <p className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">{stat.label}</p>
                       </div>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="treasury" className="space-y-6 mt-0">
-                    <BankDirectory />
-                  </TabsContent>
-                </Tabs>
+                   </div>
+                 ))}
               </div>
-            )}
-          </main>
-        </div>
+
+              <div className="p-8 bg-card/40 backdrop-blur-xl border border-white/5 rounded-[3rem] relative overflow-hidden">
+                 <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div className="flex items-center gap-6">
+                       <div className="relative">
+                          <div className="absolute inset-0 bg-primary/20 blur-xl animate-pulse rounded-full" />
+                          <AppLogo size={64} />
+                       </div>
+                       <div className="text-left">
+                          <h4 className="text-xl font-headline font-bold">Ready to take command?</h4>
+                          <p className="text-sm text-muted-foreground">আপনার ডিজিটাল পরিচয় নিশ্চিত করে সাম্রাজ্যে প্রবেশ করুন।</p>
+                       </div>
+                    </div>
+                    <Link href={user ? "/dashboard" : "/login"}>
+                       <Button size="lg" className="h-16 px-10 bg-primary text-background font-bold text-xl rounded-full gap-3 shadow-2xl hover:scale-105 transition-all">
+                          {user ? "ড্যাশবোর্ডে প্রবেশ" : "সাম্রাজ্যে প্রবেশ"} <Sparkles size={20} />
+                       </Button>
+                    </Link>
+                 </div>
+              </div>
+           </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="container mx-auto px-6 py-20 border-t border-white/5 text-center relative">
+          <div className="flex flex-col items-center gap-8">
+            <AppLogo size={80} className="opacity-40 hover:opacity-100 transition-opacity cursor-pointer" />
+            <div className="space-y-4">
+              <p className="text-[10px] md:text-xs uppercase tracking-[0.6em] font-bold text-muted-foreground">Developed with Sovereign Pride for Sirajganj District Administration</p>
+              <div className="flex justify-center gap-8 text-[9px] uppercase font-bold tracking-widest text-primary/40">
+                 <a href="#" className="hover:text-primary transition-colors">Privacy Protocols</a>
+                 <a href="#" className="hover:text-primary transition-colors">Imperial Terms</a>
+                 <a href="#" className="hover:text-primary transition-colors">Forensic Audit</a>
+              </div>
+              <p className="text-[8px] font-mono text-primary/20 uppercase tracking-[0.2em] mt-8">PROJECT_ID: 42ND_ARCHIVE_SHEIKH_CODE_EXCHANGE | VERSION: 31.0_SOVEREIGN</p>
+            </div>
+          </div>
+        </footer>
+      </main>
+    </div>
+  )
+}
+
+function FeatureCard({ icon: Icon, title, tag, desc, cases, color, glow }: any) {
+  return (
+    <Card className={`bg-card/40 border-white/5 hover:border-primary/30 transition-all duration-700 rounded-[3rem] group relative overflow-hidden flex flex-col h-full hover:shadow-2xl ${glow}`}>
+      {/* Dynamic Background Pattern */}
+      <div className={`absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-[0.05] transition-all duration-1000 pointer-events-none transform group-hover:-translate-x-4 group-hover:translate-y-4`}>
+        <Icon size={240} />
       </div>
-      <AlertCenter />
-      <Toaster />
-    </SidebarProvider>
+      
+      <CardContent className="p-12 space-y-10 relative z-10 flex-1 flex flex-col">
+        <div className="flex justify-between items-start">
+          <div className={`w-20 h-20 rounded-3xl bg-muted/50 flex items-center justify-center border border-white/10 group-hover:bg-primary/20 group-hover:border-primary/40 transition-all duration-700 ${color} shadow-lg`}>
+            <Icon size={40} className="group-hover:scale-110 transition-transform" />
+          </div>
+          <Badge variant="secondary" className="text-[9px] uppercase tracking-[0.2em] font-bold bg-white/5 border-white/10 px-4 py-1.5 rounded-full">
+            {tag}
+          </Badge>
+        </div>
+        
+        <div className="space-y-4 flex-1">
+          <h4 className="text-3xl font-headline font-bold group-hover:text-primary transition-colors tracking-tight leading-tight">{title}</h4>
+          <p className="text-base text-muted-foreground leading-relaxed font-light">
+            {desc}
+          </p>
+        </div>
+        
+        <div className="space-y-4 pt-8 border-t border-white/5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/60">Capabilities:</p>
+          <div className="grid gap-3">
+            {cases.map((c: string, i: number) => (
+              <div key={i} className="flex items-center gap-3 text-sm text-foreground/80 group/item">
+                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover/item:bg-primary/30 transition-colors">
+                   <CheckCircle2 size={12} className="text-primary" />
+                </div>
+                <span className="font-medium">{c}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        <div className="pt-6">
+           <Button variant="ghost" className="p-0 text-xs font-bold uppercase tracking-widest text-primary hover:bg-transparent group-hover:gap-3 gap-2 transition-all">
+              Learn More <ArrowRight size={14} />
+           </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
