@@ -3,7 +3,7 @@
 /**
  * @fileOverview WebRTC Signaling Service for Shurukkha Hub.
  * Manages the exchange of offers, answers, and ICE candidates via Firestore.
- * Updated: Implements candidate buffering and owner tagging to prevent "remote description null" errors.
+ * Updated Phase 3.4: Implements Signaling State Guards to prevent "wrong state: stable" errors.
  */
 
 import { db } from './firebase';
@@ -104,12 +104,16 @@ export class WebRTCManager {
 
     await setDoc(sessionRef, { offer }, { merge: true });
 
-    // Listen for Answer
+    // Listen for Answer with State Guard
     onSnapshot(sessionRef, async (snapshot) => {
       const data = snapshot.data();
-      if (!this.peerConnection?.remoteDescription && data?.answer) {
+      if (!this.peerConnection) return;
+
+      // EXCEPTION GUARD: Only set remote answer if we are currently in 'have-local-offer' state
+      // This prevents the "Called in wrong state: stable" error
+      if (data?.answer && this.peerConnection.signalingState === 'have-local-offer') {
         const answerDescription = new RTCSessionDescription(data.answer);
-        await this.peerConnection?.setRemoteDescription(answerDescription);
+        await this.peerConnection.setRemoteDescription(answerDescription);
         await this.flushCandidates();
       }
     });
@@ -157,7 +161,7 @@ export class WebRTCManager {
     const sessionSnapshot = await getDoc(sessionRef);
     const sessionData = sessionSnapshot.data();
     
-    if (sessionData?.offer) {
+    if (sessionData?.offer && this.peerConnection.signalingState === 'stable') {
       await this.peerConnection.setRemoteDescription(new RTCSessionDescription(sessionData.offer));
 
       const answerDescription = await this.peerConnection.createAnswer();
