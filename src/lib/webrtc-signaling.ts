@@ -3,8 +3,7 @@
 /**
  * @fileOverview WebRTC Signaling Service for Shurukkha Hub.
  * Manages the exchange of offers, answers, and ICE candidates via Firestore.
- * Updated Phase 3.5: Implements Signaling Mutex Locks and robust state guards 
- * to prevent duplicate signaling events and "wrong state: stable" errors.
+ * Updated Phase 3.6: Ensures bi-directional track propagation and reliable stream syncing.
  */
 
 import { db } from './firebase';
@@ -75,15 +74,17 @@ export class WebRTCManager {
   async createCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
     this.peerConnection = new RTCPeerConnection(this.rtcConfig);
     
-    localStream.getTracks().forEach(track => {
-      this.peerConnection?.addTrack(track, localStream);
-    });
-
+    // SETUP: Set ontrack before adding local tracks to catch events early
     this.peerConnection.ontrack = (event) => {
+      console.log("[WebRTC] Remote track received on Offer side");
       if (event.streams && event.streams[0]) {
         onRemoteStream(event.streams[0]);
       }
     };
+
+    localStream.getTracks().forEach(track => {
+      this.peerConnection?.addTrack(track, localStream);
+    });
 
     const sessionRef = doc(db, 'webrtc_sessions', this.sessionId);
     const candidatesCollection = collection(sessionRef, 'ice_candidates');
@@ -117,6 +118,7 @@ export class WebRTCManager {
         try {
           const answerDescription = new RTCSessionDescription(data.answer);
           await this.peerConnection.setRemoteDescription(answerDescription);
+          console.log("[WebRTC] Remote description set on Offer side (Answer received)");
           await this.flushCandidates();
         } catch (e) {
           console.warn("[WebRTC] Failed to set remote answer", e);
@@ -146,15 +148,17 @@ export class WebRTCManager {
   async answerCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
     this.peerConnection = new RTCPeerConnection(this.rtcConfig);
 
-    localStream.getTracks().forEach(track => {
-      this.peerConnection?.addTrack(track, localStream);
-    });
-
+    // SETUP: Set ontrack before adding local tracks
     this.peerConnection.ontrack = (event) => {
+      console.log("[WebRTC] Remote track received on Answer side");
       if (event.streams && event.streams[0]) {
         onRemoteStream(event.streams[0]);
       }
     };
+
+    localStream.getTracks().forEach(track => {
+      this.peerConnection?.addTrack(track, localStream);
+    });
 
     const sessionRef = doc(db, 'webrtc_sessions', this.sessionId);
     const candidatesCollection = collection(sessionRef, 'ice_candidates');
@@ -172,6 +176,7 @@ export class WebRTCManager {
     if (sessionData?.offer && this.peerConnection.signalingState === 'stable') {
       try {
         await this.peerConnection.setRemoteDescription(new RTCSessionDescription(sessionData.offer));
+        console.log("[WebRTC] Remote description set on Answer side (Offer received)");
 
         const answerDescription = await this.peerConnection.createAnswer();
         await this.peerConnection.setLocalDescription(answerDescription);
