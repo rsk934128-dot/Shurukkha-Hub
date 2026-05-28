@@ -42,10 +42,14 @@ export function BiometricPrompt({ isOpen, onVerify, onCancel, actionName = "Crit
             )}
           </div>
           <DialogTitle className="font-headline font-bold uppercase tracking-tight">Identity Confirmation</DialogTitle>
-          <DialogDescription className="text-xs">
-            আপনি বর্তমানে একটি গুরুত্বপূর্ণ কার্যক্রম পরিচালনা করছেন: <br/>
-            <Badge variant="outline" className="mt-2 border-primary/40 text-primary uppercase text-[8px]">{actionName}</Badge>
-          </DialogDescription>
+          <div className="space-y-2">
+            <DialogDescription className="text-xs">
+              আপনি বর্তমানে একটি গুরুত্বপূর্ণ কার্যক্রম পরিচালনা করছেন:
+            </DialogDescription>
+            <div className="flex justify-center">
+              <Badge variant="outline" className="border-primary/40 text-primary uppercase text-[8px]">{actionName}</Badge>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="py-6 flex flex-col items-center gap-4">
