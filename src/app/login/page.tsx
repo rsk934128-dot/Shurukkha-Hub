@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -61,8 +62,14 @@ export default function LoginPage() {
     
     try {
       const userRef = doc(firestore, "users", user.uid);
-      const userSnap = await getDoc(userRef);
-      const userData = userSnap.data();
+      let userData = null;
+      
+      try {
+        const userSnap = await getDoc(userRef);
+        userData = userSnap.data();
+      } catch (e: any) {
+        console.warn("[Handshake] Offline mode or Firestore unavailable. Proceeding with local handshake.");
+      }
 
       if (userData?.twoFactorEnabled && userData?.twoFactorSecret) {
         setPendingSecret(userData.twoFactorSecret);
@@ -74,6 +81,7 @@ export default function LoginPage() {
       const idToken = await user.getIdToken()
       const fingerprint = DeviceValidator.generateFingerprint()
       
+      // Attempt API handshake
       const response = await fetch('/api/v1/auth/handshake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -94,13 +102,25 @@ export default function LoginPage() {
       } else {
         throw new Error("Handshake Denied")
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Handshake failed", error)
-      toast({
-        title: "AUTH_FAILURE",
-        description: "সুরক্ষিত হ্যান্ডশেক সম্পন্ন করা সম্ভব হয়নি।",
-        variant: "destructive"
-      })
+      
+      // Fallback: If network is completely down but we have Firebase user, allow local mode
+      if (!navigator.onLine) {
+        const localToken = 'est_local_' + Math.random().toString(36).substring(7);
+        AuthGuard.establishSession(localToken);
+        toast({
+          title: "OFFLINE MODE ACTIVE",
+          description: "সার্ভারের সাথে সংযোগ নেই, লোকাল সেশন ব্যবহার করা হচ্ছে।",
+        })
+        router.push('/')
+      } else {
+        toast({
+          title: "AUTH_FAILURE",
+          description: "সুরক্ষিত হ্যান্ডশেক সম্পন্ন করা সম্ভব হয়নি।",
+          variant: "destructive"
+        })
+      }
     } finally {
       setIsHandshaking(false)
     }
@@ -172,6 +192,9 @@ export default function LoginPage() {
         } catch (redirectError) {
           setIsSigningIn(false)
         }
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        toast({ title: "লগইন বাতিল", description: "আপনি লগইন উইন্ডোটি বন্ধ করেছেন।" })
+        setIsSigningIn(false)
       } else {
         setIsSigningIn(false)
       }

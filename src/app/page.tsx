@@ -94,24 +94,33 @@ export default function ShurukkhaDashboard() {
       const isAdmin = user.email === 'rubels1k994@gmail.com';
       const userRef = doc(firestore, "users", user.uid);
       
-      getDoc(userRef).then(snap => {
-        const data = snap.data();
-        const currentRole = isAdmin ? 'admin' : (data?.role || 'citizen');
-        setUserRole(currentRole as any);
+      const fetchRole = async () => {
+        try {
+          const snap = await getDoc(userRef);
+          const data = snap.data();
+          const currentRole = isAdmin ? 'admin' : (data?.role || 'citizen');
+          setUserRole(currentRole as any);
 
-        setDoc(userRef, {
-          displayName: user.displayName,
-          email: user.email,
-          photoURL: user.photoURL,
-          role: currentRole,
-          lastLogin: new Date().toISOString(),
-          deviceFingerprint: DeviceValidator.generateFingerprint()
-        }, { merge: true });
+          setDoc(userRef, {
+            displayName: user.displayName,
+            email: user.email,
+            photoURL: user.photoURL,
+            role: currentRole,
+            lastLogin: new Date().toISOString(),
+            deviceFingerprint: DeviceValidator.generateFingerprint()
+          }, { merge: true });
 
-        if (currentRole === 'admin' || currentRole === 'authority') {
-          setActiveView('ops');
+          if (currentRole === 'admin' || currentRole === 'authority') {
+            setActiveView('ops');
+          }
+        } catch (e) {
+          console.warn("[Dashboard] Role fetch failed. Defaulting to citizen/cached role.");
+          const currentRole = isAdmin ? 'admin' : 'citizen';
+          setUserRole(currentRole as any);
         }
-      });
+      };
+
+      fetchRole();
     }
   }, [user, firestore])
 
