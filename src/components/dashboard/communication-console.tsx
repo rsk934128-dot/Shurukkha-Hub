@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { CommunicationOrchestrator, Message } from '@/lib/communication-orchestrator'
 import { db } from '@/lib/firebase'
 import { useUser } from '@/firebase'
-import { collection, query, orderBy, limit, onSnapshot, where, getDocs } from 'firebase/firestore'
+import { collection, query, orderBy, limit, onSnapshot, where, getDocs, setDoc, doc, serverTimestamp } from 'firebase/firestore'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
@@ -132,6 +132,23 @@ export function CommunicationConsole() {
     });
   }
 
+  const handleCall = async (type: 'audio' | 'video') => {
+    if (!user || !selectedContact) return;
+    const chatId = CommunicationOrchestrator.getChatId(user.uid, selectedContact.id);
+    
+    // Create a WebRTC session doc to notify the recipient
+    const sessionRef = doc(db, 'webrtc_sessions', chatId);
+    await setDoc(sessionRef, {
+      callerId: user.uid,
+      callerName: user.displayName || 'Sovereign Node',
+      callerAvatar: user.photoURL || '',
+      recipientId: selectedContact.id,
+      status: 'ringing',
+      type: type,
+      timestamp: serverTimestamp()
+    });
+  }
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
@@ -166,10 +183,10 @@ export function CommunicationConsole() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="h-8 w-8 border-white/10 text-primary hover:bg-primary/10">
+          <Button onClick={() => handleCall('audio')} variant="outline" size="icon" className="h-8 w-8 border-white/10 text-primary hover:bg-primary/10">
             <Phone size={14} />
           </Button>
-          <Button variant="outline" size="icon" className="h-8 w-8 border-white/10 text-accent hover:bg-accent/10">
+          <Button onClick={() => handleCall('video')} variant="outline" size="icon" className="h-8 w-8 border-white/10 text-accent hover:bg-accent/10">
             <Video size={14} />
           </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">

@@ -46,7 +46,7 @@ service cloud.firestore {
       allow list: if isAuthenticated();
     }
 
-    // WebRTC Sessions
+    // WebRTC Sessions: Universal Calling Support
     match /webrtc_sessions/{sessionId} {
       allow read, write: if isAuthenticated();
       match /ice_candidates/{candidateId} {

@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -25,6 +26,7 @@ import { SovereignIDCard } from '@/components/dashboard/sovereign-id-card'
 import { IncidentReviewBoard } from '@/components/dashboard/incident-review-board'
 import { CommunicationConsole } from '@/components/dashboard/communication-console'
 import { SovereignLens } from '@/components/dashboard/sovereign-lens'
+import { CallOverlay } from '@/components/dashboard/call-overlay'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -32,7 +34,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { DisasterStorage } from '@/lib/disaster-storage'
 import { useFirestore, useUser, useAuth } from '@/firebase'
-import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc, onSnapshot, query, where } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
 import { AutonomousOrchestrator } from '@/lib/orchestrator'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -48,6 +50,7 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { AppLogo } from '@/components/ui/app-logo'
 import { CommunicationOrchestrator } from '@/lib/communication-orchestrator'
+import { db } from '@/lib/firebase'
 
 const ADMIN_EMAILS = ['rubels1k994@gmail.com', 'rsk755734@gmail.com'];
 
@@ -63,6 +66,7 @@ export default function ShurukkhaDashboard() {
   const [survivalMode, setSurvivalMode] = useState(false)
   const [isCheckingSession, setIsCheckingCheckingSession] = useState(true)
   const [isLensOpen, setIsLensOpen] = useState(false)
+  const [activeCall, setActiveCall] = useState<any>(null)
   
   const firestore = useFirestore()
   const auth = useAuth()
@@ -134,8 +138,63 @@ export default function ShurukkhaDashboard() {
       };
 
       fetchRole();
+
+      // Universal Call Listener
+      const callsQ = query(
+        collection(db, 'webrtc_sessions'),
+        where('recipientId', '==', user.uid),
+        where('status', '==', 'ringing')
+      );
+
+      const unsubscribeCalls = onSnapshot(callsQ, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const data = change.doc.data();
+            setActiveCall({
+              sessionId: change.doc.id,
+              callerId: data.callerId,
+              callerName: data.callerName,
+              callerAvatar: data.callerAvatar,
+              type: data.type,
+              isIncoming: true
+            });
+          }
+        });
+      });
+
+      // Self Call Listener (for outgoing call state sync)
+      const myCallsQ = query(
+        collection(db, 'webrtc_sessions'),
+        where('callerId', '==', user.uid),
+        where('status', '==', 'ringing')
+      );
+
+      const unsubscribeMyCalls = onSnapshot(myCallsQ, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const data = change.doc.data();
+            // This case handles when the user initiates a call from CommunicationConsole
+            // but we want the global CallOverlay to take over.
+            if (!activeCall) {
+              setActiveCall({
+                sessionId: change.doc.id,
+                callerId: data.callerId,
+                callerName: data.recipientName || 'Node',
+                callerAvatar: data.recipientAvatar,
+                type: data.type,
+                isIncoming: false
+              });
+            }
+          }
+        });
+      });
+
+      return () => {
+        unsubscribeCalls();
+        unsubscribeMyCalls();
+      };
     }
-  }, [user, firestore])
+  }, [user, firestore, activeCall])
 
   useEffect(() => {
     const handleConnectivityChange = () => {
@@ -266,6 +325,7 @@ export default function ShurukkhaDashboard() {
         </div>
       </div>
       <SovereignLens isOpen={isLensOpen} onClose={() => setIsLensOpen(false)} />
+      <CallOverlay callData={activeCall} onClose={() => setActiveCall(null)} />
       <AlertCenter />
       <Toaster />
     </SidebarProvider>
