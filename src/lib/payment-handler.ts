@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Sovereign Payment Handler for Local & Global Settlements.
  * Manages the bridge between card-to-bKash settlements using a Buffer Logic.
@@ -51,7 +52,7 @@ export class PaymentHandler {
       
       // 4. Record Successful Settlement in Audit Registry
       await addDoc(collection(db, "audit_trails"), {
-        action: 'SET_SETTLEMENT_COMPLETED',
+        action: 'SETTLEMENT_COMPLETED',
         details: { 
           settlementId, 
           amount: intent.amount, 

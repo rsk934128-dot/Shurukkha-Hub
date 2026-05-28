@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -56,8 +57,9 @@ export default function ShurukkhaDashboard() {
 
     const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
 
-    // Log Phase 23.0 Milestone on first load
+    // Log Phase 23.0 & 24.0 Milestones on first load
     SovereignAudit.logMilestone('Phase_23.0', 'Global Banking & Sovereign Grid Integration Complete');
+    SovereignAudit.logMilestone('Phase_24.0', 'Merchant Gateway Orchestration & Redundancy Matrix Active');
 
     return () => {
       window.removeEventListener('online', handleOnline)
@@ -128,7 +130,7 @@ export default function ShurukkhaDashboard() {
                 </Badge>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">Sovereign Grid v23.0</span>
+                <span className="text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">Sovereign Grid v24.0</span>
                 {isLockedDown && <Badge variant="destructive" className="h-4 text-[8px] animate-pulse">LOCKDOWN</Badge>}
               </div>
             </div>
