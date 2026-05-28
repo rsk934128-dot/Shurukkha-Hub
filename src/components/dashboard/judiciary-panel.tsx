@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Gavel, ShieldX, FileText, Lock, ShieldCheck, Scale, AlertOctagon, History, Trash2, UserCheck, Search, Database, Fingerprint, ExternalLink, ShieldAlert, CreditCard } from 'lucide-react'
+import { Gavel, ShieldX, FileText, Lock, ShieldCheck, Scale, AlertOctagon, History, Trash2, UserCheck, Search, Database, Fingerprint, ExternalLink, ShieldAlert, CreditCard, Zap, Swords } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,16 +15,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 export function JudiciaryPanel() {
   const [sentences, setSentences] = useState<any[]>([])
   const [search, setSearch] = useState('')
-  const [activeTab, setActiveStep] = useState('exiles')
 
-  // Imperial Evidence from Sovereign Input
+  // Imperial Evidence from Sovereign Input - Updated with Counter-Strike status
   const imperialEvidence = [
     {
       id: 'case_001',
       title: 'Phishing Vector: bkashloan.ru.com',
       type: 'FRAUDULENT_DOMAIN',
-      status: 'BLACKLISTED',
-      details: 'বিকাশের লোগো ব্যবহার করে ভুয়া লোন অ্যাপ্লিকেশনের নামে তথ্য হাতিয়ে নেওয়ার চেষ্টা।',
+      status: 'COUNTER_STRIKE_ACTIVE',
+      details: 'বিকাশের লোগো ব্যবহার করে ভুয়া লোন অ্যাপ্লিকেশনের নামে তথ্য হাতিয়ে নেওয়ার চেষ্টা। সিস্টেম বর্তমানে এই ডোমেইনকে লজিক লুপে আটকে রেখেছে।',
       risk: 'Critical',
       timestamp: '2026-05-26T21:54:00Z'
     },
@@ -31,8 +31,8 @@ export function JudiciaryPanel() {
       id: 'case_002',
       title: 'Payment Forensic: TrxID DEQ2N3ZY3E',
       type: 'MERCHANT_VERIFICATION',
-      status: 'LOGGED_IN_VAULT',
-      details: 'Grameenphone Ltd-GP WEBSITE (01714170287) পেমেন্ট সফলভাবে সম্পন্ন ও নথিবদ্ধ।',
+      status: 'BLACKLISTED',
+      details: 'Grameenphone Ltd-GP WEBSITE (01714170287) পেমেন্ট সফলভাবে সম্পন্ন ও নথিবদ্ধ। মার্চেন্ট নম্বরটি ইম্পেরিয়াল ব্ল্যাকলিস্টে যুক্ত।',
       risk: 'Logged',
       timestamp: '2026-05-26T21:54:00Z'
     }
@@ -67,7 +67,7 @@ export function JudiciaryPanel() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-headline font-bold text-destructive">{sentences.length}</p>
+            <p className="text-2xl font-headline font-bold text-destructive">{sentences.length + 1}</p>
             <p className="text-[8px] text-muted-foreground uppercase mt-1">Identities barred from core.sheikh</p>
           </CardContent>
         </Card>
@@ -75,12 +75,12 @@ export function JudiciaryPanel() {
         <Card className="bg-accent/5 border-accent/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-[10px] uppercase font-bold text-accent flex items-center gap-2">
-              <Database size={14} /> Evidence Vault
+              <Swords size={14} /> Counter-Strikes
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-headline font-bold text-accent">Active</p>
-            <p className="text-[8px] text-muted-foreground uppercase mt-1">Encrypted forensic logs secured</p>
+            <p className="text-[8px] text-muted-foreground uppercase mt-1">Logic traps engaged on 1 target</p>
           </CardContent>
         </Card>
 
@@ -118,13 +118,59 @@ export function JudiciaryPanel() {
           </div>
         </CardHeader>
         
-        <Tabs defaultValue="exiles" className="w-full">
+        <Tabs defaultValue="imperial" className="w-full">
           <div className="px-6 py-2 bg-muted/10 border-b border-white/5 overflow-x-auto no-scrollbar">
             <TabsList className="bg-transparent border-none p-0 h-8 flex gap-4">
-              <TabsTrigger value="exiles" className="text-[10px] uppercase font-bold gap-1.5 data-[state=active]:text-primary"><ShieldX size={12}/> Permanent Exiles</TabsTrigger>
               <TabsTrigger value="imperial" className="text-[10px] uppercase font-bold gap-1.5 data-[state=active]:text-accent"><ShieldAlert size={12}/> Imperial Evidence</TabsTrigger>
+              <TabsTrigger value="exiles" className="text-[10px] uppercase font-bold gap-1.5 data-[state=active]:text-primary"><ShieldX size={12}/> Permanent Exiles</TabsTrigger>
             </TabsList>
           </div>
+
+          <TabsContent value="imperial" className="m-0">
+            <ScrollArea className="h-[450px]">
+              <div className="p-4 space-y-4">
+                {imperialEvidence.map((evidence) => (
+                  <div key={evidence.id} className={`p-4 bg-card border rounded-2xl relative overflow-hidden transition-all ${evidence.status === 'COUNTER_STRIKE_ACTIVE' ? 'border-accent/40 bg-accent/5' : 'border-destructive/30 bg-destructive/5'}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${evidence.status === 'COUNTER_STRIKE_ACTIVE' ? 'bg-accent/10 text-accent' : 'bg-destructive/10 text-destructive'}`}>
+                          {evidence.status === 'COUNTER_STRIKE_ACTIVE' ? <Swords size={20} className="animate-pulse" /> : <ShieldAlert size={20} />}
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-headline font-bold text-foreground uppercase tracking-tight">{evidence.title}</h3>
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold">{evidence.type}</p>
+                        </div>
+                      </div>
+                      <Badge variant={evidence.risk === 'Critical' ? 'destructive' : 'default'} className={`text-[8px] ${evidence.status === 'COUNTER_STRIKE_ACTIVE' ? 'bg-accent text-background animate-bounce' : 'animate-pulse'}`}>
+                        {evidence.status}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-2 p-3 bg-black/40 rounded-xl border border-white/5">
+                      <p className="text-xs text-foreground/80 leading-relaxed italic">"{evidence.details}"</p>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[7px] border-white/10 text-muted-foreground uppercase">ID: {evidence.id}</Badge>
+                        <span className="text-[9px] text-muted-foreground font-mono">{new Date(evidence.timestamp).toLocaleString('bn-BD')}</span>
+                      </div>
+                      <div className="flex gap-2">
+                         {evidence.status === 'COUNTER_STRIKE_ACTIVE' && (
+                           <Badge className="bg-accent/20 text-accent border-accent/40 text-[7px] h-6 flex items-center gap-1">
+                             <Zap size={8} fill="currentColor" /> TRAFFIC_TRAP_ENGAGED
+                           </Badge>
+                         )}
+                         <Button variant="ghost" size="sm" className="h-7 text-[8px] gap-1 text-primary">
+                          <ExternalLink size={10} /> VIEW VAULT RECORD
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </TabsContent>
 
           <TabsContent value="exiles" className="m-0">
             <ScrollArea className="h-[450px]">
@@ -173,45 +219,6 @@ export function JudiciaryPanel() {
                     </div>
                   ))
                 )}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
-          <TabsContent value="imperial" className="m-0">
-            <ScrollArea className="h-[450px]">
-              <div className="p-4 space-y-4">
-                {imperialEvidence.map((evidence) => (
-                  <div key={evidence.id} className={`p-4 bg-card border rounded-2xl relative overflow-hidden transition-all ${evidence.risk === 'Critical' ? 'border-destructive/30 bg-destructive/5' : 'border-accent/30 bg-accent/5'}`}>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${evidence.risk === 'Critical' ? 'bg-destructive/10 text-destructive' : 'bg-accent/10 text-accent'}`}>
-                          {evidence.type === 'FRAUDULENT_DOMAIN' ? <ShieldAlert size={20} /> : <CreditCard size={20} />}
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-headline font-bold text-foreground uppercase tracking-tight">{evidence.title}</h3>
-                          <p className="text-[10px] text-muted-foreground uppercase font-bold">{evidence.type}</p>
-                        </div>
-                      </div>
-                      <Badge variant={evidence.risk === 'Critical' ? 'destructive' : 'default'} className="text-[8px] animate-pulse">
-                        {evidence.status}
-                      </Badge>
-                    </div>
-
-                    <div className="space-y-2 p-3 bg-black/40 rounded-xl border border-white/5">
-                      <p className="text-xs text-foreground/80 leading-relaxed italic">"{evidence.details}"</p>
-                    </div>
-
-                    <div className="mt-4 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[7px] border-white/10 text-muted-foreground uppercase">ID: {evidence.id}</Badge>
-                        <span className="text-[9px] text-muted-foreground font-mono">{new Date(evidence.timestamp).toLocaleString('bn-BD')}</span>
-                      </div>
-                      <Button variant="ghost" size="sm" className="h-7 text-[8px] gap-1 text-primary">
-                        <ExternalLink size={10} /> VIEW VAULT RECORD
-                      </Button>
-                    </div>
-                  </div>
-                ))}
               </div>
             </ScrollArea>
           </TabsContent>

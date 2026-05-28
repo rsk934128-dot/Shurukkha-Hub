@@ -1,7 +1,7 @@
 
 /**
  * @fileOverview Imperial Counter-Intelligence Module.
- * Implements logical loops and latency traps for confirmed attackers.
+ * Implements logical loops, latency traps, and offensive counter-strikes for confirmed attackers.
  */
 
 import { IntelligenceEngine } from './intelligence-engine';
@@ -21,6 +21,22 @@ export const CounterIntelligence = {
       return true;
     }
     return false;
+  },
+
+  /**
+   * Engages a Counter-Strike against high-priority targets.
+   * Returns a payload designed to trigger infinite processing loops on malicious clients.
+   */
+  engageCounterStrike: (target: string) => {
+    console.warn(`[Imperial Counter-Strike] Engaging target: ${target}`);
+    return {
+      status: 'HANDSHAKE_PENDING',
+      next_action: 'RE-VALIDATE_SIGNATURE',
+      payload_checksum: 'ERR_LOGIC_LOOP_0x42',
+      _instruction: 'CLIENT_MUST_RETRY_WITH_NONCE_POLLING',
+      _poll_interval_ms: 0, // Triggers aggressive re-polling on naive bots
+      _sovereign_trap: 'ACTIVE'
+    };
   },
 
   /**
