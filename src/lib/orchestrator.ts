@@ -1,13 +1,15 @@
 /**
  * @fileOverview Autonomous Orchestrator for Shurukkha Hub.
  * Coordinates between SOS triggers, AI flows, and the Dispatcher console.
- * UPDATED Phase 31.0: Adaptive "Iron Logic" for smart responder matching.
+ * UPDATED Phase 31.0: Added Autonomous Flood Evacuation Alerts.
  */
 
 import { db } from './firebase';
-import { collection, onSnapshot, query, where, updateDoc, doc, arrayUnion, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, updateDoc, doc, arrayUnion, addDoc, serverTimestamp, getDocs, limit } from 'firebase/firestore';
 import { suggestResponder } from '@/ai/flows/suggest-responder-flow';
+import { generateFloodSurvivalAdvice } from '@/ai/flows/generate-flood-survival-advice';
 import { IntegrationBridge } from './integration-bridge';
+import { FloodDataService } from './flood-data-service';
 
 const MOCK_RESPONDERS = [
   { id: 'r1', name: "সদর থানা টিম এ", type: "Police", location: "সিরাজগঞ্জ বাজার", status: "available", gear: ["First-Aid", "Radio"] },
@@ -17,10 +19,17 @@ const MOCK_RESPONDERS = [
 
 export class AutonomousOrchestrator {
   private static isAutoMode = false;
+  private static floodMonitorInterval: any = null;
 
   static setAutoMode(enabled: boolean) {
     this.isAutoMode = enabled;
     console.log(`[Orchestrator] Iron Logic Mode: ${enabled ? 'ACTIVE' : 'INACTIVE'}`);
+    
+    if (enabled) {
+      this.startFloodIntelligenceMonitor();
+    } else {
+      if (this.floodMonitorInterval) clearInterval(this.floodMonitorInterval);
+    }
   }
 
   static startMonitoring() {
@@ -40,13 +49,59 @@ export class AutonomousOrchestrator {
     });
   }
 
+  /**
+   * Autonomous Flood Intelligence Monitor.
+   * Periodically checks telemetry and triggers global evacuation alerts if needed.
+   */
+  private static async startFloodIntelligenceMonitor() {
+    this.floodMonitorInterval = setInterval(async () => {
+      console.log("[Intelligence Monitor] Scanning River Telemetry...");
+      const telemetry = await FloodDataService.getLatestTelemetry();
+      
+      if (telemetry.waterLevel > telemetry.dangerLevel) {
+        const advice = await generateFloodSurvivalAdvice({
+          jamunaWaterLevel: telemetry.waterLevel,
+          dangerLevelThreshold: telemetry.dangerLevel,
+          weatherForecast: "Rising waters detected",
+          currentLocation: "Global District Monitoring",
+          nearbyShelters: []
+        });
+
+        if (advice.automaticAlertTriggered) {
+          await this.broadcastGlobalEvacuation(advice);
+        }
+      }
+    }, 60000); // Check every minute
+  }
+
+  private static async broadcastGlobalEvacuation(advice: any) {
+    console.warn(`[CRITICAL] AUTONOMOUS EVACUATION TRIGGERED!`);
+    
+    await addDoc(collection(db, "sos_alerts"), {
+      timestamp: serverTimestamp(),
+      location: advice.predictiveAnalytics?.hotspots.join(', ') || "Various Locations",
+      status: 'pending',
+      type: 'AUTONOMOUS_EVACUATION_WARNING',
+      note: advice.advice,
+      automated: true,
+      purity: 'SOVEREIGN_V31'
+    });
+
+    await addDoc(collection(db, "audit_trails"), {
+      action: 'GLOBAL_EVACUATION_TRIGGERED',
+      details: { riskLevel: advice.riskLevel, source: 'AI_PREDICTION_PIPELINE' },
+      signature: IntegrationBridge.generateSignature({ level: 'CRITICAL' }),
+      timestamp: serverTimestamp(),
+      performedBy: 'Autonomous_Iron_Logic'
+    });
+  }
+
   private static async processAlertAutonomously(alert: any) {
     console.log(`[Iron Logic] Analyzing SOS ID: ${alert.id}...`);
     
     try {
       const startTime = performance.now();
 
-      // 1. Adaptive AI Dispatch Analysis
       const recommendation = await suggestResponder({
         sosType: alert.type || "Emergency",
         location: alert.location || "Unknown",
@@ -61,40 +116,30 @@ export class AutonomousOrchestrator {
       const endTime = performance.now();
       const executionTime = (endTime - startTime).toFixed(3);
 
-      // 2. Imperial Execution
       const alertRef = doc(db, "sos_alerts", alert.id);
-      const updatePayload = {
+      await updateDoc(alertRef, {
         status: 'dispatched',
         assignedResponder: recommendation.recommendedResponderId,
         timeline: arrayUnion({
           status: 'dispatched',
-          note: `[IRON_LOGIC_AUTO] ${recommendation.reasoning}. Dispatch latency: ${executionTime}ms.`,
+          note: `[IRON_LOGIC_AUTO] ${recommendation.reasoning}.`,
           timestamp: new Date().toISOString(),
           automated: true,
           purity: 'VERIFIED_IMPERIAL'
         })
-      };
+      });
 
-      await updateDoc(alertRef, updatePayload);
-
-      // 3. Immutable Forensic Log
       await addDoc(collection(db, "audit_trails"), {
         action: 'AUTONOMOUS_IRON_DISPATCH',
-        details: { 
-          alertId: alert.id, 
-          responderId: recommendation.recommendedResponderId, 
-          executionTime: `${executionTime}ms`,
-          purity: 'SOVEREIGN_V31'
-        },
-        signature: IntegrationBridge.generateSignature({ alertId: alert.id, status: 'EXECUTED' }),
+        details: { alertId: alert.id, responderId: recommendation.recommendedResponderId, executionTime: `${executionTime}ms` },
+        signature: IntegrationBridge.generateSignature({ alertId: alert.id }),
         timestamp: serverTimestamp(),
         performedBy: 'Autonomous_Iron_Logic_v31'
       });
 
-      // 4. Global Network Broadcast
       IntegrationBridge.broadcastEvent({
         type: 'STATUS_UPDATED',
-        payload: { alertId: alert.id, status: 'dispatched', responder: responder?.name },
+        payload: { alertId: alert.id, status: 'dispatched' },
         timestamp: new Date().toISOString()
       });
 
