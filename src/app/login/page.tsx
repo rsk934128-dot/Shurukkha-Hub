@@ -31,20 +31,20 @@ export default function LoginPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    if (auth && !user) {
+    if (auth) {
       getRedirectResult(auth)
         .then((result) => {
           if (result?.user) {
-            console.log("[Auth] Redirect handshake initiated via redirect result.");
+            console.log("[Auth] Redirect handshake successful.");
           }
         })
         .catch((error) => {
           if (error.code !== 'auth/web-storage-unsupported') {
-            console.error("[Auth] Redirect handling error:", error);
+            console.warn("[Auth] Redirect error handled:", error.message);
           }
         });
     }
-  }, [auth, user]);
+  }, [auth]);
 
   useEffect(() => {
     if (user && !loading && !isHandshaking && !show2FA && !showBiometric && !showSecurityKey) {
@@ -81,7 +81,6 @@ export default function LoginPage() {
       const idToken = await user.getIdToken()
       const fingerprint = DeviceValidator.generateFingerprint()
       
-      // Attempt API handshake
       const response = await fetch('/api/v1/auth/handshake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,8 +103,6 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error("Handshake failed", error)
-      
-      // Fallback: If network is completely down but we have Firebase user, allow local mode
       if (!navigator.onLine) {
         const localToken = 'est_local_' + Math.random().toString(36).substring(7);
         AuthGuard.establishSession(localToken);
@@ -180,26 +177,38 @@ export default function LoginPage() {
     
     setIsSigningIn(true)
     const provider = new GoogleAuthProvider()
-    // Force Google to show the account picker
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
       await signInWithPopup(auth, provider)
     } catch (error: any) {
-      console.error("Login attempt failed:", error)
-      if (error.code === 'auth/popup-blocked') {
+      // Handle closed popup gracefully
+      if (error.code === 'auth/popup-closed-by-user') {
+        toast({ 
+          title: "লগইন প্রসেস বাতিল", 
+          description: "আপনি নিজেই লগইন উইন্ডোটি বন্ধ করেছেন।" 
+        })
+      } else if (error.code === 'auth/popup-blocked') {
         toast({ title: "পপ-আপ ব্লক করা হয়েছে", description: "রিডাইরেক্ট মোডে চেষ্টা করা হচ্ছে..." })
         try {
           await signInWithRedirect(auth, provider);
         } catch (redirectError) {
           setIsSigningIn(false)
         }
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        toast({ title: "লগইন বাতিল", description: "আপনি লগইন উইন্ডোটি বন্ধ করেছেন।" })
-        setIsSigningIn(false)
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        console.warn("[Auth] Multi-popup request cancelled.");
       } else {
+        console.error("Login attempt failed:", error)
+        toast({ 
+          title: "লগইন ত্রুটি", 
+          description: "একটি টেকনিক্যাল সমস্যা হয়েছে। আবার চেষ্টা করুন।",
+          variant: "destructive"
+        })
         setIsSigningIn(false)
       }
+    } finally {
+      // Ensure the signing in state is cleared if not redirecting
+      setTimeout(() => setIsSigningIn(false), 2000);
     }
   }
 
