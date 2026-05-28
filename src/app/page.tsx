@@ -55,8 +55,8 @@ export default function ShurukkhaDashboard() {
   const [activeView, setActiveView] = useState('citizen')
   const [activeSubTab, setActiveSubTab] = useState('ops')
   
-  const { firestore } = useFirestore()
-  const { auth } = useAuth()
+  const firestore = useFirestore()
+  const auth = useAuth()
   const { user, loading: authLoading } = useUser()
   const { toast } = useToast()
   const router = useRouter()
@@ -189,12 +189,17 @@ export default function ShurukkhaDashboard() {
     }
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (auth) {
-      sessionStorage.clear()
-      signOut(auth).then(() => {
-        toast({ title: "সফলভাবে লগআউট করা হয়েছে" })
-      })
+      try {
+        sessionStorage.clear()
+        localStorage.removeItem('sovereign_session_token')
+        await signOut(auth)
+        toast({ title: "সফলভাবে লগআউট করা হয়েছে", description: "আবার শীঘ্রই দেখা হবে।" })
+        router.push('/login')
+      } catch (e) {
+        toast({ title: "লগআউট ব্যর্থ হয়েছে", variant: "destructive" })
+      }
     }
   }
 
@@ -226,7 +231,7 @@ export default function ShurukkhaDashboard() {
   return (
     <SidebarProvider>
       <div className={`flex min-h-screen w-full text-foreground transition-all duration-500 ${isLockedDown ? 'grayscale-[0.5] contrast-125' : ''}`}>
-        <AppSidebar userRole={userRole} onNavigate={handleSidebarNavigate} activeTab={activeView} />
+        <AppSidebar userRole={userRole} onNavigate={handleSidebarNavigate} onLogout={handleLogout} activeTab={activeView} />
         
         <div className="flex-1 flex flex-col min-w-0">
           <header className={`sticky top-0 z-40 border-b transition-colors duration-500 ${isLockedDown ? 'bg-destructive/20 border-destructive/40' : 'bg-background/80 border-white/5'} backdrop-blur-lg`}>
@@ -269,8 +274,8 @@ export default function ShurukkhaDashboard() {
                       <AvatarImage src={user.photoURL || ''} />
                       <AvatarFallback className="bg-primary/10 text-[10px]">{user.displayName?.substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
-                    <Button variant="ghost" size="icon" onClick={handleLogout} className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                      <LogOut size={16} />
+                    <Button variant="ghost" size="icon" onClick={handleLogout} className="h-8 w-8 text-muted-foreground hover:text-destructive group transition-all">
+                      <LogOut size={16} className="group-hover:rotate-12 transition-transform" />
                     </Button>
                   </div>
                 ) : (

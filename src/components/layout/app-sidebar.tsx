@@ -16,7 +16,8 @@ import {
   Lock,
   Zap,
   Globe,
-  Database
+  Database,
+  LogOut
 } from "lucide-react"
 
 import {
@@ -38,10 +39,11 @@ import { AppLogo } from "@/components/ui/app-logo"
 interface AppSidebarProps {
   userRole: 'citizen' | 'authority' | 'admin'
   onNavigate: (tab: string) => void
+  onLogout?: () => void
   activeTab: string
 }
 
-export function AppSidebar({ userRole, onNavigate, activeTab }: AppSidebarProps) {
+export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSidebarProps) {
   const { setOpenMobile } = useSidebar()
 
   const handleNav = (tab: string) => {
@@ -171,7 +173,20 @@ export function AppSidebar({ userRole, onNavigate, activeTab }: AppSidebarProps)
         )}
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-white/5">
+      <SidebarFooter className="p-4 border-t border-white/5 space-y-4">
+        {onLogout && (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton 
+                onClick={onLogout}
+                className="px-4 h-10 gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+              >
+                <LogOut size={18} />
+                <span className="font-medium">লগআউট করুন</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
         <div className="p-3 bg-primary/5 rounded-xl border border-primary/20">
           <div className="flex items-center gap-2 mb-1">
             <Zap size={12} className="text-primary fill-primary" />
