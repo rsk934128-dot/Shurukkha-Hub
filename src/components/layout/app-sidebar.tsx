@@ -17,7 +17,9 @@ import {
   Globe,
   Database,
   LogOut,
-  UserCircle
+  UserCircle,
+  SearchCode,
+  Eye
 } from "lucide-react"
 
 import {
@@ -126,6 +128,18 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                     <Radio size={18} className="text-destructive animate-pulse" />
                     <span className="font-medium">জরুরি ডিসপ্যাচ</span>
                     <Badge variant="destructive" className="ml-auto text-[8px] h-4">LIVE</Badge>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    isActive={activeTab === 'intelligence'} 
+                    onClick={() => handleNav('intelligence')}
+                    className="px-4 h-10 gap-3"
+                  >
+                    <SearchCode size={18} className={activeTab === 'intelligence' ? "text-accent" : "text-muted-foreground"} />
+                    <span className="font-medium">ইন্টেলিজেন্স বোর্ড</span>
+                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent">RECON</Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 

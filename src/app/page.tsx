@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -23,6 +22,7 @@ import { SovereignStatusWidget } from '@/components/dashboard/sovereign-status-w
 import { AuditPanel } from '@/components/dashboard/audit-panel'
 import { ImperialOverview } from '@/components/dashboard/imperial-overview'
 import { SovereignIDCard } from '@/components/dashboard/sovereign-id-card'
+import { IncidentReviewBoard } from '@/components/dashboard/incident-review-board'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -225,7 +225,7 @@ export default function ShurukkhaDashboard() {
 
   const handleSidebarNavigate = (view: string) => {
     setActiveView(view);
-    if (['ops', 'analytics', 'audits', 'integrations', 'treasury', 'profile'].includes(view)) {
+    if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile'].includes(view)) {
       setActiveSubTab(view);
     }
   }
@@ -317,11 +317,15 @@ export default function ShurukkhaDashboard() {
               <div className="space-y-1">
                 <div className="flex items-center gap-3">
                   <h2 className="text-xl md:text-3xl font-headline font-bold tracking-tight">
-                    {activeView === 'citizen' ? 'সুরক্ষা সিটিজেন শিল্ড' : activeView === 'profile' ? 'সার্বভৌম পরিচয়পত্র' : 'কমান্ড সেন্টার'}
+                    {activeView === 'citizen' ? 'সুরক্ষা সিটিজেন শিল্ড' : activeView === 'profile' ? 'সার্বভৌম পরিচয়পত্র' : 
+                     activeView === 'intelligence' ? 'ইন্টেলিজেন্স রিভিউ বোর্ড' : 'কমান্ড সেন্টার'}
                   </h2>
                 </div>
                 <p className="text-muted-foreground text-xs md:text-sm font-body">
-                  {activeView === 'citizen' ? 'সরাসরি প্রশাসনকে সিগন্যাল পাঠান' : activeView === 'profile' ? 'আপনার রাজকীয় পরিচয় ও ফরেনসিক তথ্য' : 'DEOS অটোনোমাস ডিসপ্যাচ গ্রিড'}
+                  {activeView === 'citizen' ? 'সরাসরি প্রশাসনকে সিগন্যাল পাঠান' : 
+                   activeView === 'profile' ? 'আপনার রাজকীয় পরিচয় ও ফরেনসিক তথ্য' : 
+                   activeView === 'intelligence' ? 'নাগরিকদের পাঠানো ফরেনসিক রিপোর্টের গভীর বিশ্লেষণ' :
+                   'DEOS অটোনোমাস ডিসপ্যাচ গ্রিড'}
                 </p>
               </div>
             </div>
@@ -365,6 +369,9 @@ export default function ShurukkhaDashboard() {
                     <div className="lg:col-span-12 space-y-6 h-[calc(100vh-250px)]">
                       <DispatcherConsole />
                     </div>
+                  </TabsContent>
+                  <TabsContent value="intelligence" className="space-y-6 mt-0">
+                    <IncidentReviewBoard />
                   </TabsContent>
                   <TabsContent value="analytics" className="space-y-6 mt-0">
                     <SystemHealth />
