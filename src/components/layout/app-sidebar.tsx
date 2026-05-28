@@ -24,7 +24,8 @@ import {
   Share2,
   MessageSquare,
   Power,
-  Wifi
+  Wifi,
+  ScanLine
 } from "lucide-react"
 
 import {
@@ -124,7 +125,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Connection Status Section */}
         <SidebarGroup>
           <div className="px-4 py-4 mb-2 bg-primary/5 rounded-2xl mx-2 border border-primary/10">
             <div className="flex items-center justify-between mb-4">
@@ -146,7 +146,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
           </div>
         </SidebarGroup>
 
-        {/* User Identity Section */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase font-bold text-muted-foreground/50 px-4">আপনার পরিচয়</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -177,7 +176,27 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Public Section */}
+        {/* Intelligence Lens for Admin/Authority */}
+        {(userRole === 'authority' || userRole === 'admin') && (
+           <SidebarGroup>
+            <SidebarGroupLabel className="text-[10px] uppercase font-bold text-accent/50 px-4">স্ক্যানিং লেন্স</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    onClick={() => handleNav('lens')}
+                    className="px-4 h-10 gap-3 bg-accent/10 border border-accent/20 text-accent hover:bg-accent/20"
+                  >
+                    <ScanLine size={18} className="animate-pulse" />
+                    <span className="font-bold">সভ্যরেন লেন্স</span>
+                    <Badge className="ml-auto bg-accent text-background text-[7px] h-4">SCAN</Badge>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase font-bold text-muted-foreground/50 px-4">পাবলিক সার্ভিস</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -196,7 +215,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Command Center for Admin/Authority */}
         {(userRole === 'authority' || userRole === 'admin') && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-[10px] uppercase font-bold text-primary/40 px-4">কমান্ড ও কন্ট্রোল</SidebarGroupLabel>

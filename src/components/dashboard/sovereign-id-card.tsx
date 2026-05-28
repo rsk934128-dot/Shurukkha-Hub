@@ -1,14 +1,15 @@
 
 "use client"
 
-import React from 'react'
-import { ShieldCheck, Star, Fingerprint, Lock, Globe, Zap, QrCode, Cpu, User, Share2, Download, Sparkles } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { ShieldCheck, Star, Fingerprint, Lock, Globe, Zap, QrCode, Cpu, User, Share2, Download, Sparkles, Loader2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { AppLogo } from '@/components/ui/app-logo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
+import QRCode from 'qrcode'
 
 interface SovereignIDCardProps {
   user: any;
@@ -17,10 +18,41 @@ interface SovereignIDCardProps {
 
 export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
   const { toast } = useToast();
-  if (!user) return null;
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState(true);
 
-  const fingerprint = user.uid?.substring(0, 12).toUpperCase() || 'EST_XXXX_XXXX';
-  const signature = 'SIG_SHA256_' + btoa(user.email || '').substring(0, 16).toUpperCase();
+  const fingerprint = user?.uid?.substring(0, 12).toUpperCase() || 'EST_XXXX_XXXX';
+  const signature = 'SIG_SHA256_' + (user?.email ? btoa(user.email).substring(0, 16).toUpperCase() : 'UNKNOWN');
+
+  useEffect(() => {
+    if (user?.uid) {
+      // Generate real QR code with user identity
+      const data = JSON.stringify({
+        uid: user.uid,
+        name: user.displayName,
+        fingerprint,
+        role: role,
+        v: '31.0_SOVEREIGN'
+      });
+      
+      QRCode.toDataURL(data, {
+        margin: 2,
+        width: 200,
+        color: {
+          dark: '#7597FF', // Primary color
+          light: '#00000000' // Transparent
+        }
+      }).then(url => {
+        setQrDataUrl(url);
+        setIsGenerating(false);
+      }).catch(err => {
+        console.error(err);
+        setIsGenerating(false);
+      });
+    }
+  }, [user, role, fingerprint]);
+
+  if (!user) return null;
 
   const handleShare = async () => {
     const shareData = {
@@ -49,7 +81,6 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
       title: "ডাউনলোড শুরু হচ্ছে",
       description: "আপনার সার্বভৌম পরিচয়পত্রটি PDF ফরম্যাটে জেনারেট করা হচ্ছে।",
     });
-    // Trigger the print protocol which is captured by @media print in globals.css
     setTimeout(() => {
       window.print();
     }, 500);
@@ -57,20 +88,16 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
 
   return (
     <div className="space-y-8 animate-in fade-in zoom-in-95 duration-700">
-      {/* The Actual ID Card Container with Print Protocol Class */}
       <div className="relative group max-w-md mx-auto print-id-card">
-        {/* Glow Effects */}
         <div className="absolute -inset-1 bg-gradient-to-r from-primary via-accent to-primary rounded-[2.5rem] blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200 no-print" />
         
         <Card className="relative bg-card/40 backdrop-blur-3xl border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl w-full">
-          {/* Card Background Patterns */}
           <div className="absolute top-0 right-0 p-8 opacity-[0.03] rotate-12 pointer-events-none">
             <AppLogo size={300} />
           </div>
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.02] pointer-events-none" />
           
           <CardContent className="p-0">
-            {/* Header / Brand Area */}
             <div className="p-6 border-b border-white/5 flex justify-between items-center bg-primary/5">
               <div className="flex items-center gap-3">
                 <AppLogo size={32} />
@@ -84,10 +111,8 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
               </Badge>
             </div>
 
-            {/* Main Content Area */}
-            <div className="p-8 flex gap-8">
-              {/* Profile Photo Area */}
-              <div className="flex flex-col items-center gap-4">
+            <div className="p-8 flex flex-col md:flex-row gap-8 items-center md:items-start">
+              <div className="flex flex-col items-center gap-4 shrink-0">
                 <div className="relative">
                   <div className="absolute -inset-2 bg-gradient-to-b from-primary to-accent rounded-3xl blur-md opacity-30 animate-pulse no-print" />
                   <div className="relative w-32 h-32 rounded-3xl border-2 border-primary/20 overflow-hidden bg-muted p-1">
@@ -99,23 +124,32 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
                     </Avatar>
                   </div>
                 </div>
-                <div className="bg-black/40 border border-white/5 p-2 rounded-xl">
-                  <QrCode size={48} className="text-primary/60 opacity-50" />
+                
+                <div className="relative group/qr">
+                   <div className="absolute -inset-2 bg-primary/20 blur-xl rounded-full opacity-0 group-hover/qr:opacity-100 transition-all duration-500" />
+                   <div className="relative w-24 h-24 bg-black/40 border border-white/5 rounded-2xl p-2 flex items-center justify-center overflow-hidden">
+                      {isGenerating ? (
+                        <Loader2 className="animate-spin text-primary/40" size={24} />
+                      ) : qrDataUrl ? (
+                        <img src={qrDataUrl} alt="Identity QR" className="w-full h-full object-contain filter drop-shadow-[0_0_5px_rgba(117,151,255,0.5)]" />
+                      ) : (
+                        <QrCode size={40} className="text-primary/20" />
+                      )}
+                   </div>
                 </div>
               </div>
 
-              {/* Data Area */}
-              <div className="flex-1 space-y-5">
+              <div className="flex-1 space-y-5 text-center md:text-left w-full">
                 <div>
                   <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest mb-1">Identity Holder</p>
-                  <h2 className="text-xl font-headline font-bold text-foreground tracking-tight leading-tight">{user.displayName}</h2>
-                  <p className="text-[10px] text-primary font-mono lowercase opacity-70">{user.email}</p>
+                  <h2 className="text-xl font-headline font-bold text-foreground tracking-tight leading-tight truncate">{user.displayName}</h2>
+                  <p className="text-[10px] text-primary font-mono lowercase opacity-70 truncate">{user.email}</p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3">
                   <div className="space-y-1">
                     <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest">Sovereign Rank</p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center md:justify-start gap-2">
                        <Badge className={`uppercase text-[9px] font-bold h-6 px-3 rounded-lg ${role === 'admin' ? 'bg-accent text-background' : 'bg-primary text-background'}`}>
                          <Star size={10} fill="currentColor" className="mr-1.5" /> {role === 'admin' ? 'Supreme Admin' : role.toUpperCase()}
                        </Badge>
@@ -124,7 +158,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
 
                   <div className="space-y-1">
                     <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest">Digital Fingerprint</p>
-                    <code className="text-[10px] font-mono text-foreground/80 bg-black/40 px-2 py-1 rounded-md border border-white/5 block truncate">
+                    <code className="text-[10px] font-mono text-foreground/80 bg-black/40 px-2 py-1 rounded-md border border-white/5 block truncate text-center md:text-left">
                       {fingerprint}
                     </code>
                   </div>
@@ -132,27 +166,24 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
               </div>
             </div>
 
-            {/* Security Footer */}
             <div className="px-8 py-4 bg-muted/20 border-t border-white/5 flex justify-between items-center relative overflow-hidden">
                <div className="space-y-1 relative z-10">
                   <div className="flex items-center gap-1.5">
                     <Lock size={10} className="text-accent" />
                     <span className="text-[8px] font-mono text-accent font-bold uppercase">SHA256withRSA_V2_VERIFIED</span>
                   </div>
-                  <p className="text-[7px] text-muted-foreground font-mono opacity-50 truncate max-w-[200px]">{signature}</p>
+                  <p className="text-[7px] text-muted-foreground font-mono opacity-50 truncate max-w-[150px] md:max-w-[200px]">{signature}</p>
                </div>
                <div className="text-right relative z-10">
                   <p className="text-[8px] font-bold text-muted-foreground uppercase">Integrity</p>
                   <p className="text-xs font-headline font-bold text-primary">100.0%</p>
                </div>
-               {/* Decorative circuit line */}
                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary via-accent to-transparent opacity-30" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Action Buttons - Hidden during print */}
       <div className="flex justify-center gap-4 no-print">
         <Button onClick={handleDownload} variant="outline" className="rounded-full border-primary/20 bg-primary/5 text-primary gap-2 h-11 px-6 font-bold text-xs uppercase tracking-widest hover:bg-primary/10 transition-all">
           <Download size={16} /> ডাউনলোড আইডি
@@ -175,8 +206,8 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
         <div className="grid gap-3">
           {[
             { icon: Cpu, text: "আপনার আইডিটি সরাসরি 'Project 42' এর ৪২টি নোডের সাথে সিঙ্ক্রোনাইজড।" },
-            { icon: User, text: "অননুমোদিত ডিভাইসে এই আইডি ব্যবহারের চেষ্টা করলে সেশন স্বয়ংক্রিয়ভাবে বাতিল হবে।" },
-            { icon: ShieldCheck, text: "আপনার বায়োমেট্রিক এবং টিওটিপি তথ্য এই আইডির সাথে এনক্রিপ্টেড অবস্থায় আছে।" }
+            { icon: QrCode, text: "সভ্যরেন লেন্স ব্যবহার করে কর্মকর্তারা আপনার আইডি স্ক্যান করে পরিচয় নিশ্চিত করতে পারবেন।" },
+            { icon: User, text: "অননুমোদিত ডিভাইসে এই আইডি ব্যবহারের চেষ্টা করলে সেশন স্বয়ংক্রিয়ভাবে বাতিল হবে।" }
           ].map((item, idx) => (
             <div key={idx} className="flex gap-3 items-start text-[10px] text-foreground/70 bg-black/20 p-3 rounded-xl border border-white/5">
               <item.icon size={14} className="text-primary shrink-0 mt-0.5" />

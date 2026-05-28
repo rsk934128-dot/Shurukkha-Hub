@@ -25,6 +25,7 @@ import { ImperialOverview } from '@/components/dashboard/imperial-overview'
 import { SovereignIDCard } from '@/components/dashboard/sovereign-id-card'
 import { IncidentReviewBoard } from '@/components/dashboard/incident-review-board'
 import { CommunicationConsole } from '@/components/dashboard/communication-console'
+import { SovereignLens } from '@/components/dashboard/sovereign-lens'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -60,6 +61,7 @@ export default function ShurukkhaDashboard() {
   const [activeSubTab, setActiveSubTab] = useState('ops')
   const [survivalMode, setSurvivalMode] = useState(false)
   const [isCheckingSession, setIsCheckingCheckingSession] = useState(true)
+  const [isLensOpen, setIsLensOpen] = useState(false)
   
   const firestore = useFirestore()
   const auth = useAuth()
@@ -75,7 +77,6 @@ export default function ShurukkhaDashboard() {
       return
     }
 
-    // Give a small grace period for the handshake to reflect in storage if needed
     const checkSession = () => {
       if (!AuthGuard.isValidSession()) {
         setSessionValid(false)
@@ -85,7 +86,7 @@ export default function ShurukkhaDashboard() {
       }
     }
 
-    const timer = setTimeout(checkSession, 800); // Increased grace period for stabilization
+    const timer = setTimeout(checkSession, 800);
 
     const storedFp = localStorage.getItem('sovereign_device_id')
     if (storedFp && !DeviceValidator.validateIntegrity(storedFp)) {
@@ -178,6 +179,10 @@ export default function ShurukkhaDashboard() {
   }
 
   const handleSidebarNavigate = (view: string) => {
+    if (view === 'lens') {
+      setIsLensOpen(true);
+      return;
+    }
     setActiveView(view);
     if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile', 'messages'].includes(view)) {
       setActiveSubTab(view);
@@ -259,6 +264,7 @@ export default function ShurukkhaDashboard() {
           </main>
         </div>
       </div>
+      <SovereignLens isOpen={isLensOpen} onClose={() => setIsLensOpen(false)} />
       <AlertCenter />
       <Toaster />
     </SidebarProvider>
