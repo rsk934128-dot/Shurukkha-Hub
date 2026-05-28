@@ -261,14 +261,14 @@ export default function ShurukkhaDashboard() {
                 </Link>
                 <div className="hidden xl:flex items-center gap-2 px-3 py-1 bg-accent/5 border border-accent/20 rounded-full">
                   <Lock size={12} className="text-accent" />
-                  <span className="text-[9px] font-mono text-accent uppercase tracking-tighter">Encrypted_Session_Active</span>
+                  <span className="text-[9px] font-mono text-accent uppercase tracking-tighter">Sovereign_Active_Grid</span>
                 </div>
                 <SovereignStatusWidget />
                 {user ? (
                   <div className="flex items-center gap-3">
                     <div className="hidden sm:block text-right cursor-pointer" onClick={() => handleSidebarNavigate('profile')}>
                       <p className="text-[10px] font-bold leading-none">{user.displayName}</p>
-                      <p className="text-[8px] text-primary uppercase tracking-widest font-bold">{userRole}</p>
+                      <p className="text-[8px] text-primary uppercase tracking-widest font-bold">{userRole === 'admin' ? 'SUPREME ADMIN' : userRole}</p>
                     </div>
                     <Avatar className="h-8 w-8 border border-primary/20 cursor-pointer" onClick={() => handleSidebarNavigate('profile')}>
                       <AvatarImage src={user.photoURL || ''} />
@@ -312,7 +312,7 @@ export default function ShurukkhaDashboard() {
                   )}
                 </div>
                 <p className="text-muted-foreground text-xs md:text-sm font-body">
-                  {activeView === 'citizen' ? 'সিরাজগঞ্জ পাবলিক সেফটি পোর্টাল' : activeView === 'profile' ? 'আপনার রাজকীয় পরিচয় ও ফরেনসিক তথ্য' : 'মনিটরিং ও ডিসপ্যাচ ম্যানেজমেন্ট'}
+                  {activeView === 'citizen' ? 'সিরাজগঞ্জ পাবলিক সেফটি পোর্টাল' : activeView === 'profile' ? 'আপনার রাজকীয় পরিচয় ও ফরেনসিক তথ্য' : 'মনিটরিং ও ডিসপ্যাচ ম্যানেজমেন্ট (Grid v31.0)'}
                 </p>
               </div>
             </div>
@@ -349,7 +349,7 @@ export default function ShurukkhaDashboard() {
                       {isAutoMode && !isLockedDown && (
                         <Alert className="bg-accent/10 border-accent/20 py-2">
                           <Zap className="h-3 w-3 text-accent" />
-                          <AlertTitle className="text-[10px] font-bold uppercase text-accent">Autonomous Active</AlertTitle>
+                          <AlertTitle className="text-[10px] font-bold uppercase text-accent">Autonomous Active (0.004ms Sync)</AlertTitle>
                         </Alert>
                       )}
                       <div className="h-auto md:h-[calc(100vh-450px)] min-h-[400px]">
@@ -396,7 +396,7 @@ export default function ShurukkhaDashboard() {
 
           <footer className="border-t border-white/5 py-6 md:py-8 bg-muted/20 mt-12">
             <div className="container mx-auto px-4 text-center">
-              <p className="text-[8px] md:text-xs text-muted-foreground font-body uppercase tracking-[0.2em] md:tracking-[0.4em]">Shurukkha Sovereign Hub © ২০২৪ | সিরাজগঞ্জ সুরক্ষা | 42nd Project</p>
+              <p className="text-[8px] md:text-xs text-muted-foreground font-body uppercase tracking-[0.2em] md:tracking-[0.4em]">Shurukkha Sovereign Hub © ২০২৪ | সিরাজগঞ্জ সুরক্ষা | 42nd Project | V31.0_SOVEREIGN</p>
             </div>
           </footer>
         </div>

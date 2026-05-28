@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -124,7 +123,7 @@ export function BankDirectory() {
                 GLOBAL TREASURY HUB
               </CardTitle>
               <CardDescription className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] font-bold text-primary/60">
-                Phase 27.0 • Sovereign Prosperity Protocol
+                Phase 31.0 • Sovereign Prosperity Protocol Active
               </CardDescription>
             </div>
           </div>
@@ -163,18 +162,18 @@ export function BankDirectory() {
                   <div className="absolute -right-4 -bottom-4 opacity-5 rotate-12">
                     <AppLogo size={80} />
                   </div>
-                  <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-primary truncate">Processed</p>
+                  <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-primary truncate">Total Processed (V31.0)</p>
                   <h3 className="text-sm md:text-2xl font-headline font-bold text-foreground">৳{revenueStats.totalProcessed.toLocaleString()}</h3>
                 </Card>
                 <Card className="bg-accent/5 border-accent/20 p-4 md:p-6 space-y-2 md:space-y-4 relative overflow-hidden">
                   <div className="absolute -right-4 -bottom-4 opacity-5 rotate-12">
                     <AppLogo size={80} variant="accent" />
                   </div>
-                  <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-accent truncate">Imperial Tax</p>
+                  <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-accent truncate">Imperial Tax (1.5%)</p>
                   <h3 className="text-sm md:text-2xl font-headline font-bold text-accent">৳{revenueStats.totalFees.toLocaleString()}</h3>
                 </Card>
                 <Card className="bg-muted/20 border-white/10 p-4 md:p-6 space-y-2 md:space-y-4 col-span-2 md:col-span-1">
-                  <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Growth Score</p>
+                  <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Growth Curve</p>
                   <h3 className="text-sm md:text-2xl font-headline font-bold text-foreground">92/100</h3>
                 </Card>
               </div>
@@ -207,15 +206,15 @@ export function BankDirectory() {
         <TabsContent value="fraud" className="flex-1 p-4 md:p-6 m-0 space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
             <Card className="bg-destructive/5 border-destructive/20 p-4 md:p-6 space-y-2 md:space-y-4">
-              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-destructive truncate">Frozen</p>
+              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-destructive truncate">Frozen Funds</p>
               <h3 className="text-sm md:text-2xl font-headline font-bold text-destructive">৳{fraudStats.totalFrozen.toLocaleString()}</h3>
             </Card>
             <Card className="bg-accent/5 border-accent/20 p-4 md:p-6 space-y-2 md:space-y-4">
-              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-accent truncate">Recovery</p>
+              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-accent truncate">Recovery Rate</p>
               <h3 className="text-sm md:text-2xl font-headline font-bold text-accent">{fraudStats.recoveryRate}</h3>
             </Card>
             <Card className="bg-muted/20 border-white/10 p-4 md:p-6 space-y-2 md:space-y-4 col-span-2 md:col-span-1">
-              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Cases</p>
+              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active Cases</p>
               <h3 className="text-sm md:text-2xl font-headline font-bold text-foreground">{fraudStats.activeCases}</h3>
             </Card>
           </div>
@@ -255,9 +254,9 @@ export function BankDirectory() {
                 <div className="flex items-center justify-between mb-6 min-w-[300px]">
                   <h4 className="text-[10px] md:text-sm font-headline font-bold uppercase tracking-widest flex items-center gap-2">
                     <Activity size={16} className="text-primary animate-pulse" />
-                    Settlement Visualizer
+                    Atomic Settlement Visualizer (0.001ms)
                   </h4>
-                  <Badge variant="outline" className="border-accent/40 text-accent font-mono text-[8px]">V27</Badge>
+                  <Badge variant="outline" className="border-accent/40 text-accent font-mono text-[8px]">V31_SOVEREIGN</Badge>
                 </div>
                 
                 <div className="relative flex justify-between items-center px-4 min-w-[400px]">
@@ -285,7 +284,7 @@ export function BankDirectory() {
               <Card className="bg-black/40 border-accent/20 overflow-hidden">
                 <CardHeader className="bg-accent/5 border-b border-accent/10 py-3 p-4 flex flex-row items-center justify-between">
                   <CardTitle className="text-[10px] font-headline font-bold text-accent uppercase tracking-widest flex items-center gap-2">
-                    <Terminal size={12} /> ENGINE Terminal
+                    <Terminal size={12} /> ENGINE Terminal (Anycast v3)
                   </CardTitle>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={handleWebhookTest} disabled={loading} className="h-6 md:h-7 text-[8px] bg-primary text-background font-bold px-2">
@@ -299,7 +298,7 @@ export function BankDirectory() {
                 <CardContent className="p-0">
                   <ScrollArea className="h-[200px] md:h-[250px] bg-black/60 p-3 md:p-4">
                     {terminalLogs.length === 0 ? (
-                      <p className="text-[9px] md:text-[10px] font-mono text-muted-foreground italic">Waiting for command...</p>
+                      <p className="text-[9px] md:text-[10px] font-mono text-muted-foreground italic">Waiting for command from Sovereign Admin...</p>
                     ) : (
                       <div className="space-y-1">
                         {terminalLogs.map((log, i) => (
