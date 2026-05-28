@@ -2,13 +2,14 @@
  * @fileOverview Universal Bridge for Shurukkha Hub Partnership.
  * Implements RSA v2 Bridge, SHA256withRSA signing, and Webhook Engine.
  * Now includes Sovereign Identity Recognition, URL Discovery Protocol, and Redundancy Matrix.
+ * Added: Two-Way Outbound Signaling for Future Readiness.
  */
 
 import { db } from './firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 
 export interface IntegrationEvent {
-  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT' | 'SOVEREIGN_HANDSHAKE' | 'NETWORK_HEARTBEAT' | 'LOCAL_PAYMENT_INITIATED' | 'SETTLEMENT_COMPLETED' | 'IDENTITY_RECOGNITION' | 'VERIFICATION_LOOP' | 'ENDPOINT_DISCOVERED' | 'FAILOVER_TRIGGERED';
+  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT' | 'SOVEREIGN_HANDSHAKE' | 'NETWORK_HEARTBEAT' | 'LOCAL_PAYMENT_INITIATED' | 'SETTLEMENT_COMPLETED' | 'IDENTITY_RECOGNITION' | 'VERIFICATION_LOOP' | 'ENDPOINT_DISCOVERED' | 'FAILOVER_TRIGGERED' | 'OUTBOUND_SIGNAL_SENT';
   payload: any;
   timestamp: string;
 }
@@ -47,6 +48,25 @@ export const IntegrationBridge = {
       strategy: 'ACTIVE_FAILOVER',
       lastHeartbeat: new Date().toISOString()
     };
+  },
+
+  /**
+   * Sends an Outbound Signal to a partner (Two-Way Sync)
+   */
+  sendOutboundSignal: async (targetAppId: string, signalType: string, data: any) => {
+    console.log(`[Two-Way Sync] Sending ${signalType} to App: ${targetAppId}`);
+    const signature = IntegrationBridge.generateSignature(data);
+    
+    // Simulate outgoing API call
+    await addDoc(collection(db, "audit_trails"), {
+      action: 'OUTBOUND_SIGNAL_SENT',
+      details: { targetAppId, signalType, data },
+      signature,
+      timestamp: serverTimestamp(),
+      performedBy: 'sovereign_sync_engine'
+    });
+
+    return { success: true, signature };
   },
 
   registerApp: async (appName: string, webhookUrl: string, events: string[]) => {

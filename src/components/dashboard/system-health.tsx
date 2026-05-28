@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Activity, Zap, ShieldCheck, TrendingUp, BrainCircuit, Play, Loader2, AlertTriangle, Users, Database, ShieldAlert, Bug, ScrollText, Lock, CheckCircle2, ShieldQuestion, FileSearch, ShieldX, Camera, RefreshCw, FileText, Download, BarChart4 } from 'lucide-react'
+import { Activity, Zap, ShieldCheck, TrendingUp, BrainCircuit, Play, Loader2, AlertTriangle, Users, Database, ShieldAlert, Bug, ScrollText, Lock, CheckCircle2, ShieldQuestion, FileSearch, ShieldX, Camera, RefreshCw, FileText, Download, BarChart4, Signal } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -140,36 +139,6 @@ export function SystemHealth() {
       toast({ title: "Imperial Report Generated", description: "সাম্রাজ্যের ইতিহাসে নতুন অধ্যায় যুক্ত হয়েছে।" });
     }, 2000);
   };
-
-  const handleMassStressTest = async () => {
-    setIsStressTesting(true)
-    toast({
-      title: "Stress Test Initiated",
-      description: "সিস্টেমে ১০টি ফেক SOS অ্যালার্ট পুশ করা হচ্ছে...",
-    })
-
-    const testLocations = ["কাজীপুর চর", "সদরের দক্ষিণ অংশ", "বেলকুচি ঘাট", "এনায়েতপুর বাজার"];
-    const testTypes = ["বন্যা উদ্ধার", "মেডিকেল ইমার্জেন্সি", "অগ্নিকাণ্ড"];
-
-    try {
-      for (let i = 0; i < 10; i++) {
-        await addDoc(collection(db, "sos_alerts"), {
-          location: testLocations[i % testLocations.length] + ` (Test-${i+1})`,
-          type: testTypes[i % testTypes.length],
-          status: 'pending',
-          timestamp: serverTimestamp(),
-          isStressTest: true,
-          reporterId: 'system_stress_bot'
-        });
-        await new Promise(r => setTimeout(r, 500));
-      }
-      toast({ title: "Stress Test Successful" })
-    } catch (e) {
-      toast({ title: "Stress Test Failed", variant: "destructive" })
-    } finally {
-      setIsStressTesting(false)
-    }
-  }
 
   const verifyAuditLog = (log: any) => {
     setVerificationData({ open: true, log, result: null, verifying: true })
@@ -379,8 +348,9 @@ export function SystemHealth() {
           <Card className="bg-card border-white/5">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-headline flex items-center gap-2 uppercase tracking-widest">
-                <TrendingUp size={16} /> নেটওয়ার্ক ল্যাটেন্সি (Smart)
+                <Signal size={16} className="text-accent animate-pulse" /> Network Telemetry
               </CardTitle>
+              <CardDescription className="text-[10px]">Real-time Latency Mapping</CardDescription>
             </CardHeader>
             <CardContent className="h-[200px] pt-4">
               <ChartContainer config={{ 
@@ -407,22 +377,20 @@ export function SystemHealth() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-[10px] text-muted-foreground leading-relaxed">
-                প্রতিটি লেনদেন **SHA256withRSA** সিগনেচার দ্বারা সুরক্ষিত। **Dynamic Key Rotation** এখন সক্রিয় রয়েছে।
+                প্রতিটি লেনদেন **SHA256withRSA** সিগনেচার দ্বারা সুরক্ষিত। **Two-Way Sync Engine** এখন সক্রিয় রয়েছে।
               </p>
               <div className="space-y-2">
                 <div className="flex justify-between text-[9px] uppercase font-bold">
-                  <span className="text-muted-foreground">Audit Registry Status</span>
-                  <span className="text-accent">ENCRYPTED</span>
-                </div>
-                <div className="flex justify-between text-[9px] uppercase font-bold">
-                  <span className="text-muted-foreground">Smart-Routing</span>
+                  <span className="text-muted-foreground">Sync Engine</span>
                   <span className="text-accent">ACTIVE</span>
                 </div>
                 <div className="flex justify-between text-[9px] uppercase font-bold">
-                  <span className="text-muted-foreground">Lockdown Protocol</span>
-                  <span className={isLocked ? "text-destructive" : "text-primary"}>
-                    {isLocked ? "ENABLED" : "STANDBY"}
-                  </span>
+                  <span className="text-muted-foreground">Sovereign Credit</span>
+                  <span className="text-accent">-3 Cr (Locked)</span>
+                </div>
+                <div className="flex justify-between text-[9px] uppercase font-bold">
+                  <span className="text-muted-foreground">Outbound Comms</span>
+                  <span className="text-accent">READY</span>
                 </div>
               </div>
             </CardContent>

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw } from 'lucide-react'
+import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -131,7 +131,7 @@ export function IntegrationPanel() {
             <TabsTrigger value="apps" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Globe size={14}/> কানেক্টেড পার্টনার্স</TabsTrigger>
             <TabsTrigger value="discovery" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><Search size={14}/> URL ডিসকভারি</TabsTrigger>
             <TabsTrigger value="redundancy" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><ShieldAlert size={14}/> ব্যাকআপ ম্যাট্রিক্স</TabsTrigger>
-            <TabsTrigger value="docs" className="text-xs gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold"><Code2 size={14}/> এপিআই ডকস</TabsTrigger>
+            <TabsTrigger value="future" className="text-xs gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold"><Rocket size={14}/> Future Readiness</TabsTrigger>
           </TabsList>
         </div>
 
@@ -296,45 +296,55 @@ export function IntegrationPanel() {
                 TRIGGER FAILOVER
               </Button>
             </div>
-            {isTestingFailover && (
-              <div className="p-3 bg-black/60 rounded-xl border border-white/5 overflow-x-auto">
-                <pre className="text-[9px] font-mono text-accent/80 leading-relaxed animate-pulse">
-                  {`[SYSTEM]: Simulating Primary Failure... 
-[FAILOVER]: Redirecting Packet to Backup Node Node_42...
-[SECURITY]: SHA256withRSA Signature Verified on Backup...
-[RESULT]: Transaction Synchronized Successfully.`}
-                </pre>
-              </div>
-            )}
           </div>
         </TabsContent>
 
-        <TabsContent value="docs" className="flex-1 p-6 m-0">
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-6">
-              <section className="p-4 bg-primary/5 rounded-2xl border border-primary/20">
-                <h4 className="text-sm font-headline font-bold text-primary flex items-center gap-2 mb-3 uppercase tracking-widest">
-                  <Terminal size={18} /> Imperial SDK Integration
-                </h4>
-                <p className="text-xs text-foreground/80 leading-relaxed font-body mb-4">
-                  নূরআই এবং ফিউশনপে-এর সাথে আপনার সিস্টেমকে যুক্ত করার জন্য প্রতিটি রিকোয়েস্টে ডিজিটাল সিগনেচার বাধ্যতামূলক।
-                </p>
-                <div className="p-4 bg-black/60 rounded-xl border border-white/5 overflow-x-auto">
-                  <pre className="text-[10px] font-mono text-accent/80 leading-relaxed">
-{`// Sovereign Handshake Example
-const response = await fetch('https://api.noorai.io/v1/handshake', {
-  method: 'POST',
-  headers: {
-    'X-R-AK': 'X-R-AK-SURAKKHA-2024',
-    'X-R-Signature': generateSignature(payload, secretKey)
-  },
-  body: JSON.stringify({ action: 'AUTHORIZE_PAYMENT' })
-});`}
-                  </pre>
+        <TabsContent value="future" className="flex-1 p-6 m-0 space-y-6">
+          <div className="p-4 bg-accent/5 rounded-xl border border-accent/20">
+            <h4 className="text-sm font-headline font-bold text-accent flex items-center gap-2 mb-2 uppercase tracking-widest">
+              <Rocket size={18} /> Future Integration Roadmap
+            </h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              সাম্রাজ্যের ফিনটেক সক্ষমতা এবং বৈশ্বিক গ্রিড একীভূতকরণের পরবর্তী ধাপসমূহ।
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { phase: 'Phase 25.0', title: 'Direct Settlement', desc: 'বিকাশ ও স্ট্রাইপের সাথে সরাসরি ফান্ডিং লজিক।', icon: Database },
+              { phase: 'Phase 26.0', title: 'Two-Way Sync', desc: 'আউটবাউন্ড সিগন্যালিং এবং গেটওয়ে কন্ট্রোল।', icon: ArrowRightLeft },
+              { phase: 'Phase 27.0', title: 'Predictive Traffic', desc: 'NoorAI ব্যবহার করে ট্র্যাফিক ফোরকাস্টিং।', icon: TrendingUp },
+            ].map((step, idx) => (
+              <div key={idx} className="p-5 bg-card/60 border border-white/5 rounded-2xl space-y-3 group hover:border-primary/30 transition-all">
+                <div className="flex items-center justify-between">
+                  <step.icon size={20} className="text-primary" />
+                  <Badge variant="outline" className="text-[8px] h-4 border-primary/20 text-primary">{step.phase}</Badge>
                 </div>
-              </section>
+                <h4 className="text-sm font-headline font-bold">{step.title}</h4>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl space-y-4">
+            <h4 className="text-xs font-headline font-bold uppercase tracking-widest flex items-center gap-2">
+              <History size={14} className="text-primary" /> Readiness Log
+            </h4>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-2 bg-black/40 rounded border border-white/5">
+                <span className="text-[9px] font-mono text-muted-foreground uppercase">Two-Way Sync Engine</span>
+                <Badge className="bg-accent/20 text-accent border-accent/30 text-[8px] h-4">ACTIVE</Badge>
+              </div>
+              <div className="flex items-center justify-between p-2 bg-black/40 rounded border border-white/5">
+                <span className="text-[9px] font-mono text-muted-foreground uppercase">Outbound RSA Signing</span>
+                <Badge className="bg-accent/20 text-accent border-accent/30 text-[8px] h-4">ENABLED</Badge>
+              </div>
+              <div className="flex items-center justify-between p-2 bg-black/40 rounded border border-white/5">
+                <span className="text-[9px] font-mono text-muted-foreground uppercase">Latency Telemetry Loop</span>
+                <Badge className="bg-accent/20 text-accent border-accent/30 text-[8px] h-4">STANDBY</Badge>
+              </div>
             </div>
-          </ScrollArea>
+          </div>
         </TabsContent>
       </Tabs>
     </Card>
