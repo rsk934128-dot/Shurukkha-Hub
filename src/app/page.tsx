@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -238,7 +239,13 @@ export default function ShurukkhaDashboard() {
               </div>
               
               <div className="flex items-center gap-2 md:gap-6 flex-1 justify-end">
-                <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-accent/5 border border-accent/20 rounded-full">
+                <Link href="/welcome" className="hidden lg:block">
+                  <Button variant="outline" size="sm" className="h-8 border-accent/20 text-accent gap-2 text-[10px] font-bold uppercase tracking-widest bg-accent/5 hover:bg-accent/10">
+                    <Sparkles size={14} /> ফিচার ট্যুর
+                  </Button>
+                </Link>
+                
+                <div className="hidden xl:flex items-center gap-2 px-3 py-1 bg-accent/5 border border-accent/20 rounded-full">
                   <Lock size={12} className="text-accent" />
                   <span className="text-[9px] font-mono text-accent uppercase tracking-tighter">Encrypted_Session_Active</span>
                 </div>
