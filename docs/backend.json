@@ -57,6 +57,19 @@
         "partnershipLevel": { "type": "string", "enum": ["Standard", "Imperial", "Sovereign"] }
       }
     },
+    "SovereignDomain": {
+      "title": "Sovereign Domain",
+      "description": "Private DNS records for the sovereign infrastructure.",
+      "type": "object",
+      "properties": {
+        "domainName": { "type": "string" },
+        "extension": { "type": "string", "enum": [".sheikh", ".surukkha", ".imperial"] },
+        "targetIp": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "propagating", "locked"] },
+        "dnsType": { "type": "string", "enum": ["A", "CNAME", "SOA"] },
+        "lastResolved": { "type": "string", "format": "date-time" }
+      }
+    },
     "SovereignHandshake": {
       "title": "Sovereign Handshake",
       "description": "Records of secure digital handshakes with NoorAI/FusionPay.",
@@ -122,6 +135,10 @@
     "/integrations/{appId}": {
       "schema": "IntegrationApp",
       "description": "Registry of authorized partner applications."
+    },
+    "/sovereign_domains/{domainId}": {
+      "schema": "SovereignDomain",
+      "description": "Private DNS records for the sovereign network."
     },
     "/sovereign_handshakes/{handshakeId}": {
       "schema": "SovereignHandshake",

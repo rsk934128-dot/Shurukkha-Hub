@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -16,6 +16,7 @@ import { IntegrationPanel } from '@/components/dashboard/integration-panel'
 import { SystemHealth } from '@/components/dashboard/system-health'
 import { NetworkStatusBoard } from '@/components/dashboard/network-status-board'
 import { SovereignNetworkMap } from '@/components/dashboard/sovereign-network-map'
+import { SovereignDomainManager } from '@/components/dashboard/sovereign-domain-manager'
 import { BankDirectory } from '@/components/treasury/bank-directory'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
@@ -60,6 +61,7 @@ export default function ShurukkhaDashboard() {
     // Log Phase 23.0 & 24.0 Milestones on first load
     SovereignAudit.logMilestone('Phase_23.0', 'Global Banking & Sovereign Grid Integration Complete');
     SovereignAudit.logMilestone('Phase_24.0', 'Merchant Gateway Orchestration & Redundancy Matrix Active');
+    SovereignAudit.logMilestone('Phase_24.5', 'Sovereign DNS Root Authority Initialized (.sheikh)');
 
     return () => {
       window.removeEventListener('online', handleOnline)
@@ -130,7 +132,7 @@ export default function ShurukkhaDashboard() {
                 </Badge>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">Sovereign Grid v24.0</span>
+                <span className="text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">Sovereign Grid v24.5</span>
                 {isLockedDown && <Badge variant="destructive" className="h-4 text-[8px] animate-pulse">LOCKDOWN</Badge>}
               </div>
             </div>
@@ -234,7 +236,7 @@ export default function ShurukkhaDashboard() {
               <TabsList className="mb-6 bg-muted/20 border border-white/5 p-1 h-12">
                 <TabsTrigger value="ops" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[10px]">১. ডিসপ্যাচ কমান্ড</TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-2 h-10 px-6 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[10px]">২. হেলথ ও ফরেনসিক</TabsTrigger>
-                <TabsTrigger value="integrations" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[10px]">৩. পার্টনার ব্রিজ</TabsTrigger>
+                <TabsTrigger value="integrations" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[10px]">৩. পার্টনার ও ডোমেইন</TabsTrigger>
                 <TabsTrigger value="treasury" className="gap-2 h-10 px-6 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[10px]">৪. ট্রেজারি ও ব্যাংকিং</TabsTrigger>
               </TabsList>
 
@@ -268,6 +270,9 @@ export default function ShurukkhaDashboard() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                   <div className="lg:col-span-12">
                     <SovereignNetworkMap />
+                  </div>
+                  <div className="lg:col-span-12">
+                    <SovereignDomainManager />
                   </div>
                   <div className="lg:col-span-7">
                     <IntegrationPanel />
