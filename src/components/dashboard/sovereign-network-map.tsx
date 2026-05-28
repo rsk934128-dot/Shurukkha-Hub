@@ -1,10 +1,11 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Smartphone, ShieldCheck, Globe, Zap, Landmark, ArrowLeftRight, Cpu, Activity, ShieldAlert, Wifi, Server } from 'lucide-react'
+import { Smartphone, ShieldCheck, Globe, Zap, Landmark, ArrowLeftRight, Cpu, Activity, ShieldAlert, Wifi, Server, TrendingUp, BarChart3, Star } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { NetworkAuditor, NetworkNode } from '@/lib/network-auditor'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export function SovereignNetworkMap() {
   const [pulse, setPulse] = useState<any>(null)
@@ -49,72 +50,151 @@ export function SovereignNetworkMap() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-6">
-        <div className="relative flex flex-col items-center gap-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full items-center">
-            <div className="space-y-4 flex flex-col items-center">
-              <NetworkNodeItem node={mainNodes[0]} />
-            </div>
-
-            <div className="flex flex-col items-center relative">
-              <div className="absolute -z-10 w-full h-px bg-primary/20 top-1/2 -translate-y-1/2 md:block hidden" />
-              <NetworkNodeItem node={mainNodes[1]} highlight />
-            </div>
-
-            <div className="space-y-4 flex flex-col items-center">
-              <NetworkNodeItem node={mainNodes[2]} />
-              <NetworkNodeItem node={mainNodes[3]} />
-            </div>
-          </div>
-
-          <div className="w-full pt-8 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-             <div className="flex flex-col items-center gap-2">
-                <p className="text-[9px] uppercase font-bold text-muted-foreground mb-2">Distributed Ledger Node</p>
-                <NetworkNodeItem node={mainNodes[4]} />
-             </div>
-             
-             <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-[10px] font-headline font-bold uppercase tracking-widest flex items-center gap-2">
-                    <Server size={14} className="text-accent" /> Node Health Pulse
-                  </h4>
-                  <span className="text-[9px] text-accent font-bold">AVG LATENCY: 4ms</span>
-                </div>
-                <div className="grid grid-cols-7 gap-1">
-                  {Array.from({ length: 42 }).map((_, i) => (
-                    <div 
-                      key={i} 
-                      className={`h-1.5 rounded-full transition-all duration-500 ${pulse ? 'bg-accent shadow-[0_0_5px_rgba(34,211,238,0.5)]' : 'bg-muted'}`}
-                      title={`Node 42-${i+1}: Healthy`}
-                    />
-                  ))}
-                </div>
-                <p className="text-[8px] text-muted-foreground leading-relaxed">
-                  আপনার ৪২টি ডিস্ট্রিবিউটেড নোড এখন Anycast রাউটিংয়ের মাধ্যমে core.sheikh ডোমেইন পরিচালনা করছে।
-                </p>
-             </div>
-          </div>
+      
+      <Tabs defaultValue="map" className="w-full">
+        <div className="px-6 py-2 bg-muted/20 border-b border-white/5">
+          <TabsList className="bg-transparent border-none p-0 h-8">
+            <TabsTrigger value="map" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Globe size={12}/> Architecture Map</TabsTrigger>
+            <TabsTrigger value="metrics" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><BarChart3 size={12}/> Growth Metrics</TabsTrigger>
+          </TabsList>
         </div>
 
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-3 bg-muted/20 rounded-xl border border-white/5 space-y-1">
-            <p className="text-[8px] uppercase font-bold text-muted-foreground">Domain Trust</p>
-            <p className="text-[10px] font-mono text-primary font-bold">EPHEMERAL_TOKEN_V1</p>
+        <TabsContent value="map" className="p-6 m-0">
+          <div className="relative flex flex-col items-center gap-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full items-center">
+              <div className="space-y-4 flex flex-col items-center">
+                <NetworkNodeItem node={mainNodes[0]} />
+              </div>
+
+              <div className="flex flex-col items-center relative">
+                <div className="absolute -z-10 w-full h-px bg-primary/20 top-1/2 -translate-y-1/2 md:block hidden" />
+                <NetworkNodeItem node={mainNodes[1]} highlight />
+              </div>
+
+              <div className="space-y-4 flex flex-col items-center">
+                <NetworkNodeItem node={mainNodes[2]} />
+                <NetworkNodeItem node={mainNodes[3]} />
+              </div>
+            </div>
+
+            <div className="w-full pt-8 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+               <div className="flex flex-col items-center gap-2">
+                  <p className="text-[9px] uppercase font-bold text-muted-foreground mb-2">Distributed Ledger Node</p>
+                  <NetworkNodeItem node={mainNodes[4]} />
+               </div>
+               
+               <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[10px] font-headline font-bold uppercase tracking-widest flex items-center gap-2">
+                      <Server size={14} className="text-accent" /> Node Health Pulse
+                    </h4>
+                    <span className="text-[9px] text-accent font-bold">AVG LATENCY: 4ms</span>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: 42 }).map((_, i) => (
+                      <div 
+                        key={i} 
+                        className={`h-1.5 rounded-full transition-all duration-500 ${pulse ? 'bg-accent shadow-[0_0_5px_rgba(34,211,238,0.5)]' : 'bg-muted'}`}
+                        title={`Node 42-${i+1}: Healthy`}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-[8px] text-muted-foreground leading-relaxed">
+                    আপনার ৪২টি ডিস্ট্রিবিউটেড নোড এখন Anycast রাউটিংয়ের মাধ্যমে core.sheikh ডোমেইন পরিচালনা করছে।
+                  </p>
+               </div>
+            </div>
           </div>
-          <div className="p-3 bg-muted/20 rounded-xl border border-white/5 space-y-1">
-            <p className="text-[8px] uppercase font-bold text-muted-foreground">Settlement</p>
-            <p className="text-[10px] font-mono text-accent font-bold">ATOMIC_RECEIPT_ENABLED</p>
+        </TabsContent>
+
+        <TabsContent value="metrics" className="p-6 m-0 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="bg-primary/5 border-primary/20 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <TrendingUp size={16} className="text-primary" />
+                <Badge className="bg-primary/20 text-primary border-primary/30 text-[8px]">+24%</Badge>
+              </div>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground">Success Rate</p>
+              <p className="text-2xl font-headline font-bold text-primary">99.98%</p>
+              <p className="text-[8px] text-muted-foreground">Atomic Settlement efficiency improved.</p>
+            </Card>
+
+            <Card className="bg-accent/5 border-accent/20 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <Activity size={16} className="text-accent" />
+                <Badge className="bg-accent/20 text-accent border-accent/30 text-[8px]">-15ms</Badge>
+              </div>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground">Network Latency</p>
+              <p className="text-2xl font-headline font-bold text-accent">4.2ms</p>
+              <p className="text-[8px] text-muted-foreground">Anycast Routing optimization active.</p>
+            </Card>
+
+            <Card className="bg-primary/5 border-primary/20 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <Star size={16} className="text-primary fill-primary" />
+                <Badge className="bg-primary/20 text-primary border-primary/30 text-[8px]">100%</Badge>
+              </div>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground">System Uptime</p>
+              <p className="text-2xl font-headline font-bold text-primary">Sovereign</p>
+              <p className="text-[8px] text-muted-foreground">Zero-downtime redundancy protocol.</p>
+            </Card>
           </div>
-          <div className="p-3 bg-muted/20 rounded-xl border border-white/5 space-y-1">
-            <p className="text-[8px] uppercase font-bold text-muted-foreground">Anycast Nodes</p>
-            <p className="text-[10px] font-mono text-primary font-bold">42_HEALTHY_PULSE</p>
+
+          <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl">
+            <h4 className="text-xs font-headline font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Landmark size={14} className="text-primary" /> SovereignPay Impact Analytics
+            </h4>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <div className="flex justify-between text-[9px] uppercase font-bold">
+                  <span className="text-muted-foreground">Automated Auditing Efficiency</span>
+                  <span className="text-primary">95%</span>
+                </div>
+                <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+                  <div className="h-full bg-primary w-[95%]" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-[9px] uppercase font-bold">
+                  <span className="text-muted-foreground">Gateway Pre-Flight Success</span>
+                  <span className="text-accent">100%</span>
+                </div>
+                <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+                  <div className="h-full bg-accent w-full" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-[9px] uppercase font-bold">
+                  <span className="text-muted-foreground">Atomic Settlement Speed</span>
+                  <span className="text-primary">0.001ms</span>
+                </div>
+                <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+                  <div className="h-full bg-primary w-[98%]" />
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="p-3 bg-muted/20 rounded-xl border border-white/5 space-y-1">
-            <p className="text-[8px] uppercase font-bold text-muted-foreground">Sync State</p>
-            <p className="text-[10px] font-mono text-accent font-bold">MULTI_NODE_LEDGER</p>
-          </div>
+        </TabsContent>
+      </Tabs>
+
+      <div className="p-6 pt-0 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="p-3 bg-muted/20 rounded-xl border border-white/5 space-y-1">
+          <p className="text-[8px] uppercase font-bold text-muted-foreground">Domain Trust</p>
+          <p className="text-[10px] font-mono text-primary font-bold">EPHEMERAL_TOKEN_V1</p>
         </div>
-      </CardContent>
+        <div className="p-3 bg-muted/20 rounded-xl border border-white/5 space-y-1">
+          <p className="text-[8px] uppercase font-bold text-muted-foreground">Settlement</p>
+          <p className="text-[10px] font-mono text-accent font-bold">ATOMIC_RECEIPT_ENABLED</p>
+        </div>
+        <div className="p-3 bg-muted/20 rounded-xl border border-white/5 space-y-1">
+          <p className="text-[8px] uppercase font-bold text-muted-foreground">Anycast Nodes</p>
+          <p className="text-[10px] font-mono text-primary font-bold">42_HEALTHY_PULSE</p>
+        </div>
+        <div className="p-3 bg-muted/20 rounded-xl border border-white/5 space-y-1">
+          <p className="text-[8px] uppercase font-bold text-muted-foreground">Sync State</p>
+          <p className="text-[10px] font-mono text-accent font-bold">MULTI_NODE_LEDGER</p>
+        </div>
+      </div>
     </Card>
   )
 }

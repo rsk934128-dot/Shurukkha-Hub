@@ -1,8 +1,6 @@
 /**
  * @fileOverview Sovereign Payment Handler for Local & Global Settlements.
- * Updated: Added Validation & Settlement Engine with Retry Loop logic.
- * UPDATED: Primary Identity migrated to core.sheikh.
- * UPDATED Phase 24.5: Atomic Settlement & Cryptographic Receipts.
+ * Updated Phase 24.5: Atomic Settlement, Cryptographic Receipts & Automated Treasury Sync.
  */
 
 import { IntegrationBridge } from './integration-bridge';
@@ -50,27 +48,34 @@ export class PaymentHandler {
   }
 
   /**
-   * Initiates an Atomic local settlement via Anycast Domain
+   * Initiates an Atomic local settlement via Anycast Domain with Automated Treasury Sync.
    */
   static async initiateLocalSettlement(intent: PaymentIntent) {
     console.log(`[Atomic Treasury] Initiating Settlement for ${intent.amount} ${intent.currency} via ${IntegrationBridge.primaryDomain}...`);
+    
+    // Step 1: Gateway Pre-Flight Check (Phase 24.5)
     const token = IntegrationBridge.generateEphemeralToken();
-    const signature = IntegrationBridge.generateSignature({ ...intent, token });
+    const preFlight = await IntegrationBridge.preFlightCheck(intent.target === 'BKASH' ? 'gw-bkash' : 'gw-stripe', token);
+    
+    if (preFlight.status !== 'PASSED') {
+      throw new Error(`Security Exception: ${preFlight.reason}`);
+    }
 
     try {
-      // 1. Log Initiation with Token
+      // 2. Broadcast Initiation
       await IntegrationBridge.broadcastEvent({
         type: 'LOCAL_PAYMENT_INITIATED',
-        payload: { ...intent, signature, domain: IntegrationBridge.primaryDomain, token },
+        payload: { ...intent, domain: IntegrationBridge.primaryDomain, token },
         timestamp: new Date().toISOString()
       });
 
       await new Promise(resolve => setTimeout(resolve, 600)); // Atomic Speed
       const settlementId = 'set_bkash_' + Math.random().toString(36).substr(2, 12);
       
-      // 2. Atomic Settlement Record
+      // 3. Generate Atomic Receipt
       const receipt = PaymentHandler.generateReceipt(intent, settlementId);
       
+      // 4. Automated Treasury Sync (Immutable Log)
       await addDoc(collection(db, "audit_trails"), {
         action: 'SETTLEMENT_COMPLETED',
         details: { settlementId, amount: intent.amount, target: intent.target, status: 'SUCCESS', domain: IntegrationBridge.primaryDomain, receipt },
@@ -79,7 +84,7 @@ export class PaymentHandler {
         performedBy: 'sovereign_atomic_engine'
       });
 
-      return { success: true, settlementId, signature, receipt };
+      return { success: true, settlementId, receipt };
     } catch (e) {
       console.error("[Payment Handler] Atomic Settlement failed", e);
       throw e;
@@ -103,6 +108,9 @@ export class PaymentHandler {
 
     onLog("[RESPONSE_ENGINE]: Waiting for bKash Reply via Anycast...");
     const token = IntegrationBridge.generateEphemeralToken();
+    
+    // Pre-Flight Simulation
+    onLog("[PRE-FLIGHT]: Running Security Check...");
     await new Promise(r => setTimeout(r, 400));
     
     const signature = IntegrationBridge.generateSignature({ ...intent, token });
@@ -113,6 +121,7 @@ export class PaymentHandler {
     const settlementId = 'set_test_anycast_' + Math.random().toString(36).substr(2, 8);
     const receipt = PaymentHandler.generateReceipt(intent, settlementId);
     
+    // Automated Treasury Sync
     await addDoc(collection(db, "audit_trails"), {
       action: 'DUMMY_PAYMENT_TEST',
       details: { intent, settlementId, status: 'VERIFIED', domain: IntegrationBridge.primaryDomain, receipt },
