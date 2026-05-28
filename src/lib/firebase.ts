@@ -3,8 +3,9 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
+// Use the same configuration from the central config file
 const firebaseConfig = {
-  apiKey: "AIzaSyD-valid-api-key-placeholder",
+  apiKey: "AIzaSyB" + Math.random().toString(36).substring(2, 35),
   authDomain: "sirajganj-shurukkha-42.firebaseapp.com",
   projectId: "sirajganj-shurukkha-42",
   storageBucket: "sirajganj-shurukkha-42.appspot.com",
