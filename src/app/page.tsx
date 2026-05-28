@@ -18,6 +18,7 @@ import {
   Star,
   Activity,
   ShieldAlert,
+  ShieldCheck,
   Server,
   Fingerprint,
   Swords,
@@ -289,7 +290,7 @@ export default function WelcomeLanding() {
                    { icon: Globe, label: 'Global Nodes', val: '42' },
                    { icon: Zap, label: 'Execution', val: '0.004ms' },
                    { icon: ShieldAlert, label: 'Threat Blocks', val: '1.2M+' },
-                   { icon: Server, label: 'Core Version', val: 'v31.0' }
+                   { icon: ShieldCheck, label: 'Core Version', val: 'v31.0' }
                  ].map((stat, i) => (
                    <div key={i} className="space-y-4 group">
                       <div className="w-20 h-20 bg-card/60 border border-white/10 rounded-[2rem] flex items-center justify-center mx-auto group-hover:border-primary/40 transition-all duration-500 shadow-xl">
@@ -332,7 +333,7 @@ export default function WelcomeLanding() {
             <div className="space-y-4">
               <p className="text-[10px] md:text-xs uppercase tracking-[0.6em] font-bold text-muted-foreground">Developed with Sovereign Pride for Sirajganj District Administration</p>
               <div className="flex justify-center gap-8 text-[9px] uppercase font-bold tracking-widest text-primary/40">
-                 <a href="#" className="hover:text-primary transition-colors">Privacy Protocols</a>
+                 <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Protocols</Link>
                  <a href="#" className="hover:text-primary transition-colors">Imperial Terms</a>
                  <a href="#" className="hover:text-primary transition-colors">Forensic Audit</a>
               </div>
@@ -385,9 +386,11 @@ function FeatureCard({ icon: Icon, title, tag, desc, cases, color, glow }: any) 
         </div>
         
         <div className="pt-6">
-           <Button variant="ghost" className="p-0 text-xs font-bold uppercase tracking-widest text-primary hover:bg-transparent group-hover:gap-3 gap-2 transition-all">
-              Learn More <ArrowRight size={14} />
-           </Button>
+           <Link href="/login">
+            <Button variant="ghost" className="p-0 text-xs font-bold uppercase tracking-widest text-primary hover:bg-transparent group-hover:gap-3 gap-2 transition-all">
+                Learn More <ArrowRight size={14} />
+            </Button>
+           </Link>
         </div>
       </CardContent>
     </Card>
