@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -22,6 +21,7 @@ import { AlertCenter } from '@/components/dashboard/alert-center'
 import { SovereignStatusWidget } from '@/components/dashboard/sovereign-status-widget'
 import { AuditPanel } from '@/components/dashboard/audit-panel'
 import { ImperialOverview } from '@/components/dashboard/imperial-overview'
+import { SovereignIDCard } from '@/components/dashboard/sovereign-id-card'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -205,7 +205,7 @@ export default function ShurukkhaDashboard() {
 
   const handleSidebarNavigate = (view: string) => {
     setActiveView(view);
-    if (['ops', 'analytics', 'audits', 'integrations', 'treasury'].includes(view)) {
+    if (['ops', 'analytics', 'audits', 'integrations', 'treasury', 'profile'].includes(view)) {
       setActiveSubTab(view);
     }
   }
@@ -266,11 +266,11 @@ export default function ShurukkhaDashboard() {
                 <SovereignStatusWidget />
                 {user ? (
                   <div className="flex items-center gap-3">
-                    <div className="hidden sm:block text-right">
+                    <div className="hidden sm:block text-right cursor-pointer" onClick={() => handleSidebarNavigate('profile')}>
                       <p className="text-[10px] font-bold leading-none">{user.displayName}</p>
                       <p className="text-[8px] text-primary uppercase tracking-widest font-bold">{userRole}</p>
                     </div>
-                    <Avatar className="h-8 w-8 border border-primary/20">
+                    <Avatar className="h-8 w-8 border border-primary/20 cursor-pointer" onClick={() => handleSidebarNavigate('profile')}>
                       <AvatarImage src={user.photoURL || ''} />
                       <AvatarFallback className="bg-primary/10 text-[10px]">{user.displayName?.substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
@@ -297,13 +297,13 @@ export default function ShurukkhaDashboard() {
           </header>
 
           <main className="flex-1 container mx-auto px-4 py-4 md:py-8 overflow-x-hidden">
-            {(userRole === 'admin' || userRole === 'authority') && <ImperialOverview />}
+            {(userRole === 'admin' || userRole === 'authority') && activeView !== 'profile' && <ImperialOverview />}
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-3">
                   <h2 className="text-xl md:text-3xl font-headline font-bold tracking-tight">
-                    {activeView === 'citizen' ? 'সুরক্ষা ড্যাশবোর্ড' : 'কমান্ড সেন্টার'}
+                    {activeView === 'citizen' ? 'সুরক্ষা ড্যাশবোর্ড' : activeView === 'profile' ? 'সার্বভৌম পরিচয়পত্র' : 'কমান্ড সেন্টার'}
                   </h2>
                   {(isLockedDown || userRole === 'admin') && (
                     <Badge variant="outline" className={`${userRole === 'admin' ? 'border-accent/40 text-accent' : 'border-destructive/30 text-destructive'} gap-1 text-[8px] h-5`}>
@@ -312,7 +312,7 @@ export default function ShurukkhaDashboard() {
                   )}
                 </div>
                 <p className="text-muted-foreground text-xs md:text-sm font-body">
-                  {activeView === 'citizen' ? 'সিরাজগঞ্জ পাবলিক সেফটি পোর্টাল' : 'মনিটরিং ও ডিসপ্যাচ ম্যানেজমেন্ট'}
+                  {activeView === 'citizen' ? 'সিরাজগঞ্জ পাবলিক সেফটি পোর্টাল' : activeView === 'profile' ? 'আপনার রাজকীয় পরিচয় ও ফরেনসিক তথ্য' : 'মনিটরিং ও ডিসপ্যাচ ম্যানেজমেন্ট'}
                 </p>
               </div>
             </div>
@@ -335,7 +335,13 @@ export default function ShurukkhaDashboard() {
               </div>
             )}
 
-            {(activeView !== 'citizen') && (
+            {activeView === 'profile' && (
+              <div className="max-w-4xl mx-auto">
+                <SovereignIDCard user={user} role={userRole} />
+              </div>
+            )}
+
+            {(activeView !== 'citizen' && activeView !== 'profile') && (
               <div className="w-full">
                 <Tabs value={activeSubTab} onValueChange={handleSidebarNavigate} className="w-full">
                   <TabsContent value="ops" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">

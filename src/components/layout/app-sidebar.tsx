@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -17,7 +16,8 @@ import {
   Zap,
   Globe,
   Database,
-  LogOut
+  LogOut,
+  UserCircle
 } from "lucide-react"
 
 import {
@@ -64,6 +64,26 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
       </SidebarHeader>
 
       <SidebarContent>
+        {/* User Identity Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] uppercase font-bold text-muted-foreground/50 px-4">আপনার পরিচয়</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  isActive={activeTab === 'profile'} 
+                  onClick={() => handleNav('profile')}
+                  className="px-4 h-10 gap-3"
+                >
+                  <UserCircle size={18} className={activeTab === 'profile' ? "text-accent" : "text-muted-foreground"} />
+                  <span className="font-medium">প্রোফাইল আইডি</span>
+                  <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent uppercase font-bold">SOVEREIGN</Badge>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         {/* Public Section */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase font-bold text-muted-foreground/50 px-4">পাবলিক সার্ভিস</SidebarGroupLabel>
