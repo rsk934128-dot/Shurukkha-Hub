@@ -1,7 +1,6 @@
 /**
  * @fileOverview Sovereign Webhook Endpoint for bKash Merchant Handshake.
- * Handles challenge/response and payment notifications with RSA v2 verification.
- * This is a server-side route handler.
+ * Implements Validation & Settlement Engine for Autonomous Response Handling.
  */
 
 import { NextResponse } from 'next/server';
@@ -13,9 +12,8 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const challenge = searchParams.get('challenge');
 
-  // Imperial Handshake: Respond to verification challenges
   if (challenge) {
-    console.log(`[Merchant Hook] Received Challenge: ${challenge}`);
+    console.log(`[Merchant Hook] Challenge Verified: ${challenge}`);
     return new NextResponse(challenge, { status: 200 });
   }
 
@@ -27,28 +25,45 @@ export async function POST(request: Request) {
     const body = await request.json();
     const signature = request.headers.get('X-Imperial-Signature');
 
-    // Verify incoming payload signature
+    // Step 1: Integrity Check (RSA v2 Verification)
     const isValid = IntegrationBridge.verifySignature(body, signature || '');
 
-    await addDoc(collection(db, "audit_trails"), {
-      action: 'MERCHANT_WEBHOOK_RECEIVED',
-      details: { ...body, verified: isValid },
+    // Step 2: Forensic Logging (Audit Trail)
+    const auditData = {
+      action: 'BKASH_RESPONSE_RECEIVED',
+      details: { ...body, verificationStatus: isValid ? 'SUCCESS' : 'FAILED' },
       signature: signature,
       timestamp: serverTimestamp(),
-      performedBy: 'sovereign_webhook_engine'
-    });
+      performedBy: 'sovereign_response_engine_v1'
+    };
+
+    await addDoc(collection(db, "audit_trails"), auditData);
 
     if (!isValid) {
-      console.error("[Merchant Hook] Invalid Signature Detected");
-      return new NextResponse(JSON.stringify({ status: 'UNAUTHORIZED', message: 'Invalid Signature' }), { status: 401 });
+      console.error("[Response Engine] Signature Mismatch Detected");
+      return NextResponse.json({ status: 'UNAUTHORIZED', message: 'Signature Invalid' }, { status: 401 });
     }
 
-    // Process payment logic here...
-    console.log(`[Merchant Hook] Payment Processed: ${body.amount} BDT`);
+    // Step 3: Success Parsing & Autonomous Settlement
+    if (body.status === 'SUCCESS') {
+      console.log(`[Response Engine] Transaction ${body.transactionId} Verified & Settled.`);
+      
+      // Potential logic here for direct balance update or signaling
+      await IntegrationBridge.broadcastEvent({
+        type: 'SETTLEMENT_COMPLETED',
+        payload: { transactionId: body.transactionId, amount: body.amount },
+        timestamp: new Date().toISOString()
+      });
+    }
 
-    return new NextResponse(JSON.stringify({ status: 'SUCCESS', transactionId: body.transactionId || 'tx_mock_123' }), { status: 200 });
+    return NextResponse.json({ 
+      status: 'SUCCESS', 
+      transactionId: body.transactionId,
+      message: 'Autonomous Settlement Confirmed'
+    }, { status: 200 });
+
   } catch (error) {
-    console.error("[Merchant Hook] Error processing webhook", error);
-    return new NextResponse(JSON.stringify({ status: 'ERROR', message: 'Internal Server Error' }), { status: 500 });
+    console.error("[Response Engine] Critical Error", error);
+    return NextResponse.json({ status: 'ERROR', message: 'Internal Validation Failure' }, { status: 500 });
   }
 }

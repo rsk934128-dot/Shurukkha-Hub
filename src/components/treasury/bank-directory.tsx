@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, CreditCard, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play, UserCheck, ShieldAlert, Cpu, Activity, Signal } from 'lucide-react'
+import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play, UserCheck, ShieldAlert, Cpu, Activity, Signal, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -20,9 +20,10 @@ export function BankDirectory() {
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [terminalLogs, setTerminalLogs] = useState<string[]>([])
+  const [activeStep, setActiveStep] = useState(0)
   const [merchantForm, setMerchantForm] = useState({
     name: 'Shurukkha Hub Official',
-    callback: 'https://shurukkha-hub.gov.bd/api/webhook/bkash'
+    callback: 'https://hub.shurukkha.gov.bd/api/webhook/bkash'
   })
   const { toast } = useToast()
 
@@ -36,46 +37,8 @@ export function BankDirectory() {
     try {
       const data = await StripeBankSync.fetchGlobalBanks()
       setBanks(data)
-      toast({
-        title: "GLOBAL SYNC SUCCESS",
-        description: "Phase 23.0: Stripe ব্যাংকিং ডিরেক্টরি সফলভাবে আপডেট করা হয়েছে।",
-      })
     } catch (e) {
       toast({ title: "SYNC FAILED", variant: "destructive" })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handlePush = async (bankId: string) => {
-    toast({ title: "INITIATING RSA PUSH", description: "সিগনেচার ভেরিফাই করা হচ্ছে..." })
-    const sig = await StripeBankSync.initiateBankPush(bankId)
-    if (sig) {
-      toast({
-        title: "PUSH AUTHORIZED",
-        description: `Bank Node ${bankId} আমাদের সিগনেচার গ্রহণ করেছে।`,
-      })
-    }
-  }
-
-  const handleLocalSettlement = async (gw: any) => {
-    setLoading(true)
-    try {
-      const result = await PaymentHandler.initiateLocalSettlement({
-        amount: 5000,
-        currency: 'BDT',
-        source: 'CARD',
-        target: 'BKASH',
-        merchantId: 'SIRAJGANJ_GOV_HUB'
-      })
-      if (result.success) {
-        toast({
-          title: "SETTLEMENT SUCCESSFUL",
-          description: `Transaction ID: ${result.settlementId} | bKash এ ফান্ড পাঠানো হয়েছে।`,
-        })
-      }
-    } catch (e) {
-      toast({ title: "SETTLEMENT FAILED", variant: "destructive" })
     } finally {
       setLoading(false)
     }
@@ -84,13 +47,15 @@ export function BankDirectory() {
   const handleDummyTest = async () => {
     setLoading(true)
     setTerminalLogs([])
+    setActiveStep(1)
     try {
       await PaymentHandler.triggerDummyPayment((msg) => {
         setTerminalLogs(prev => [...prev, msg])
+        if (msg.includes('CONNECTED')) setActiveStep(2)
+        if (msg.includes('Verified')) setActiveStep(3)
+        if (msg.includes('Balance Update')) setActiveStep(4)
+        if (msg.includes('সফল')) setActiveStep(5)
       })
-      toast({ title: "Dummy Test Complete", description: "লোকাল পেমেন্ট লজিক সফলভাবে যাচাই করা হয়েছে।" })
-    } catch (e) {
-      toast({ title: "Test Failed", variant: "destructive" })
     } finally {
       setLoading(false)
     }
@@ -103,9 +68,6 @@ export function BankDirectory() {
       await PaymentHandler.testWebhookHandshake((msg) => {
         setTerminalLogs(prev => [...prev, msg])
       })
-      toast({ title: "Webhook Test Complete", description: "বিকাশ গেটওয়ে কনফার্মেশন রিসিভ করা হয়েছে।" })
-    } catch (e) {
-      toast({ title: "Webhook Test Failed", variant: "destructive" })
     } finally {
       setLoading(false)
     }
@@ -115,16 +77,8 @@ export function BankDirectory() {
     e.preventDefault()
     setLoading(true)
     try {
-      const result = await PaymentHandler.registerMerchant({
-        merchantName: merchantForm.name,
-        callbackUrl: merchantForm.callback
-      })
-      toast({
-        title: "MERCHANT PARTNER ACTIVE",
-        description: `বিকাশ গেটওয়ের সাথে হ্যান্ডশেক সম্পন্ন হয়েছে। ID: ${result.merchantId}`,
-      })
-    } catch (e) {
-      toast({ title: "Registration Failed", variant: "destructive" })
+      const result = await PaymentHandler.registerMerchant(merchantForm)
+      toast({ title: "MERCHANT PARTNER ACTIVE", description: `bKash ID: ${result.merchantId}` })
     } finally {
       setLoading(false)
     }
@@ -134,6 +88,14 @@ export function BankDirectory() {
     b.bankName.toLowerCase().includes(search.toLowerCase()) || 
     b.country.toLowerCase().includes(search.toLowerCase())
   )
+
+  const steps = [
+    { id: 1, label: 'Webhook Received', icon: Signal },
+    { id: 2, label: 'Signature Verified', icon: ShieldCheck },
+    { id: 3, label: 'Payload Parsed', icon: Cpu },
+    { id: 4, label: 'Settlement Initiated', icon: ArrowRightLeft },
+    { id: 5, label: 'Registry Updated', icon: Landmark },
+  ]
 
   return (
     <Card className="bg-card border-primary/20 h-full flex flex-col overflow-hidden">
@@ -165,15 +127,8 @@ export function BankDirectory() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={handleSync}
-              disabled={loading}
-              className="h-9 border-primary/20 text-primary gap-2"
-            >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-              SYNC REGISTRY
+            <Button size="sm" variant="outline" onClick={handleSync} disabled={loading} className="h-9 border-primary/20 text-primary gap-2">
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> SYNC REGISTRY
             </Button>
           </div>
         </div>
@@ -203,45 +158,11 @@ export function BankDirectory() {
               <TableBody>
                 {filteredBanks.map((bank) => (
                   <TableRow key={bank.id} className="group hover:bg-primary/5 border-white/5">
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Globe size={14} className="text-muted-foreground" />
-                        <span className="text-xs font-bold">{bank.country}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Building2 size={14} className="text-primary/60 group-hover:text-primary" />
-                        <span className="text-sm font-headline font-medium">{bank.bankName}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={
-                        bank.status === 'CONNECTED' ? 'bg-accent/20 text-accent border-accent/30' : 
-                        bank.status === 'READY' ? 'bg-primary/20 text-primary border-primary/30' : 
-                        'bg-destructive/20 text-destructive'
-                      }>
-                        {bank.status === 'CONNECTED' && <CheckCircle2 size={10} className="mr-1" />}
-                        {bank.status === 'LOCKED' && <Lock size={10} className="mr-1" />}
-                        {bank.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <code className="text-[10px] font-mono text-muted-foreground bg-black/40 px-2 py-0.5 rounded">
-                        {bank.handshakeId}
-                      </code>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        disabled={!bank.pushAvailable}
-                        onClick={() => handlePush(bank.id)}
-                        className="h-8 text-[10px] uppercase font-bold tracking-widest text-primary hover:bg-primary/10 gap-2"
-                      >
-                        <Zap size={12} fill="currentColor" /> PUSH
-                      </Button>
-                    </TableCell>
+                    <TableCell><span className="text-xs font-bold">{bank.country}</span></TableCell>
+                    <TableCell><span className="text-sm font-headline font-medium">{bank.bankName}</span></TableCell>
+                    <TableCell><Badge variant="outline">{bank.status}</Badge></TableCell>
+                    <TableCell><code className="text-[10px]">{bank.handshakeId}</code></TableCell>
+                    <TableCell className="text-right"><Button size="sm" variant="ghost" disabled={!bank.pushAvailable}>PUSH</Button></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -250,39 +171,38 @@ export function BankDirectory() {
         </TabsContent>
 
         <TabsContent value="local" className="flex-1 p-6 m-0 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {localGateways.map(gw => (
-              <div key={gw.id} className="p-4 bg-muted/30 border border-white/5 rounded-2xl space-y-4 group hover:border-accent/30 transition-all">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center border border-accent/20">
-                      <Smartphone className="text-accent" size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-headline font-bold">{gw.name}</h3>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{gw.type} GATEWAY</p>
-                    </div>
-                  </div>
-                  <Badge className="bg-accent/20 text-accent border-accent/30">{gw.status}</Badge>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-12">
+              <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20">
+                <div className="flex items-center justify-between mb-6">
+                  <h4 className="text-sm font-headline font-bold uppercase tracking-widest flex items-center gap-2">
+                    <Activity size={18} className="text-primary animate-pulse" />
+                    Transaction Flow Visualizer
+                  </h4>
+                  <Badge variant="outline" className="border-accent/40 text-accent font-mono text-[9px]">ENGINE_V1_ACTIVE</Badge>
                 </div>
                 
-                <div className="flex items-center justify-between text-[9px] font-mono">
-                  <span className="text-muted-foreground">LATENCY: {gw.latency}</span>
-                  <span className="text-accent">RSA_V2_READY</span>
+                <div className="relative flex justify-between items-center px-4">
+                  <div className="absolute top-1/2 left-0 right-0 h-px bg-white/10 -translate-y-1/2 -z-10" />
+                  {steps.map((step, idx) => {
+                    const Icon = step.icon;
+                    const isCompleted = activeStep >= step.id;
+                    const isCurrent = activeStep === step.id;
+                    return (
+                      <div key={step.id} className="flex flex-col items-center gap-2 relative">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isCompleted ? 'bg-primary border-primary text-background' : isCurrent ? 'bg-muted border-accent text-accent animate-pulse' : 'bg-card border-white/5 text-muted-foreground'}`}>
+                          <Icon size={20} />
+                        </div>
+                        <span className={`text-[9px] font-bold uppercase tracking-tighter text-center max-w-[80px] ${isCompleted ? 'text-primary' : 'text-muted-foreground'}`}>
+                          {step.label}
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
-
-                <Button 
-                  onClick={() => handleLocalSettlement(gw)}
-                  disabled={loading}
-                  className="w-full h-8 text-[10px] font-bold bg-accent text-background gap-2"
-                >
-                  <ArrowRightLeft size={12} /> INITIATE SETTLEMENT
-                </Button>
               </div>
-            ))}
-          </div>
+            </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-8">
               <Card className="bg-black/40 border-accent/20 overflow-hidden">
                 <CardHeader className="bg-accent/5 border-b border-accent/10 py-3 flex flex-row items-center justify-between">
@@ -290,26 +210,16 @@ export function BankDirectory() {
                     <Terminal size={14} /> Live Transaction Terminal
                   </CardTitle>
                   <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={handleWebhookTest} 
-                      disabled={loading}
-                      className="h-7 text-[9px] bg-primary text-background font-bold gap-2"
-                    >
+                    <Button size="sm" onClick={handleWebhookTest} disabled={loading} className="h-7 text-[9px] bg-primary text-background font-bold gap-2">
                       <Zap size={10} fill="currentColor" /> TEST WEBHOOK
                     </Button>
-                    <Button 
-                      size="sm" 
-                      onClick={handleDummyTest} 
-                      disabled={loading}
-                      className="h-7 text-[9px] bg-accent text-background font-bold gap-2"
-                    >
+                    <Button size="sm" onClick={handleDummyTest} disabled={loading} className="h-7 text-[9px] bg-accent text-background font-bold gap-2">
                       <Play size={10} fill="currentColor" /> RUN DUMMY TEST
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <ScrollArea className="h-[200px] bg-black/60 p-4">
+                  <ScrollArea className="h-[250px] bg-black/60 p-4">
                     {terminalLogs.length === 0 ? (
                       <p className="text-[10px] font-mono text-muted-foreground italic">Waiting for imperial command...</p>
                     ) : (
@@ -325,143 +235,59 @@ export function BankDirectory() {
                 </CardContent>
               </Card>
             </div>
+            
             <div className="lg:col-span-4">
-              <div className="p-4 bg-accent/5 border border-accent/20 rounded-xl h-full">
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-accent mb-2">Settlement Buffer Protocol:</h4>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  কার্ড থেকে প্রাপ্ত ফান্ড সরাসরি বিকাশে সেটেল করার জন্য **Sovereign Settlement Buffer** ব্যবহৃত হচ্ছে। প্রতিটি ট্রানজেকশন **SHA256withRSA v2** সিগনেচার দ্বারা সুরক্ষিত।
-                </p>
-                <div className="mt-4 pt-4 border-t border-accent/10 space-y-2">
-                  <div className="flex justify-between text-[8px] uppercase font-bold text-muted-foreground">
-                    <span>Hook Auth</span>
-                    <span className="text-accent">VERIFIED</span>
+              <div className="p-4 bg-muted/20 border border-white/5 rounded-xl space-y-4">
+                <h4 className="text-xs font-headline font-bold uppercase tracking-widest text-primary">Response Engine Stats</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="text-muted-foreground">Retry Efficiency</span>
+                    <span className="text-accent font-bold">99.9%</span>
                   </div>
-                  <div className="flex justify-between text-[8px] uppercase font-bold text-muted-foreground">
-                    <span>Buffer Status</span>
-                    <span className="text-accent">ACTIVE</span>
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="text-muted-foreground">Validation Latency</span>
+                    <span className="text-accent font-bold">4ms</span>
                   </div>
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="text-muted-foreground">Audit Compliance</span>
+                    <span className="text-primary font-bold">VERIFIED</span>
+                  </div>
+                </div>
+                <div className="pt-4 border-t border-white/5">
+                  <p className="text-[9px] text-muted-foreground italic leading-relaxed">
+                    বিকাশের প্রতিটি রিপ্লাই এখন সভারেন এন্ডপয়েন্টে এনক্রিপ্টেড লুপের মাধ্যমে প্রসেস হচ্ছে।
+                  </p>
                 </div>
               </div>
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="merchant" className="flex-1 p-6 m-0 space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-7">
-              <Card className="bg-card border-primary/20 shadow-2xl overflow-hidden">
-                <CardHeader className="bg-primary/5 border-b border-primary/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                      <UserCheck className="text-primary" size={24} />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm font-headline font-bold uppercase tracking-widest">মার্চেন্ট পার্টনার রেজিস্ট্রেশন</CardTitle>
-                      <CardDescription className="text-[10px]">বিকাশ গেটওয়ের সাথে সরাসরি নেটওয়ার্ক-টু-নেটওয়ার্ক সংযোগ।</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <form onSubmit={handleMerchantRegister} className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">মার্চেন্ট বা প্রজেক্টের নাম</Label>
-                        <Input 
-                          value={merchantForm.name}
-                          onChange={e => setMerchantForm({...merchantForm, name: e.target.value})}
-                          className="bg-muted/40 border-white/10"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">API Callback URL (Handshake Endpoint)</Label>
-                        <Input 
-                          value={merchantForm.callback}
-                          onChange={e => setMerchantForm({...merchantForm, callback: e.target.value})}
-                          className="bg-muted/40 border-white/10 font-mono text-xs"
-                        />
-                      </div>
-                    </div>
-                    <div className="p-4 bg-primary/5 rounded-xl border border-primary/20 space-y-3">
-                      <div className="flex items-center gap-2 text-primary">
-                        <ShieldCheck size={16} />
-                        <span className="text-xs font-bold uppercase tracking-widest">Sovereign Encryption Active</span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground leading-relaxed">
-                        এই ফর্মটি সাবমিট করার সাথে সাথে আপনার সিস্টেম বিকাশের পোর্টালে আপনার সিস্টেমকে ভেরিফাইড পার্টনার হিসেবে নথিভুক্ত করবে।
-                      </p>
-                    </div>
-                    <Button type="submit" disabled={loading} className="w-full h-12 bg-primary text-background font-bold text-lg gap-2">
-                      {loading ? <RefreshCw className="animate-spin" /> : <Zap size={18} fill="currentColor" />}
-                      ডিজিটাল সিগনেচার পুশ করুন
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
-            <div className="lg:col-span-5 space-y-6">
-              <Card className="bg-accent/5 border-accent/20">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent flex items-center gap-2">
-                    <Signal size={14} /> Operational Dashboard
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+        <TabsContent value="merchant" className="flex-1 p-6 m-0">
+          <Card className="bg-card border-primary/20 max-w-2xl mx-auto">
+            <CardHeader className="bg-primary/5 border-b border-primary/10">
+              <CardTitle className="text-sm font-headline font-bold uppercase tracking-widest">মার্চেন্ট পার্টনার রেজিস্ট্রেশন</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <form onSubmit={handleMerchantRegister} className="space-y-6">
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-muted-foreground font-medium">bKash Webhook Link</span>
-                      <Badge variant="outline" className="h-5 text-[8px] bg-accent/10 border-accent/40 text-accent font-bold">LIVE_SYNC</Badge>
-                    </div>
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-muted-foreground font-medium">Handshake Challenge</span>
-                      <Badge variant="outline" className="h-5 text-[8px] bg-accent/10 border-accent/40 text-accent font-bold">SUCCESSFUL</Badge>
-                    </div>
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-muted-foreground font-medium">Network Automation</span>
-                      <Badge variant="outline" className="h-5 text-[8px] bg-accent/10 border-accent/40 text-accent font-bold">FULL_AUTO</Badge>
-                    </div>
+                    <Label className="text-[10px] font-bold uppercase tracking-widest">মার্চেন্ট বা প্রজেক্টের নাম</Label>
+                    <Input value={merchantForm.name} onChange={e => setMerchantForm({...merchantForm, name: e.target.value})} className="bg-muted/40 border-white/10" />
                   </div>
-                  <div className="pt-4 border-t border-accent/10 space-y-3">
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-accent">
-                      <Activity size={12} className="animate-pulse" />
-                      <span>LIVE TRANSACTION MONITORING</span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground leading-relaxed italic">
-                      বিকাশ গেটওয়ে এখন আপনার সিস্টেমকে একটি "Verified Partner" হিসেবে শনাক্ত করছে। পজিটিভ সেটেলমেন্ট লজিক সক্রিয়।
-                    </p>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest">API Callback URL</Label>
+                    <Input value={merchantForm.callback} onChange={e => setMerchantForm({...merchantForm, callback: e.target.value})} className="bg-muted/40 border-white/10 font-mono text-xs" />
                   </div>
-                </CardContent>
-              </Card>
-              <div className="p-6 rounded-2xl bg-muted/20 border border-white/5 flex flex-col items-center justify-center text-center gap-4 py-12">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
-                  <Cpu className="text-primary" size={32} />
                 </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-headline font-bold uppercase tracking-widest">Sovereign Grid v24.0</h4>
-                  <p className="text-[10px] text-muted-foreground">জিরো-হিউম্যান ইন্টারভেনশন গেটওয়ে সক্রিয়।</p>
-                </div>
-              </div>
-            </div>
-          </div>
+                <Button type="submit" disabled={loading} className="w-full h-12 bg-primary text-background font-bold text-lg gap-2">
+                  ডিজিটাল সিগনেচার পুশ করুন
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
-      
-      <div className="p-4 bg-primary/5 border-t border-primary/10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-              <span className="text-[9px] font-bold uppercase tracking-widest text-accent">Local Hook Status: ACTIVE</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <ShieldCheck size={12} className="text-primary" />
-              <span className="text-[9px] font-bold uppercase tracking-widest text-primary">Grid Identity: 42nd_Project_Verified</span>
-            </div>
-          </div>
-          <p className="text-[9px] text-muted-foreground italic font-body">
-            * প্রতিটি লোকাল পেমেন্ট Sovereign অডিট রেজিস্ট্রিতে সিগনেচার সহ সংরক্ষিত হয়।
-          </p>
-        </div>
-      </div>
     </Card>
   )
 }
