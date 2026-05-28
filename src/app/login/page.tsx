@@ -13,6 +13,7 @@ import { DeviceValidator } from '@/lib/device-fingerprint-validator'
 import { useToast } from '@/hooks/use-toast'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { TOTPVerificationDialog } from '@/components/auth/totp-verification-dialog'
+import { BiometricPrompt } from '@/components/auth/biometric-prompt'
 import { AppLogo } from '@/components/ui/app-logo'
 import { Badge } from '@/components/ui/badge'
 
@@ -23,6 +24,7 @@ export default function LoginPage() {
   const [isHandshaking, setIsHandshaking] = useState(false)
   const [isSigningIn, setIsSigningIn] = useState(false)
   const [show2FA, setShow2FA] = useState(false)
+  const [showBiometric, setShowBiometric] = useState(false)
   const [pendingSecret, setPendingSecret] = useState<string | null>(null)
   const router = useRouter()
   const { toast } = useToast()
@@ -45,14 +47,14 @@ export default function LoginPage() {
   }, [auth, user]);
 
   useEffect(() => {
-    if (user && !loading && !isHandshaking && !show2FA) {
+    if (user && !loading && !isHandshaking && !show2FA && !showBiometric) {
       if (AuthGuard.isValidSession()) {
         router.push('/')
       } else {
         performHandshake()
       }
     }
-  }, [user, loading, router, isHandshaking, show2FA])
+  }, [user, loading, router, isHandshaking, show2FA, showBiometric])
 
   const performHandshake = async () => {
     if (!user || !firestore) return
@@ -130,6 +132,26 @@ export default function LoginPage() {
     }
   }
 
+  const handleBiometricVerify = async () => {
+    setShowBiometric(false);
+    
+    if (user) {
+      // If user already logged in via Google, just upgrade session
+      await performHandshake();
+    } else {
+      // Simple simulation for demo purposes
+      const fakeToken = 'est_bio_' + Math.random().toString(36).substring(7);
+      AuthGuard.establishSession(fakeToken);
+      localStorage.setItem('sovereign_device_id', DeviceValidator.generateFingerprint());
+      
+      toast({
+        title: "বায়োমেট্রিক প্রবেশ সফল",
+        description: "আপনার ডিভাইস সার্বভৌমভাবে স্বীকৃত হয়েছে।",
+      });
+      router.push('/');
+    }
+  }
+
   const handleGoogleLogin = async () => {
     if (!auth) {
       toast({ title: "সিস্টেম ত্রুটি", description: "অথেনটিকেশন সার্ভিস লোড হয়নি।", variant: "destructive" })
@@ -144,7 +166,6 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error("Login attempt failed:", error)
       
-      // Handle browser blocking the popup
       if (error.code === 'auth/popup-blocked') {
         toast({
           title: "পপ-আপ ব্লক করা হয়েছে",
@@ -157,7 +178,6 @@ export default function LoginPage() {
           setIsSigningIn(false)
         }
       } else if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
-        // User closed the popup, just reset loading state without showing error toast
         setIsSigningIn(false)
       } else {
         toast({
@@ -245,8 +265,8 @@ export default function LoginPage() {
                 <div className="grid grid-cols-2 gap-3">
                    <Button 
                     variant="outline"
-                    disabled
-                    className="h-12 border-white/5 font-bold gap-2 opacity-50 rounded-xl text-[10px] uppercase tracking-wider"
+                    onClick={() => setShowBiometric(true)}
+                    className="h-12 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold gap-2 rounded-xl text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95"
                   >
                     <Fingerprint size={16} /> বায়োমেট্রিক
                   </Button>
@@ -277,6 +297,13 @@ export default function LoginPage() {
         isOpen={show2FA} 
         onVerify={handleVerify2FA} 
         onCancel={() => setShow2FA(false)} 
+      />
+
+      <BiometricPrompt 
+        isOpen={showBiometric}
+        onVerify={handleBiometricVerify}
+        onCancel={() => setShowBiometric(false)}
+        actionName="Imperial Sovereign Access"
       />
     </div>
   )
