@@ -20,7 +20,7 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.role == role;
     }
 
-    // Users: Users can read/write their own profile, Admins can read all
+    // Users: Everyone can read basic profile, owner can write
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
@@ -35,21 +35,20 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Messages: Secured Account-to-Account communication
+    // Messages: Secure Peer-to-Peer & Admin comms
     match /messages/{messageId} {
       allow read: if isAuthenticated() && (
         request.auth.uid in resource.data.participants ||
-        resource.data.recipientId == 'command_center' ||
         isAdmin()
       );
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      allow update: if isAuthenticated() && (request.auth.uid in resource.data.participants || isAdmin());
+      allow list: if isAuthenticated();
     }
 
-    // WebRTC Signaling: Encrypted sessions
+    // WebRTC Sessions
     match /webrtc_sessions/{sessionId} {
       allow read, write: if isAuthenticated();
-      
       match /ice_candidates/{candidateId} {
         allow read, write: if isAuthenticated();
       }
@@ -62,12 +61,11 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated() && (isAdmin() || request.auth.uid == resource.data.userId);
     }
 
-    // Shelters, Domains, Integrations, Audit Trails
-    match /shelters/{shelterId} { allow read: if true; allow write: if isAdmin(); }
+    // Global Collections
+    match /sovereign_domains/{domainId} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /integrations/{integrationId} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /partner_requests/{requestId} { allow read: if isAdmin(); allow create: if true; }
     match /audit_trails/{logId} { allow read: if isAdmin(); allow create: if isAuthenticated(); }
     match /suspect_profiles/{profileId} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /sovereign_domains/{domainId} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /integrations/{integrationId} { allow read: if isAdmin() || isRole('authority'); allow write: if isAdmin(); }
-    match /partner_requests/{requestId} { allow read: if isAdmin(); allow create: if true; }
   }
 }

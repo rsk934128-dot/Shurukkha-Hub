@@ -14,6 +14,8 @@ import { db } from '@/lib/firebase'
 import { useUser } from '@/firebase'
 import { collection, query, orderBy, limit, onSnapshot, where, getDocs } from 'firebase/firestore'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
+import { errorEmitter } from '@/firebase/error-emitter'
+import { FirestorePermissionError } from '@/firebase/errors'
 
 const COMMAND_CENTER_CONTACT = { id: 'command_center', name: "Sovereign Command", role: "admin", status: 'online', avatar: '' }
 
@@ -31,7 +33,6 @@ export function CommunicationConsole() {
   const { playMessageSound } = useAudioEngine()
   const lastMessageId = useRef<string | null>(null)
 
-  // Fetch all users to allow universal communication
   useEffect(() => {
     if (!user) return;
 
@@ -61,7 +62,6 @@ export function CommunicationConsole() {
     fetchUsers();
   }, [user])
 
-  // Filtered contacts based on search query
   const filteredContacts = useMemo(() => {
     if (!searchQuery) return contacts;
     return contacts.filter(c => 
@@ -70,12 +70,10 @@ export function CommunicationConsole() {
     );
   }, [contacts, searchQuery]);
 
-  // Real-time message listener with robust error handling
   useEffect(() => {
     if (!user || !selectedContact) return;
 
-    const orchestrator = CommunicationOrchestrator.getInstance();
-    const currentChatId = orchestrator.getChatId(user.uid, selectedContact.id);
+    const currentChatId = CommunicationOrchestrator.getChatId(user.uid, selectedContact.id);
 
     const q = query(
       collection(db, "messages"),
@@ -89,18 +87,23 @@ export function CommunicationConsole() {
       
       const lastMsg = chatMsgs[chatMsgs.length - 1];
       
-      // Audio alert for new inbound messages
-      if (lastMsg && lastMsg.id !== lastMessageId.current && lastMsg.senderId !== user.uid) {
-        playMessageSound();
-        lastMessageId.current = lastMsg.id || null;
-      } else if (lastMsg) {
+      if (lastMsg && lastMsg.id !== lastMessageId.current) {
+        if (lastMsg.senderId !== user.uid) {
+          playMessageSound();
+        }
         lastMessageId.current = lastMsg.id || null;
       }
 
       setMessages(chatMsgs);
-      setTimeout(scrollToBottom, 200);
-    }, (err) => {
-      console.error("[Chat Query] Signal Interruption:", err);
+      setTimeout(scrollToBottom, 300);
+    }, async (err) => {
+      if (err.code === 'permission-denied') {
+        const permissionError = new FirestorePermissionError({
+          path: '/messages',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      }
     });
 
     return () => unsubscribe();
@@ -108,9 +111,9 @@ export function CommunicationConsole() {
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
-      const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
-        scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior: 'smooth' });
+      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
       }
     }
   }
@@ -118,13 +121,15 @@ export function CommunicationConsole() {
   const handleSend = async () => {
     if (!input.trim() || !user) return;
     const comm = CommunicationOrchestrator.getInstance();
+    const content = input;
+    setInput(''); // Clear immediately for UX
+    
     await comm.sendMessage({
       senderId: user.uid,
       recipientId: selectedContact.id,
-      content: input,
+      content: content,
       type: 'text'
     });
-    setInput('');
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,7 +162,7 @@ export function CommunicationConsole() {
               <CardTitle className="text-sm font-headline font-bold uppercase tracking-widest">{selectedContact.name}</CardTitle>
               {selectedContact.role === 'admin' && <Badge variant="outline" className="text-[7px] border-accent/40 text-accent uppercase font-bold bg-accent/5">Imperial Admin</Badge>}
             </div>
-            <p className="text-[9px] text-muted-foreground font-mono uppercase tracking-tighter">CHANNEL_v3.1_ENCRYPTED • {selectedContact.role === 'admin' ? 'SECURE_COMMAND' : 'CITIZEN_COMM'}</p>
+            <p className="text-[9px] text-muted-foreground font-mono uppercase tracking-tighter">CHANNEL_v3.1_ENCRYPTED</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -174,7 +179,6 @@ export function CommunicationConsole() {
       </CardHeader>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar: Contacts & Search */}
         <div className="w-20 md:w-72 border-r border-white/5 flex flex-col bg-black/20">
           <div className="p-4 border-b border-white/5 space-y-3 hidden md:block">
             <div className="flex items-center justify-between">
@@ -197,88 +201,54 @@ export function CommunicationConsole() {
           
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
-              {filteredContacts.length === 0 ? (
-                <div className="py-8 text-center px-4 hidden md:block opacity-40">
-                  <p className="text-[10px] text-muted-foreground italic">No identity match found.</p>
-                </div>
-              ) : (
-                filteredContacts.map(res => (
-                  <div 
-                    key={res.id} 
-                    onClick={() => { setSelectedContact(res); setSearchQuery(''); }}
-                    className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${selectedContact.id === res.id ? 'bg-primary/20 border border-primary/30' : 'hover:bg-white/5 border border-transparent'}`}
-                  >
-                    <div className="relative">
-                      <Avatar className="h-9 w-9 border border-white/10">
-                        <AvatarImage src={res.avatar} />
-                        <AvatarFallback className="text-[10px] font-bold">{res.name[0]}</AvatarFallback>
-                      </Avatar>
-                      {res.role === 'admin' && <div className="absolute -top-1 -right-1 bg-accent p-0.5 rounded-full"><Shield size={8} className="text-background fill-accent" /></div>}
-                    </div>
-                    <div className="hidden md:block overflow-hidden flex-1">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[11px] font-bold truncate text-foreground">{res.name}</p>
-                        {res.id === 'command_center' && <Badge className="bg-primary/80 text-background text-[6px] h-3 uppercase font-bold">Center</Badge>}
-                      </div>
-                      <p className="text-[8px] text-muted-foreground uppercase tracking-tight">{res.role === 'admin' ? 'Imperial Authority' : 'Registered Citizen'}</p>
-                    </div>
+              {filteredContacts.map(res => (
+                <div 
+                  key={res.id} 
+                  onClick={() => { setSelectedContact(res); setSearchQuery(''); }}
+                  className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${selectedContact.id === res.id ? 'bg-primary/20 border border-primary/30' : 'hover:bg-white/5 border border-transparent'}`}
+                >
+                  <div className="relative">
+                    <Avatar className="h-9 w-9 border border-white/10">
+                      <AvatarImage src={res.avatar} />
+                      <AvatarFallback className="text-[10px] font-bold">{res.name[0]}</AvatarFallback>
+                    </Avatar>
+                    {res.role === 'admin' && <div className="absolute -top-1 -right-1 bg-accent p-0.5 rounded-full"><Shield size={8} className="text-background fill-accent" /></div>}
                   </div>
-                ))
-              )}
+                  <div className="hidden md:block overflow-hidden flex-1">
+                    <p className="text-[11px] font-bold truncate text-foreground">{res.name}</p>
+                    <p className="text-[8px] text-muted-foreground uppercase tracking-tight">{res.role}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </ScrollArea>
         </div>
 
-        {/* Right Sidebar: Chat Area */}
         <div className="flex-1 flex flex-col relative">
-          <ScrollArea ref={scrollRef} className="flex-1 p-6 bg-[url('https://www.transparenttextures.com/patterns/grid.png')] bg-fixed opacity-[0.98]">
+          <ScrollArea ref={scrollRef} className="flex-1 p-6 bg-[url('https://www.transparenttextures.com/patterns/grid.png')] bg-fixed">
             <div className="space-y-6">
-              <div className="flex justify-center">
-                <Badge variant="outline" className="text-[8px] border-white/5 text-muted-foreground uppercase py-1 px-4 gap-2 bg-black/20 backdrop-blur-sm">
-                  <ShieldCheck size={10} className="text-accent" /> RSA_V2 Secure Sovereign Tunnel Active
-                </Badge>
-              </div>
-
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/30 animate-pulse">
                   <Signal size={64} className="mb-4" />
                   <p className="text-xs uppercase font-bold tracking-[0.3em]">নতুন সিগন্যাল শুরু করুন</p>
-                  <p className="text-[10px] mt-2 italic">Awaiting secure frequency handshake with {selectedContact.name}...</p>
                 </div>
               ) : (
                 messages.map((msg, i) => {
                   const isMe = msg.senderId === user?.uid;
                   return (
-                    <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}>
-                      <div className={`max-w-[75%] flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-1.5`}>
-                        <div className={`p-3.5 rounded-2xl border text-[13px] leading-relaxed shadow-xl ${isMe ? 'bg-primary text-background border-primary/20 rounded-tr-none font-medium' : 'bg-muted/80 backdrop-blur-md border-white/10 rounded-tl-none text-foreground'}`}>
+                    <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}>
+                      <div className={`max-w-[75%] flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-1`}>
+                        <div className={`p-3 rounded-2xl border text-[13px] shadow-lg ${isMe ? 'bg-primary text-background border-primary/20 rounded-tr-none' : 'bg-muted/80 backdrop-blur-md border-white/10 rounded-tl-none'}`}>
                           {msg.type === 'file' ? (
-                            <div className="flex items-center gap-3 p-1">
-                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isMe ? 'bg-black/20' : 'bg-black/40'}`}>
-                                <FileText size={18} className={isMe ? "text-background" : "text-accent"} />
-                              </div>
-                              <div className="overflow-hidden">
-                                <p className="font-bold truncate max-w-[140px] text-[11px]">{msg.content}</p>
-                                <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className={`text-[9px] flex items-center gap-1 hover:underline font-bold ${isMe ? 'text-background/80' : 'text-accent'}`}>
-                                  <Download size={10} /> DOWNLOAD_DEOS_VAULT
-                                </a>
-                              </div>
+                            <div className="flex items-center gap-3">
+                              <FileText size={18} className={isMe ? "text-background" : "text-accent"} />
+                              <a href={msg.fileUrl} target="_blank" className="hover:underline font-bold text-[10px] uppercase">Download Vault</a>
                             </div>
-                          ) : (
-                            msg.content
-                          )}
+                          ) : msg.content}
                         </div>
-                        <div className="flex items-center gap-2 px-1">
-                          <span className="text-[9px] font-mono text-muted-foreground">
-                            {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          {isMe && (
-                            <div className="flex items-center gap-1">
-                              <CheckCircle2 size={10} className="text-accent" />
-                              <Badge variant="outline" className="text-[7px] h-3.5 border-accent/40 text-accent uppercase font-mono px-1.5">{msg.status}</Badge>
-                            </div>
-                          )}
-                        </div>
+                        <span className="text-[8px] font-mono text-muted-foreground opacity-50 px-1">
+                          {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Syncing...'}
+                        </span>
                       </div>
                     </div>
                   )
@@ -287,42 +257,22 @@ export function CommunicationConsole() {
             </div>
           </ScrollArea>
 
-          {/* Input Area */}
           <div className="p-4 bg-background/80 border-t border-white/5 backdrop-blur-xl">
-            <div className="flex items-center gap-3 bg-black/40 border border-white/10 rounded-2xl p-2 px-4 shadow-2xl transition-all focus-within:border-primary/40">
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileUpload} 
-                className="hidden" 
-              />
-              <Button 
-                onClick={() => fileInputRef.current?.click()}
-                variant="ghost" 
-                size="icon" 
-                className="h-9 w-9 text-muted-foreground hover:text-primary transition-colors"
-              >
+            <div className="flex items-center gap-3 bg-black/40 border border-white/10 rounded-2xl p-2 px-4 shadow-2xl">
+              <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+              <Button onClick={() => fileInputRef.current?.click()} variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary">
                 <Paperclip size={20} />
               </Button>
               <Input 
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSend()}
-                placeholder={`সুরক্ষিত বার্তা পাঠান ${selectedContact.name} কে...`} 
-                className="flex-1 bg-transparent border-none focus-visible:ring-0 text-[13px] h-10 placeholder:text-muted-foreground/40"
+                placeholder="সুরক্ষিত বার্তা পাঠান..." 
+                className="flex-1 bg-transparent border-none focus-visible:ring-0 text-[13px]"
               />
-              <div className="flex items-center gap-1.5">
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-accent transition-colors">
-                  <Mic size={20} />
-                </Button>
-                <Button 
-                  onClick={handleSend}
-                  disabled={!input.trim()}
-                  className="h-9 w-9 rounded-xl bg-primary text-background shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-all disabled:opacity-30"
-                >
-                  <Send size={18} />
-                </Button>
-              </div>
+              <Button onClick={handleSend} disabled={!input.trim()} className="h-9 w-9 rounded-xl bg-primary text-background shadow-lg shadow-primary/30">
+                <Send size={18} />
+              </Button>
             </div>
           </div>
         </div>

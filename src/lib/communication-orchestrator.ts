@@ -6,7 +6,7 @@
  */
 
 import { db } from './firebase';
-import { collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { DisasterStorage } from './disaster-storage';
 import { IntegrationBridge } from './integration-bridge';
 
@@ -14,8 +14,8 @@ export interface Message {
   id?: string;
   senderId: string;
   recipientId: string;
-  chatId: string; // Composite key for fast indexing
-  participants: string[]; // Array for flexible searching
+  chatId: string;
+  participants: string[];
   content: string;
   type: 'text' | 'file' | 'voice';
   timestamp: any;
@@ -34,18 +34,18 @@ export class CommunicationOrchestrator {
   }
 
   /**
-   * Generates a consistent Chat ID between two users (Alphabetical sort ensures symmetry).
+   * Generates a consistent Chat ID between two users.
    */
-  getChatId(uid1: string, uid2: string): string {
+  static getChatId(uid1: string, uid2: string): string {
     const ids = [uid1, uid2].sort();
     return `chat_${ids[0]}_${ids[1]}`;
   }
 
   /**
-   * Sends a message with automatic survival mode handling and fast-track indexing.
+   * Sends a message with automatic survival mode handling.
    */
   async sendMessage(msg: Omit<Message, 'timestamp' | 'status' | 'isEncrypted' | 'chatId' | 'participants'>) {
-    const chatId = this.getChatId(msg.senderId, msg.recipientId);
+    const chatId = CommunicationOrchestrator.getChatId(msg.senderId, msg.recipientId);
     const messageData: any = {
       senderId: msg.senderId,
       recipientId: msg.recipientId,
@@ -69,11 +69,10 @@ export class CommunicationOrchestrator {
           timestamp: new Date().toISOString()
         });
       } catch (e) {
-        console.error("[Comm] Sync failed, queuing message...");
+        console.error("[Comm] Write failed, queuing message locally...");
         DisasterStorage.addToSyncQueue('SEND_MESSAGE', { ...messageData, timestamp: new Date().toISOString() });
       }
     } else {
-      console.warn("[Survival Mode] Network offline. Queuing message locally.");
       const localMsg = { ...messageData, timestamp: new Date().toISOString() };
       DisasterStorage.addToSyncQueue('SEND_MESSAGE', localMsg);
       DisasterStorage.saveLocalMessage(localMsg);
@@ -81,11 +80,10 @@ export class CommunicationOrchestrator {
   }
 
   /**
-   * Simulates encrypted file upload to Sovereign Storage.
+   * Simulates encrypted file upload.
    */
   async uploadFile(file: File, recipientId: string, senderId: string): Promise<string> {
-    console.log(`[Comm] Encrypting file: ${file.name} for recipient: ${recipientId}`);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     const simulatedUrl = `https://storage.surukkha.sheikh/vault/${Math.random().toString(36).substring(7)}_${file.name}`;
     
     await this.sendMessage({
@@ -101,16 +99,13 @@ export class CommunicationOrchestrator {
 
   setConnectivity(status: boolean) {
     this.isOnline = status;
-    if (status) {
-      this.syncQueuedMessages();
-    }
+    if (status) this.syncQueuedMessages();
   }
 
   private async syncQueuedMessages() {
     const queue = DisasterStorage.getSyncQueue().filter(item => item.action === 'SEND_MESSAGE');
     if (queue.length === 0) return;
 
-    console.log(`[Comm] Synchronizing ${queue.length} queued signals...`);
     for (const item of queue) {
       try {
         await addDoc(collection(db, "messages"), {
@@ -118,9 +113,7 @@ export class CommunicationOrchestrator {
           status: 'sent',
           timestamp: serverTimestamp()
         });
-      } catch (e) {
-        break;
-      }
+      } catch (e) { break; }
     }
     DisasterStorage.clearSyncQueue();
   }
