@@ -205,9 +205,18 @@ export default function ShurukkhaDashboard() {
 
   if (authLoading || (user && !sessionValid)) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
-        <Loader2 className="animate-spin text-primary" size={48} />
-        <p className="text-xs uppercase tracking-[0.3em] font-bold text-primary/60 animate-pulse">Establishing Sovereign Handshake...</p>
+      <div className="min-h-screen bg-[#05070a] flex flex-col items-center justify-center gap-8">
+        <div className="relative">
+          <div className="absolute inset-0 bg-primary/20 blur-3xl animate-pulse rounded-full" />
+          <AppLogo size={120} className="animate-sos-pulse relative z-10" />
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2">
+            <Loader2 className="animate-spin text-primary" size={16} />
+            <p className="text-[10px] uppercase tracking-[0.4em] font-bold text-primary animate-pulse">Establishing Sovereign Handshake...</p>
+          </div>
+          <p className="text-[8px] text-muted-foreground font-mono">PROJECT_ID: 42ND_ARCHIVE | v31.0</p>
+        </div>
       </div>
     )
   }

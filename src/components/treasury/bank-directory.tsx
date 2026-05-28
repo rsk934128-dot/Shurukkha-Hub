@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -16,6 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { MerchantGrowthChart } from '@/components/dashboard/merchant-growth-chart'
+import { AppLogo } from '@/components/ui/app-logo'
 
 export function BankDirectory() {
   const [banks, setBanks] = useState<BankNode[]>([])
@@ -105,19 +107,24 @@ export function BankDirectory() {
   ]
 
   return (
-    <Card className="bg-card border-primary/20 h-full flex flex-col overflow-hidden">
-      <CardHeader className="bg-primary/5 border-b border-primary/10 p-4 md:p-6">
+    <Card className="bg-card border-primary/20 h-full flex flex-col overflow-hidden relative">
+      {/* Background Sovereign Logo Watermark */}
+      <div className="absolute bottom-4 right-4 opacity-5 pointer-events-none">
+        <AppLogo size={300} />
+      </div>
+
+      <CardHeader className="bg-primary/5 border-b border-primary/10 p-4 md:p-6 relative z-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center border border-primary/20">
-              <Landmark className="text-primary" size={24} />
+              <AppLogo size={24} />
             </div>
             <div>
               <CardTitle className="text-base md:text-lg font-headline flex items-center gap-2">
-                GLOBAL TREASURY
+                GLOBAL TREASURY HUB
               </CardTitle>
               <CardDescription className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] font-bold text-primary/60">
-                Phase 27.0 • Prosperity Protocol
+                Phase 27.0 • Sovereign Prosperity Protocol
               </CardDescription>
             </div>
           </div>
@@ -125,7 +132,7 @@ export function BankDirectory() {
             <div className="relative flex-1 md:w-64">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={12} />
               <Input 
-                placeholder="Search..." 
+                placeholder="বাজারে ব্যাংক খুঁজুন..." 
                 className="pl-8 h-8 md:h-9 bg-background/50 border-white/10 text-[10px] md:text-xs"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -138,7 +145,7 @@ export function BankDirectory() {
         </div>
       </CardHeader>
       
-      <Tabs defaultValue="revenue" className="flex-1 flex flex-col">
+      <Tabs defaultValue="revenue" className="flex-1 flex flex-col relative z-10">
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
             <TabsTrigger value="revenue" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><TrendingUp size={12}/> রেভিনিউ</TabsTrigger>
@@ -152,11 +159,17 @@ export function BankDirectory() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-8 space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-                <Card className="bg-primary/5 border-primary/20 p-4 md:p-6 space-y-2 md:space-y-4">
+                <Card className="bg-primary/5 border-primary/20 p-4 md:p-6 space-y-2 md:space-y-4 relative overflow-hidden">
+                  <div className="absolute -right-4 -bottom-4 opacity-5 rotate-12">
+                    <AppLogo size={80} />
+                  </div>
                   <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-primary truncate">Processed</p>
                   <h3 className="text-sm md:text-2xl font-headline font-bold text-foreground">৳{revenueStats.totalProcessed.toLocaleString()}</h3>
                 </Card>
-                <Card className="bg-accent/5 border-accent/20 p-4 md:p-6 space-y-2 md:space-y-4">
+                <Card className="bg-accent/5 border-accent/20 p-4 md:p-6 space-y-2 md:space-y-4 relative overflow-hidden">
+                  <div className="absolute -right-4 -bottom-4 opacity-5 rotate-12">
+                    <AppLogo size={80} variant="accent" />
+                  </div>
                   <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-accent truncate">Imperial Tax</p>
                   <h3 className="text-sm md:text-2xl font-headline font-bold text-accent">৳{revenueStats.totalFees.toLocaleString()}</h3>
                 </Card>

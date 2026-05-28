@@ -125,18 +125,24 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#05070a] flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-primary/5 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] pointer-events-none" />
       
+      {/* Visual Background Logo */}
+      <div className="absolute -bottom-24 -left-24 opacity-5 rotate-12">
+        <AppLogo size={500} />
+      </div>
+
       <Card className="max-w-md w-full border-primary/20 bg-card/60 backdrop-blur-xl shadow-2xl z-10">
         <CardHeader className="text-center space-y-4">
-          <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto border border-primary/20">
+          <div className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto border border-primary/20 relative group">
+            <div className="absolute inset-0 bg-primary/10 blur-xl rounded-full scale-0 group-hover:scale-100 transition-transform duration-700" />
             {isHandshaking ? (
-              <Loader2 className="animate-spin text-primary" size={32} />
+              <AppLogo size={64} className="animate-sos-pulse" />
             ) : (
-              <AppLogo size={48} />
+              <AppLogo size={64} />
             )}
           </div>
           <div className="space-y-1">
             <CardTitle className="text-2xl font-headline font-bold tracking-tight uppercase">SHURUKKHA HUB</CardTitle>
-            <CardDescription className="text-xs uppercase tracking-[0.2em] font-bold text-primary/60">
+            <CardDescription className="text-[10px] uppercase tracking-[0.2em] font-bold text-primary/60">
               {isHandshaking ? "Establishing Sovereign Handshake..." : "Sovereign Identity Access"}
             </CardDescription>
           </div>
@@ -149,36 +155,36 @@ export default function LoginPage() {
                 <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
                 <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
               </div>
-              <p className="text-xs text-muted-foreground font-mono">ENCRYPTING_SESSION_KEYS...</p>
+              <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest animate-pulse">Encrypting_Session_Keys...</p>
             </div>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground text-center leading-relaxed">
-                সিরাজগঞ্জ সুরক্ষা পোর্টালে আপনার রাজকীয় পরিচয় নিশ্চিত করুন। নিরাপদ এক্সেস পেতে নিচের যেকোনো একটি মাধ্যম বেছে নিন।
+              <p className="text-sm text-muted-foreground text-center leading-relaxed px-4">
+                সিরাজগঞ্জ সুরক্ষা পোর্টালে আপনার রাজকীয় পরিচয় নিশ্চিত করুন। নিরাপদ এক্সেস পেতে নিচের মাধ্যমটি ব্যবহার করুন।
               </p>
               
               <div className="space-y-3">
                 <Button 
                   onClick={handleGoogleLogin}
-                  className="w-full h-12 bg-white text-black hover:bg-white/90 font-bold gap-3"
+                  className="w-full h-14 bg-white text-black hover:bg-white/90 font-bold gap-3 rounded-2xl shadow-xl transition-all hover:scale-[1.02] active:scale-95"
                 >
-                  <Globe size={18} /> Google দিয়ে লগইন করুন
+                  <Globe size={18} /> Google দিয়ে রাজকীয় প্রবেশ
                 </Button>
                 
                 <Button 
                   variant="outline"
                   disabled
-                  className="w-full h-12 border-white/10 font-bold gap-3 opacity-50"
+                  className="w-full h-14 border-white/10 font-bold gap-3 opacity-50 rounded-2xl"
                 >
-                  <LogIn size={18} /> ফোন নম্বর (শীঘ্রই আসছে)
+                  <Fingerprint size={18} /> বায়োমেট্রিক লগইন (শীঘ্রই)
                 </Button>
               </div>
             </>
           )}
 
           <div className="pt-6 border-t border-white/5 text-center">
-            <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground uppercase tracking-widest">
-              <Lock size={12} /> SHA256withRSA SECURED
+            <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground uppercase tracking-[0.3em] font-bold">
+              <Lock size={12} className="text-primary" /> SHA256withRSA SECURED
             </div>
           </div>
         </CardContent>
