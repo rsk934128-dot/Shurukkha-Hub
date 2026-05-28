@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "SOSAlert": {
@@ -66,6 +67,18 @@
         "status": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" }
       }
+    },
+    "BankRegistry": {
+      "title": "Global Bank Registry",
+      "description": "Directory of international banking nodes connected via Stripe.",
+      "type": "object",
+      "properties": {
+        "country": { "type": "string" },
+        "bankName": { "type": "string" },
+        "status": { "type": "string" },
+        "handshakeId": { "type": "string" },
+        "pushAvailable": { "type": "boolean" }
+      }
     }
   },
   "auth": {
@@ -87,6 +100,10 @@
     "/sovereign_handshakes/{handshakeId}": {
       "schema": "SovereignHandshake",
       "description": "Audit log of NoorAI/FusionPay handshakes."
+    },
+    "/bank_registry/{bankId}": {
+      "schema": "BankRegistry",
+      "description": "Directory of global banking nodes."
     }
   }
 }

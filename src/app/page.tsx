@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -15,6 +15,7 @@ import { DispatcherConsole } from '@/components/dashboard/dispatcher-console'
 import { IntegrationPanel } from '@/components/dashboard/integration-panel'
 import { SystemHealth } from '@/components/dashboard/system-health'
 import { NetworkStatusBoard } from '@/components/dashboard/network-status-board'
+import { BankDirectory } from '@/components/treasury/bank-directory'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -223,6 +224,7 @@ export default function ShurukkhaDashboard() {
                 <TabsTrigger value="ops" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[10px]">১. ডিসপ্যাচ কমান্ড</TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-2 h-10 px-6 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[10px]">২. হেলথ ও ফরেনসিক</TabsTrigger>
                 <TabsTrigger value="integrations" className="gap-2 h-10 px-6 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold tracking-widest uppercase text-[10px]">৩. পার্টনার ব্রিজ</TabsTrigger>
+                <TabsTrigger value="treasury" className="gap-2 h-10 px-6 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold tracking-widest uppercase text-[10px]">৪. ট্রেজারি ও ব্যাংকিং</TabsTrigger>
               </TabsList>
 
               <TabsContent value="ops" className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
@@ -260,6 +262,10 @@ export default function ShurukkhaDashboard() {
                     <NetworkStatusBoard />
                   </div>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="treasury" className="space-y-6 mt-0">
+                <BankDirectory />
               </TabsContent>
             </Tabs>
           </TabsContent>
