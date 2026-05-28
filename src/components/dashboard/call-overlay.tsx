@@ -35,7 +35,22 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
   const webrtcRef = useRef<WebRTCManager | null>(null)
   const timerRef = useRef<any>(null)
+  const ringtoneIntervalRef = useRef<any>(null)
   const { playAlertSound } = useAudioEngine()
+
+  // Control Ringtone with strict logic
+  const stopRingtone = () => {
+    if (ringtoneIntervalRef.current) {
+      clearInterval(ringtoneIntervalRef.current)
+      ringtoneIntervalRef.current = null
+    }
+  }
+
+  const startRingtone = () => {
+    stopRingtone()
+    playAlertSound()
+    ringtoneIntervalRef.current = setInterval(playAlertSound, 3000)
+  }
 
   useEffect(() => {
     if (callData) {
@@ -53,6 +68,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         const data = snap.data();
         if (data.status === 'connected' && status === 'ringing') {
           setStatus('connected');
+          stopRingtone(); // Stop immediately when connected
           startTimer();
         }
         if (data.status === 'ended') {
@@ -61,27 +77,29 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       });
 
       if (callData.isIncoming) {
-        // Repeatedly play alert sound while ringing
-        const ringInterval = setInterval(playAlertSound, 3000);
-        playAlertSound();
-        return () => {
-          unsubscribe();
-          clearInterval(ringInterval);
-          stopTimer();
-        };
+        startRingtone();
       } else {
         initiateOutgoingCall();
-        return () => {
-          unsubscribe();
-          stopTimer();
-        };
       }
+
+      return () => {
+        unsubscribe();
+        stopRingtone();
+        stopTimer();
+      };
     }
   }, [callData?.sessionId]);
 
   useEffect(() => {
-    if (localVideoRef.current && localStream) localVideoRef.current.srcObject = localStream;
-    if (remoteVideoRef.current && remoteStream) remoteVideoRef.current.srcObject = remoteStream;
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+      // Ensure the remote stream is not muted
+      remoteVideoRef.current.muted = false;
+      remoteVideoRef.current.play().catch(e => console.warn("[WebRTC] Autoplay prevented", e));
+    }
   }, [localStream, remoteStream]);
 
   const initiateOutgoingCall = async () => {
@@ -104,6 +122,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
   const handleAccept = async () => {
     if (!callData) return;
+    stopRingtone(); // Stop ringtone as soon as user clicks accept
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: callData.type === 'video', 
@@ -128,6 +147,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   }
 
   const handleEndCall = async () => {
+    stopRingtone();
     if (callData) {
       try {
         await updateDoc(doc(db, 'webrtc_sessions', callData.sessionId), { status: 'ended' });
@@ -224,8 +244,35 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
           ) : (
             <>
               {/* Connected Video or Profile View */}
-              {callData.type === 'video' && status === 'connected' && remoteStream ? (
-                <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+              {status === 'connected' && remoteStream ? (
+                <div className="w-full h-full relative">
+                  <video 
+                    ref={remoteVideoRef} 
+                    autoPlay 
+                    playsInline 
+                    className={`w-full h-full object-cover ${callData.type === 'audio' ? 'hidden' : ''}`} 
+                  />
+                  {callData.type === 'audio' && (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-6 bg-slate-900">
+                      <div className="relative">
+                        <div className="absolute -inset-8 bg-accent/20 rounded-full blur-3xl animate-pulse" />
+                        <Avatar className="h-40 w-40 border-4 border-accent/40 relative z-10 shadow-2xl">
+                          <AvatarImage src={callData.callerAvatar} />
+                          <AvatarFallback className="bg-primary/10 text-5xl font-headline font-bold text-primary">
+                            {callData.callerName?.[0] || 'S'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="absolute -bottom-2 -right-2 bg-accent p-2 rounded-full border-2 border-background">
+                          <Volume2 className="text-background" size={24} />
+                        </div>
+                      </div>
+                      <div className="text-center space-y-2">
+                        <h2 className="text-3xl font-headline font-bold tracking-tight text-white">{callData.callerName}</h2>
+                        <Badge variant="outline" className="border-accent/40 text-accent uppercase tracking-widest text-[10px]">Audio Only Session</Badge>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="flex flex-col items-center gap-6">
                    <div className="relative">
@@ -259,7 +306,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
           {/* HUD Status Overlays */}
           <div className="absolute top-6 left-6 flex flex-col gap-2 z-30">
             <Badge variant="outline" className="border-accent/40 text-accent bg-black/60 backdrop-blur-md text-[8px] uppercase tracking-widest gap-2">
-              <Activity size={10} className="animate-pulse" /> SOVEREIGN_LINK_v3.2
+              <Activity size={10} className="animate-pulse" /> SOVEREIGN_LINK_v3.3
             </Badge>
             <div className="flex items-center gap-2 text-[8px] font-mono text-white/40 bg-black/40 px-2 py-1 rounded">
                <ShieldCheck size={8} className="text-primary" /> ENCRYPTION: RSA_V2
