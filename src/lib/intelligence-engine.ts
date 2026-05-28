@@ -2,6 +2,7 @@
  * @fileOverview Adaptive Threat Intelligence Engine.
  * Implements self-learning blacklisting and attacker profiling.
  * Updated: Engages Identity Correlation and triggers Auto-Justicesentences.
+ * Support for Sovereign Decrees: Flagging bkashloan.ru.com and reported TrxIDs.
  */
 
 import { db } from './firebase';
@@ -13,12 +14,15 @@ import { AutoJustice } from './auto-justice-protocol';
 
 export interface ThreatAnalysis {
   ip: string;
-  source: 'gatekeeper' | 'honeypot' | 'deep_inspection';
+  source: 'gatekeeper' | 'honeypot' | 'deep_inspection' | 'sovereign_decree';
   violationType: string;
   metadata?: any;
 }
 
 export const IntelligenceEngine = {
+  // Sovereign Threat List (Imperial Blacklist)
+  imperialBlacklist: ['bkashloan.ru.com', '01714170287'],
+
   /**
    * Generates a unique device fingerprint hash from request headers
    */
@@ -51,7 +55,7 @@ export const IntelligenceEngine = {
       // Engaged Offensive Counter-Intel
       await CounterIntelligence.applyLatencyTrap(analysis.ip);
 
-      if (analysis.source === 'honeypot' || analysis.source === 'deep_inspection') {
+      if (analysis.source === 'honeypot' || analysis.source === 'deep_inspection' || analysis.source === 'sovereign_decree') {
         SelfHealing.initiateRecovery(analysis.source, analysis.violationType);
         SelfEvolutionEngine.evolveFromThreat(analysis.violationType);
       }
@@ -65,10 +69,10 @@ export const IntelligenceEngine = {
           fingerprint: fingerprint,
           linkedIdentities: linkedIps,
           violationCount: 1,
-          threatLevel: analysis.source === 'honeypot' ? 'high' : 'medium',
+          threatLevel: analysis.source === 'honeypot' || analysis.source === 'sovereign_decree' ? 'high' : 'medium',
           lastIncident: new Date().toISOString(),
           capturedAt: analysis.source,
-          status: analysis.source === 'honeypot' ? 'blacklisted' : 'monitored',
+          status: analysis.source === 'honeypot' || analysis.source === 'sovereign_decree' ? 'blacklisted' : 'monitored',
           metadata: { ...analysis.metadata, userAgent },
           timestamp: serverTimestamp()
         });
@@ -85,7 +89,7 @@ export const IntelligenceEngine = {
         const profile = ipSnapshot.docs[0];
         profileId = profile.id;
         const newViolationCount = (profile.data().violationCount || 0) + 1;
-        const newStatus = newViolationCount >= 3 || analysis.source === 'honeypot' ? 'blacklisted' : 'monitored';
+        const newStatus = newViolationCount >= 3 || analysis.source === 'honeypot' || analysis.source === 'sovereign_decree' ? 'blacklisted' : 'monitored';
         
         await updateDoc(doc(db, "suspect_profiles", profile.id), {
           violationCount: newViolationCount,
@@ -97,7 +101,7 @@ export const IntelligenceEngine = {
         });
 
         // Trigger Auto-Justice if threshold met
-        if (newViolationCount >= 5 || analysis.source === 'honeypot') {
+        if (newViolationCount >= 5 || analysis.source === 'honeypot' || analysis.source === 'sovereign_decree') {
           await AutoJustice.executeSentence(profileId, fingerprint, newViolationCount >= 10 ? 'critical' : 'high');
         }
       }
@@ -118,9 +122,12 @@ export const IntelligenceEngine = {
   },
 
   /**
-   * Checks if an IP is blacklisted.
+   * Checks if an IP or Domain is blacklisted.
    */
   isBlacklisted: async (ip: string): Promise<boolean> => {
+    // Check internal decree list first
+    if (IntelligenceEngine.imperialBlacklist.some(item => ip.includes(item))) return true;
+
     const suspectsRef = collection(db, "suspect_profiles");
     const q = query(suspectsRef, where("ipAddress", "==", ip), where("status", "==", "blacklisted"), limit(1));
     const snapshot = await getDocs(q);

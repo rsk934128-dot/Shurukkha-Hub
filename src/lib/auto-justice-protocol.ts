@@ -1,6 +1,7 @@
 /**
  * @fileOverview Imperial Auto-Justice Protocol.
  * Executes "sentences" on confirmed high-threat actors and manages the Evidence Vault.
+ * Updated: Supports Imperial Decrees and Historical Evidence recording.
  */
 
 import { db } from './firebase';
@@ -79,5 +80,30 @@ export const AutoJustice = {
       timestamp: serverTimestamp(),
       performedBy: 'sovereign_archivist_v1'
     });
+  },
+
+  /**
+   * Records high-priority evidence based on Imperial decree (User inputs).
+   */
+  async recordImperialEvidence(caseTitle: string, data: any) {
+    const evidenceId = 'imp_evid_' + Math.random().toString(36).substring(2, 10);
+    const signature = IntegrationBridge.generateSignature(data);
+    
+    await addDoc(collection(db, "audit_trails"), {
+      action: 'IMPERIAL_EVIDENCE_RECORDED',
+      details: { 
+        title: caseTitle,
+        evidenceId,
+        metadata: data,
+        purity: 'VERIFIED_IMPERIAL',
+        timestamp: new Date().toISOString()
+      },
+      signature,
+      timestamp: serverTimestamp(),
+      performedBy: 'Imperial_Sovereign_v26'
+    });
+
+    console.log(`[Evidence Vault] High-Priority Case Recorded: ${caseTitle}`);
+    return evidenceId;
   }
 };
