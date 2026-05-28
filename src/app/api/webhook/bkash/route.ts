@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     if (body.status === 'SUCCESS') {
       console.log(`[Response Engine] Transaction ${body.transactionId} Verified & Settled.`);
       
-      // Potential logic here for direct balance update or signaling
+      // Broadcast event for the dashboard to pick up
       await IntegrationBridge.broadcastEvent({
         type: 'SETTLEMENT_COMPLETED',
         payload: { transactionId: body.transactionId, amount: body.amount },
