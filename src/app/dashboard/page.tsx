@@ -59,6 +59,7 @@ export default function ShurukkhaDashboard() {
   const [activeView, setActiveView] = useState('citizen')
   const [activeSubTab, setActiveSubTab] = useState('ops')
   const [survivalMode, setSurvivalMode] = useState(false)
+  const [isCheckingSession, setIsCheckingCheckingSession] = useState(true)
   
   const firestore = useFirestore()
   const auth = useAuth()
@@ -79,10 +80,12 @@ export default function ShurukkhaDashboard() {
       if (!AuthGuard.isValidSession()) {
         setSessionValid(false)
         router.replace('/login')
+      } else {
+        setIsCheckingCheckingSession(false)
       }
     }
 
-    const timer = setTimeout(checkSession, 500); // 500ms grace period
+    const timer = setTimeout(checkSession, 800); // Increased grace period for stabilization
 
     const storedFp = localStorage.getItem('sovereign_device_id')
     if (storedFp && !DeviceValidator.validateIntegrity(storedFp)) {
@@ -167,7 +170,7 @@ export default function ShurukkhaDashboard() {
       try {
         AuthGuard.clearSession();
         await signOut(auth)
-        window.location.href = '/';
+        window.location.assign('/')
       } catch (e) {
         toast({ title: "লগআউট ব্যর্থ হয়েছে", variant: "destructive" })
       }
@@ -181,7 +184,7 @@ export default function ShurukkhaDashboard() {
     }
   }
 
-  if (authLoading || (user && !sessionValid)) {
+  if (authLoading || isCheckingSession || (user && !sessionValid)) {
     return (
       <div className="min-h-screen bg-[#05070a] flex flex-col items-center justify-center gap-8">
         <AppLogo size={120} className="animate-sos-pulse" />

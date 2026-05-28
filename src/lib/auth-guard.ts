@@ -24,6 +24,7 @@ export const AuthGuard = {
       return false;
     }
     
+    // Support both online (est_) and offline (est_local_) tokens
     return token.startsWith('est_');
   },
 
@@ -44,6 +45,7 @@ export const AuthGuard = {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('sovereign_session_token');
     localStorage.removeItem('sovereign_session_expiry');
+    localStorage.removeItem('sovereign_device_id');
     sessionStorage.clear();
   },
 
