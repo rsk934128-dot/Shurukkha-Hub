@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle, RefreshCcw, Swords, Target, Crosshair, Sparkles, BrainCircuit } from 'lucide-react'
+import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle, RefreshCcw, Swords, Target, Crosshair, Sparkles, BrainCircuit, Fingerprint, Network } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,7 +43,7 @@ export function IntegrationPanel() {
       setApps(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
-    const suspectsQ = query(collection(db, "suspect_profiles"), orderBy("timestamp", "desc"), limit(10));
+    const suspectsQ = query(collection(db, "suspect_profiles"), orderBy("timestamp", "desc"), limit(15));
     const unsubSuspects = onSnapshot(suspectsQ, (snapshot) => {
       setSuspects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
@@ -127,9 +128,9 @@ export function IntegrationPanel() {
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
             <TabsTrigger value="war-room" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap"><Swords size={12}/> ওয়ার-রুম</TabsTrigger>
+            <TabsTrigger value="intelligence" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap"><Skull size={12}/> ইন্টেল ইউনিট</TabsTrigger>
             <TabsTrigger value="evolution" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><BrainCircuit size={12}/> প্রেডিকশন</TabsTrigger>
             <TabsTrigger value="guard" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><ShieldX size={12}/> গার্ড</TabsTrigger>
-            <TabsTrigger value="intelligence" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap"><Skull size={12}/> ইন্টেল</TabsTrigger>
             <TabsTrigger value="apps" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap"><Globe size={12}/> পার্টনার্স</TabsTrigger>
             <TabsTrigger value="discovery" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><Search size={12}/> ডিকয়</TabsTrigger>
           </TabsList>
@@ -158,6 +159,74 @@ export function IntegrationPanel() {
               </div>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="intelligence" className="flex-1 p-4 md:p-6 space-y-6 m-0">
+          <div className="p-3 bg-destructive/5 border border-destructive/20 rounded-xl mb-4">
+            <p className="text-[10px] text-destructive font-bold uppercase tracking-widest flex items-center gap-2">
+              <Network size={14} /> Identity Correlation Matrix
+            </p>
+            <p className="text-[9px] text-muted-foreground mt-1">সিস্টেমটি একই ডিজিটাল ফিঙ্গারপ্রিন্ট ব্যবহারকারী একাধিক আক্রমণকারীকে স্বয়ংক্রিয়ভাবে লিঙ্ক করছে।</p>
+          </div>
+          
+          <ScrollArea className="h-[400px]">
+            <div className="grid gap-3">
+              {suspects.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground opacity-30">
+                  <UserX size={32} className="mb-2" />
+                  <p className="text-xs font-headline">কোন সন্দেহভাজন নেই</p>
+                </div>
+              ) : (
+                suspects.map(suspect => (
+                  <div key={suspect.id} className="p-3 md:p-4 bg-card/60 border border-destructive/20 rounded-xl flex flex-col gap-3 group hover:border-destructive/40 transition-all">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center border ${suspect.status === 'blacklisted' ? 'bg-destructive/10 border-destructive/20 text-destructive' : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500'}`}>
+                          <Skull size={20} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-[10px] md:text-sm font-mono font-bold truncate max-w-[100px] md:max-w-none">{suspect.ipAddress}</p>
+                            <Badge variant={suspect.threatLevel === 'critical' ? 'destructive' : 'outline'} className="text-[6px] h-3 px-1">
+                              {suspect.threatLevel}
+                            </Badge>
+                          </div>
+                          <p className="text-[8px] md:text-[10px] text-muted-foreground truncate max-w-[150px]">Capture Point: <span className="text-foreground uppercase">{suspect.capturedAt}</span></p>
+                        </div>
+                      </div>
+                      <div className="text-right flex flex-col items-end gap-1">
+                        <Badge className={`text-[7px] ${suspect.status === 'blacklisted' ? 'bg-destructive' : 'bg-yellow-500 text-black'}`}>
+                          {suspect.status.toUpperCase()}
+                        </Badge>
+                        <span className="text-[7px] font-mono text-muted-foreground">{new Date(suspect.lastIncident).toLocaleTimeString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
+                      <div className="space-y-1">
+                        <p className="text-[7px] uppercase font-bold text-muted-foreground flex items-center gap-1"><Fingerprint size={8} /> Digital Fingerprint</p>
+                        <code className="text-[8px] text-accent font-mono bg-black/40 px-1.5 py-0.5 rounded block truncate">
+                          {suspect.fingerprint || 'GENERATING...'}
+                        </code>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[7px] uppercase font-bold text-muted-foreground flex items-center gap-1"><Link size={8} /> Linked Identites</p>
+                        <div className="flex flex-wrap gap-1">
+                          {suspect.linkedIdentities?.length > 0 ? (
+                            suspect.linkedIdentities.map((id: string, i: number) => (
+                              <Badge key={i} variant="outline" className="text-[6px] h-3 border-destructive/30 text-destructive">{id}</Badge>
+                            ))
+                          ) : (
+                            <span className="text-[8px] text-muted-foreground italic">No links found.</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
         </TabsContent>
 
         <TabsContent value="evolution" className="flex-1 p-4 md:p-6 m-0">
@@ -225,43 +294,6 @@ export function IntegrationPanel() {
               </div>
             </div>
           </div>
-        </TabsContent>
-
-        <TabsContent value="intelligence" className="flex-1 p-4 md:p-6 space-y-6 m-0">
-          <ScrollArea className="h-[400px]">
-            <div className="grid gap-3">
-              {suspects.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground opacity-30">
-                  <UserX size={32} className="mb-2" />
-                  <p className="text-xs font-headline">কোন সন্দেহভাজন নেই</p>
-                </div>
-              ) : (
-                suspects.map(suspect => (
-                  <div key={suspect.id} className="p-3 md:p-4 bg-card/60 border border-destructive/20 rounded-xl flex items-center justify-between group hover:border-destructive/40 transition-all">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center border ${suspect.status === 'blacklisted' ? 'bg-destructive/10 border-destructive/20 text-destructive' : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500'}`}>
-                        <Skull size={20} />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-[10px] md:text-sm font-mono font-bold truncate max-w-[100px] md:max-w-none">{suspect.ipAddress}</p>
-                          <Badge variant={suspect.threatLevel === 'critical' ? 'destructive' : 'outline'} className="text-[6px] h-3 px-1">
-                            {suspect.threatLevel}
-                          </Badge>
-                        </div>
-                        <p className="text-[8px] md:text-[10px] text-muted-foreground truncate max-w-[150px]">Violations: {suspect.violationCount}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge className={`text-[7px] ${suspect.status === 'blacklisted' ? 'bg-destructive' : 'bg-yellow-500 text-black'}`}>
-                        {suspect.status.toUpperCase()}
-                      </Badge>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
         </TabsContent>
 
         <TabsContent value="apps" className="flex-1 p-4 md:p-6 space-y-6 m-0">

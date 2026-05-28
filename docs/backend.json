@@ -70,23 +70,14 @@
         "lastResolved": { "type": "string", "format": "date-time" }
       }
     },
-    "SovereignHandshake": {
-      "title": "Sovereign Handshake",
-      "description": "Records of secure digital handshakes with NoorAI/FusionPay.",
-      "type": "object",
-      "properties": {
-        "transactionId": { "type": "string" },
-        "action": { "type": "string" },
-        "status": { "type": "string" },
-        "timestamp": { "type": "string", "format": "date-time" }
-      }
-    },
     "SuspectProfile": {
       "title": "Suspect Profile",
       "description": "Captured intelligence on potential attackers identified by the Guard Engine.",
       "type": "object",
       "properties": {
         "ipAddress": { "type": "string" },
+        "fingerprint": { "type": "string", "description": "Unique device hash" },
+        "linkedIdentities": { "type": "array", "items": { "type": "string" }, "description": "Other IPs sharing this fingerprint" },
         "userAgent": { "type": "string" },
         "threatLevel": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
         "violationCount": { "type": "number" },
@@ -118,7 +109,7 @@
     },
     "/suspect_profiles/{profileId}": {
       "schema": "SuspectProfile",
-      "description": "Captured threat intelligence log."
+      "description": "Captured threat intelligence log with identity correlation."
     }
   }
 }
