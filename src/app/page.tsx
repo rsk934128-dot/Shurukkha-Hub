@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -55,13 +55,23 @@ export default function ShurukkhaDashboard() {
 
     const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
 
+    // Log Phase 23.0 Milestone on first load of authority mode
+    if (userRole === 'authority') {
+      addDoc(collection(db, "audit_trails"), {
+        action: 'PHASE_23_MILESTONE_VERIFIED',
+        details: { project: '42nd_Project_Sheikh_Code_Exchange', phase: '23.0', status: 'Sovereign_Active' },
+        timestamp: serverTimestamp(),
+        performedBy: 'Imperial_Sentinel'
+      });
+    }
+
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
       unsubscribeOrchestrator()
       clearInterval(interval);
     }
-  }, [])
+  }, [userRole])
 
   const handleAutoModeToggle = (enabled: boolean) => {
     setIsAutoMode(enabled)
@@ -117,9 +127,14 @@ export default function ShurukkhaDashboard() {
               <Shield className={isLockedDown ? "text-destructive" : "text-primary"} size={24} />
             </div>
             <div>
-              <h1 className="text-xl font-headline font-bold tracking-tighter leading-none uppercase">SHURUKKHA HUB</h1>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">Sovereign Grid</span>
+                <h1 className="text-xl font-headline font-bold tracking-tighter leading-none uppercase">SHURUKKHA HUB</h1>
+                <Badge variant="outline" className="h-4 text-[7px] border-primary/20 text-primary uppercase tracking-[0.2em] font-bold">
+                  <Star size={8} fill="currentColor" className="mr-1" /> 42nd Project
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">Sovereign Grid v23.0</span>
                 {isLockedDown && <Badge variant="destructive" className="h-4 text-[8px] animate-pulse">LOCKDOWN</Badge>}
               </div>
             </div>
@@ -274,7 +289,7 @@ export default function ShurukkhaDashboard() {
 
       <footer className="border-t border-white/5 py-8 bg-muted/20 mt-12">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-xs text-muted-foreground font-body uppercase tracking-[0.4em]">Shurukkha Sovereign Hub © ২০২৪ | সিরাজগঞ্জ সুরক্ষা মিশন-ক্রিটিক্যাল ইনফ্রাস্ট্রাকচার</p>
+          <p className="text-xs text-muted-foreground font-body uppercase tracking-[0.4em]">Shurukkha Sovereign Hub © ২০২৪ | সিরাজগঞ্জ সুরক্ষা মিশন-ক্রিটিক্যাল ইনফ্রাস্ট্রাকচার | 42nd Project Archive</p>
         </div>
       </footer>
       

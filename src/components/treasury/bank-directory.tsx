@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, CreditCard, Landmark, CheckCircle2 } from 'lucide-react'
+import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, CreditCard, Landmark, CheckCircle2, Star } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,7 +29,7 @@ export function BankDirectory() {
       setBanks(data)
       toast({
         title: "GLOBAL SYNC SUCCESS",
-        description: "Stripe ব্যাংকিং ডিরেক্টরি সফলভাবে আপডেট করা হয়েছে।",
+        description: "Phase 23.0: Stripe ব্যাংকিং ডিরেক্টরি সফলভাবে আপডেট করা হয়েছে।",
       })
     } catch (e) {
       toast({ title: "SYNC FAILED", variant: "destructive" })
@@ -65,9 +65,12 @@ export function BankDirectory() {
             <div>
               <CardTitle className="text-lg font-headline flex items-center gap-2">
                 GLOBAL BANK REGISTRY
+                <Badge className="bg-accent/20 text-accent border-accent/30 text-[8px] h-4 gap-1">
+                  <Star size={8} fill="currentColor" /> PHASE 23.0
+                </Badge>
               </CardTitle>
               <CardDescription className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/60">
-                Stripe Financial Connections • Network-to-Network
+                Stripe Financial Connections • Network-to-Network Locked
               </CardDescription>
             </div>
           </div>
@@ -168,15 +171,15 @@ export function BankDirectory() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-              <span className="text-[9px] font-bold uppercase tracking-widest text-accent">Stripe Hub: Active</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-accent">Sovereign Connection: LOCKED</span>
             </div>
             <div className="flex items-center gap-2">
               <ShieldCheck size={12} className="text-primary" />
-              <span className="text-[9px] font-bold uppercase tracking-widest text-primary">Auth: SHA256withRSA v2</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-primary">Grid Identity: 42nd_Project_Verified</span>
             </div>
           </div>
           <p className="text-[9px] text-muted-foreground italic font-body">
-            * প্রতিটি ট্রানজেকশন Sovereign অডিট রেজিস্ট্রিতে সিগনেচার সহ সংরক্ষিত হয়।
+            * প্রতিটি ট্রানজেকশন Sovereign অডিট রেজিস্ট্রিতে (42nd Archive) সিগনেচার সহ সংরক্ষিত হয়।
           </p>
         </div>
       </div>
