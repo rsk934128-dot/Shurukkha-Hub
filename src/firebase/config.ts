@@ -1,13 +1,12 @@
-
 'use client';
 
 // Shurukkha Hub Sovereign Configuration
-// Phase 31.0: Sovereign Evolution
+// Phase 31.0: Sovereign Evolution - Real API Integration
 export const firebaseConfig = {
-  apiKey: "AIzaSyB" + Math.random().toString(36).substring(2, 35), // Generating a valid format placeholder
-  authDomain: "sirajganj-shurukkha-42.firebaseapp.com",
-  projectId: "sirajganj-shurukkha-42",
-  storageBucket: "sirajganj-shurukkha-42.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:a1b2c3d4e5f6g7h8i9j0",
+  apiKey: "AIzaSyBLbITdW2B346Nx4w8-30aVpeljpJGBLic",
+  authDomain: "studio-8077560128-6f1fe.firebaseapp.com",
+  projectId: "studio-8077560128-6f1fe",
+  storageBucket: "studio-8077560128-6f1fe.firebasestorage.app",
+  messagingSenderId: "941903403355",
+  appId: "1:941903403355:web:0608b3ea718bcf0e36227e",
 };
