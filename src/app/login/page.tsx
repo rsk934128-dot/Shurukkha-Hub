@@ -6,7 +6,7 @@ import { Shield, Globe, Lock, LogIn, Loader2, Key, Fingerprint, Star, Zap } from
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth, useUser, useFirestore } from '@/firebase'
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { AuthGuard } from '@/lib/auth-guard'
 import { DeviceValidator } from '@/lib/device-fingerprint-validator'
@@ -26,6 +26,23 @@ export default function LoginPage() {
   const [pendingSecret, setPendingSecret] = useState<string | null>(null)
   const router = useRouter()
   const { toast } = useToast()
+
+  // Handle redirect result on mount (for browsers that block popups)
+  useEffect(() => {
+    if (auth && !user) {
+      getRedirectResult(auth)
+        .then((result) => {
+          if (result?.user) {
+            console.log("[Auth] Redirect handshake initiated via redirect result.");
+          }
+        })
+        .catch((error) => {
+          if (error.code !== 'auth/web-storage-unsupported') {
+            console.error("[Auth] Redirect handling error:", error);
+          }
+        });
+    }
+  }, [auth, user]);
 
   useEffect(() => {
     if (user && !loading && !isHandshaking && !show2FA) {
@@ -121,17 +138,34 @@ export default function LoginPage() {
     
     setIsSigningIn(true)
     const provider = new GoogleAuthProvider()
+    
     try {
       await signInWithPopup(auth, provider)
     } catch (error: any) {
-      console.error("Login failed", error)
-      toast({
-        title: "লগইন ব্যর্থ",
-        description: error.message || "গুগল লগইন সম্পন্ন করা সম্ভব হয়নি।",
-        variant: "destructive"
-      })
-    } finally {
-      setIsSigningIn(false)
+      console.error("Login attempt failed:", error)
+      
+      // Handle browser blocking the popup
+      if (error.code === 'auth/popup-blocked') {
+        toast({
+          title: "পপ-আপ ব্লক করা হয়েছে",
+          description: "ব্রাউজার পপ-আপ ব্লক করায় রিডাইরেক্ট মোডে চেষ্টা করা হচ্ছে...",
+        })
+        try {
+          await signInWithRedirect(auth, provider);
+        } catch (redirectError) {
+          console.error("Redirect attempt failed:", redirectError);
+          setIsSigningIn(false)
+        }
+      } else if (error.code !== 'auth/cancelled-popup-request') {
+        toast({
+          title: "লগইন ব্যর্থ",
+          description: error.message || "গুগল লগইন সম্পন্ন করা সম্ভব হয়নি।",
+          variant: "destructive"
+        })
+        setIsSigningIn(false)
+      } else {
+        setIsSigningIn(false)
+      }
     }
   }
 
