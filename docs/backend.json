@@ -81,42 +81,18 @@
         "timestamp": { "type": "string", "format": "date-time" }
       }
     },
-    "BankRegistry": {
-      "title": "Global Bank Registry",
-      "description": "Directory of international banking nodes connected via Stripe.",
+    "SuspectProfile": {
+      "title": "Suspect Profile",
+      "description": "Captured intelligence on potential attackers identified by the Guard Engine.",
       "type": "object",
       "properties": {
-        "country": { "type": "string" },
-        "bankName": { "type": "string" },
-        "status": { "type": "string" },
-        "handshakeId": { "type": "string" },
-        "pushAvailable": { "type": "boolean" }
-      }
-    },
-    "LocalSettlement": {
-      "title": "Local Payment Settlement",
-      "description": "Records of mobile finance settlements (bKash, Nagad).",
-      "type": "object",
-      "properties": {
-        "settlementId": { "type": "string" },
-        "amount": { "type": "number" },
-        "currency": { "type": "string" },
-        "target": { "type": "string" },
-        "status": { "type": "string" },
-        "signature": { "type": "string" }
-      }
-    },
-    "MerchantPartner": {
-      "title": "Merchant Partner",
-      "description": "Verification data for bKash and local gateway partnership.",
-      "type": "object",
-      "properties": {
-        "merchantName": { "type": "string" },
-        "callbackUrl": { "type": "string" },
-        "merchantId": { "type": "string" },
-        "status": { "type": "string", "enum": ["pending", "verified", "active"] },
-        "rsaSignature": { "type": "string" },
-        "timestamp": { "type": "string", "format": "date-time" }
+        "ipAddress": { "type": "string" },
+        "userAgent": { "type": "string" },
+        "threatLevel": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "violationCount": { "type": "number" },
+        "lastIncident": { "type": "string", "format": "date-time" },
+        "capturedAt": { "type": "string", "enum": ["gatekeeper", "honeypot", "deep_inspection"] },
+        "status": { "type": "string", "enum": ["monitored", "blacklisted"] }
       }
     }
   },
@@ -140,21 +116,9 @@
       "schema": "SovereignDomain",
       "description": "Private DNS records for the sovereign network."
     },
-    "/sovereign_handshakes/{handshakeId}": {
-      "schema": "SovereignHandshake",
-      "description": "Audit log of NoorAI/FusionPay handshakes."
-    },
-    "/bank_registry/{bankId}": {
-      "schema": "BankRegistry",
-      "description": "Directory of global banking nodes."
-    },
-    "/local_settlements/{settlementId}": {
-      "schema": "LocalSettlement",
-      "description": "Records of bKash/Mobile finance settlements."
-    },
-    "/merchants/{merchantId}": {
-      "schema": "MerchantPartner",
-      "description": "Verification registry for bKash merchant partners."
+    "/suspect_profiles/{profileId}": {
+      "schema": "SuspectProfile",
+      "description": "Captured threat intelligence log."
     }
   }
 }
