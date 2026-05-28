@@ -3,7 +3,8 @@
 /**
  * @fileOverview WebRTC Signaling Service for Shurukkha Hub.
  * Manages the exchange of offers, answers, and ICE candidates via Firestore.
- * Updated Phase 3.4: Implements Signaling State Guards to prevent "wrong state: stable" errors.
+ * Updated Phase 3.5: Implements Signaling Mutex Locks and robust state guards 
+ * to prevent duplicate signaling events and "wrong state: stable" errors.
  */
 
 import { db } from './firebase';
@@ -22,6 +23,7 @@ export class WebRTCManager {
   private sessionId: string;
   private peerConnection: RTCPeerConnection | null = null;
   private candidateQueue: RTCIceCandidateInit[] = [];
+  private isProcessingRemoteDescription = false;
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
@@ -39,7 +41,7 @@ export class WebRTCManager {
    * Buffers candidates until remote description is available.
    */
   private async addCandidate(candidate: RTCIceCandidateInit) {
-    if (this.peerConnection?.remoteDescription) {
+    if (this.peerConnection && this.peerConnection.remoteDescription) {
       try {
         await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (e) {
@@ -54,7 +56,7 @@ export class WebRTCManager {
    * Processes all buffered candidates once connection is ready.
    */
   private async flushCandidates() {
-    if (!this.peerConnection?.remoteDescription) return;
+    if (!this.peerConnection || !this.peerConnection.remoteDescription) return;
     while (this.candidateQueue.length > 0) {
       const candidate = this.candidateQueue.shift();
       if (candidate) {
@@ -104,17 +106,23 @@ export class WebRTCManager {
 
     await setDoc(sessionRef, { offer }, { merge: true });
 
-    // Listen for Answer with State Guard
+    // Listen for Answer with Mutex Guard
     onSnapshot(sessionRef, async (snapshot) => {
       const data = snapshot.data();
-      if (!this.peerConnection) return;
+      if (!this.peerConnection || this.isProcessingRemoteDescription) return;
 
       // EXCEPTION GUARD: Only set remote answer if we are currently in 'have-local-offer' state
-      // This prevents the "Called in wrong state: stable" error
       if (data?.answer && this.peerConnection.signalingState === 'have-local-offer') {
-        const answerDescription = new RTCSessionDescription(data.answer);
-        await this.peerConnection.setRemoteDescription(answerDescription);
-        await this.flushCandidates();
+        this.isProcessingRemoteDescription = true;
+        try {
+          const answerDescription = new RTCSessionDescription(data.answer);
+          await this.peerConnection.setRemoteDescription(answerDescription);
+          await this.flushCandidates();
+        } catch (e) {
+          console.warn("[WebRTC] Failed to set remote answer", e);
+        } finally {
+          this.isProcessingRemoteDescription = false;
+        }
       }
     });
 
@@ -162,18 +170,22 @@ export class WebRTCManager {
     const sessionData = sessionSnapshot.data();
     
     if (sessionData?.offer && this.peerConnection.signalingState === 'stable') {
-      await this.peerConnection.setRemoteDescription(new RTCSessionDescription(sessionData.offer));
+      try {
+        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(sessionData.offer));
 
-      const answerDescription = await this.peerConnection.createAnswer();
-      await this.peerConnection.setLocalDescription(answerDescription);
+        const answerDescription = await this.peerConnection.createAnswer();
+        await this.peerConnection.setLocalDescription(answerDescription);
 
-      const answer = {
-        type: answerDescription.type,
-        sdp: answerDescription.sdp,
-      };
+        const answer = {
+          type: answerDescription.type,
+          sdp: answerDescription.sdp,
+        };
 
-      await updateDoc(sessionRef, { answer });
-      await this.flushCandidates();
+        await updateDoc(sessionRef, { answer });
+        await this.flushCandidates();
+      } catch (e) {
+        console.warn("[WebRTC] Failed to set remote offer or create answer", e);
+      }
     }
 
     // Listen for remote ICE candidates
@@ -196,5 +208,6 @@ export class WebRTCManager {
       this.peerConnection = null;
     }
     this.candidateQueue = [];
+    this.isProcessingRemoteDescription = false;
   }
 }
