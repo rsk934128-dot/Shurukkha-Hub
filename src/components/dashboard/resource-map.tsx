@@ -1,19 +1,26 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Map as MapIcon, Info, Navigation, Search, Layers, Waves, ShieldCheck, Plane, Signal, Radio, ArrowUpRight, Crosshair, Zap, Activity } from 'lucide-react'
+import { Map as MapIcon, Info, Navigation, Search, Layers, Waves, ShieldCheck, Plane, Signal, Radio, ArrowUpRight, Crosshair, Zap, Activity, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
 import { DroneService, DroneNode } from '@/lib/drone-service'
+import { db } from '@/lib/firebase'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { useToast } from '@/hooks/use-toast'
+import { IntegrationBridge } from '@/lib/integration-bridge'
 
 export function ResourceMap() {
   const [viewMode, setViewMode] = useState<'shelters' | 'flood_overlay' | 'drone_intel'>('flood_overlay')
   const [drones, setDrones] = useState<DroneNode[]>([])
   const [mapRotation, setMapRotation] = useState(0)
+  const [isSendingWarning, setIsSendingWarning] = useState(false)
   
+  const { toast } = useToast()
+
   useEffect(() => {
     setDrones(DroneService.getDroneStats());
     const interval = setInterval(() => {
@@ -22,6 +29,47 @@ export function ResourceMap() {
     }, 1000);
     return () => clearInterval(interval);
   }, [])
+
+  const handleSendAutonomousWarning = async () => {
+    setIsSendingWarning(true)
+    try {
+      const warningData = {
+        timestamp: serverTimestamp(),
+        location: "বেলকুচি, এনায়েতপুর ও সংলগ্ন চরাঞ্চল",
+        status: 'pending',
+        type: 'AUTONOMOUS_EVACUATION_WARNING',
+        note: "যমুনা নদীর পানি বিপদসীমা অতিক্রম করেছে। অটোনোমাস সিস্টেম অনুযায়ী অবিলম্বে নিরাপদ আশ্রয়ে সরে যাওয়ার নির্দেশ দেওয়া হচ্ছে।",
+        automated: true,
+        purity: 'SOVEREIGN_V31'
+      }
+
+      // 1. Trigger the SOS Alert
+      await addDoc(collection(db, "sos_alerts"), warningData);
+
+      // 2. Log in Audit Trail
+      await addDoc(collection(db, "audit_trails"), {
+        action: 'GLOBAL_EVACUATION_TRIGGERED_MANUALLY',
+        details: { riskLevel: 'EXTREME', source: 'SOVEREIGN_GIS_COMMAND' },
+        signature: IntegrationBridge.generateSignature({ alert: 'CRITICAL' }),
+        timestamp: serverTimestamp(),
+        performedBy: 'Imperial_Admin'
+      });
+
+      toast({
+        title: "অটোনোমাস সতর্কবার্তা পাঠানো হয়েছে",
+        description: "পুরো সাম্রাজ্যে জরুরি সংকেত ব্রডকাস্ট করা হয়েছে।",
+        variant: "destructive",
+      })
+    } catch (error) {
+      toast({
+        title: "কমান্ড এক্সিকিউশন ব্যর্থ",
+        description: "নেটওয়ার্ক কানেক্টিভিটি চেক করুন।",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSendingWarning(false)
+    }
+  }
 
   return (
     <Card className="bg-card/40 border-primary/20 h-full flex flex-col overflow-hidden relative group">
@@ -197,8 +245,14 @@ export function ResourceMap() {
               </div>
 
               <div className="flex gap-3">
-                <Button size="sm" className="bg-destructive hover:bg-destructive/90 text-white font-bold text-[10px] h-10 w-full gap-2 rounded-xl shadow-lg shadow-destructive/20">
-                   <Radio size={16} /> অটোনোমাস সতর্কবার্তা পাঠান
+                <Button 
+                  onClick={handleSendAutonomousWarning}
+                  disabled={isSendingWarning}
+                  size="sm" 
+                  className="bg-destructive hover:bg-destructive/90 text-white font-bold text-[10px] h-10 w-full gap-2 rounded-xl shadow-lg shadow-destructive/20"
+                >
+                   {isSendingWarning ? <Loader2 size={16} className="animate-spin" /> : <Radio size={16} />}
+                   {isSendingWarning ? "ব্রডকাস্টিং..." : "অটোনোমাস সতর্কবার্তা পাঠান"}
                 </Button>
                 <Button onClick={() => setViewMode('drone_intel')} size="sm" variant="outline" className="border-white/10 hover:bg-white/5 text-[10px] h-10 w-full gap-2 rounded-xl">
                    <Plane size={16} /> ড্রোন ভেরিফিকেশন শুরু করুন
