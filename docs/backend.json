@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -15,7 +14,10 @@
           "default": "citizen"
         },
         "phoneNumber": { "type": "string" },
-        "lastLogin": { "type": "string", "format": "date-time" }
+        "lastLogin": { "type": "string", "format": "date-time" },
+        "twoFactorEnabled": { "type": "boolean", "default": false },
+        "twoFactorSecret": { "type": "string", "description": "Encrypted TOTP Secret" },
+        "recoveryCodes": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["role"]
     },

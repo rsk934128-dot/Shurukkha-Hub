@@ -1,25 +1,30 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Globe, Lock, LogIn, Loader2, Key } from 'lucide-react'
+import { Shield, Globe, Lock, LogIn, Loader2, Key, Fingerprint } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { useAuth, useUser } from '@/firebase'
+import { useAuth, useUser, useFirestore } from '@/firebase'
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { AuthGuard } from '@/lib/auth-guard'
 import { DeviceValidator } from '@/lib/device-fingerprint-validator'
 import { useToast } from '@/hooks/use-toast'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { TOTPVerificationDialog } from '@/components/auth/totp-verification-dialog'
 
 export default function LoginPage() {
   const { auth } = useAuth()
+  const { firestore } = useFirestore()
   const { user, loading } = useUser()
   const [isHandshaking, setIsHandshaking] = useState(false)
+  const [show2FA, setShow2FA] = useState(false)
+  const [pendingSecret, setPendingSecret] = useState<string | null>(null)
   const router = useRouter()
   const { toast } = useToast()
 
   useEffect(() => {
-    if (user && !loading && !isHandshaking) {
+    if (user && !loading && !isHandshaking && !show2FA) {
       if (AuthGuard.isValidSession()) {
         router.push('/')
       } else {
@@ -29,10 +34,22 @@ export default function LoginPage() {
   }, [user, loading, router])
 
   const performHandshake = async () => {
-    if (!user) return
+    if (!user || !firestore) return
     setIsHandshaking(true)
     
     try {
+      // Check if user has 2FA enabled
+      const userRef = doc(firestore, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
+
+      if (userData?.twoFactorEnabled && userData?.twoFactorSecret) {
+        setPendingSecret(userData.twoFactorSecret);
+        setShow2FA(true);
+        setIsHandshaking(false);
+        return;
+      }
+
       const idToken = await user.getIdToken()
       const fingerprint = DeviceValidator.generateFingerprint()
       
@@ -50,7 +67,7 @@ export default function LoginPage() {
         
         toast({
           title: "Sovereign Handshake ACTIVE",
-          description: "আপনার সেশন ১০ মিনিটের জন্য এনক্রিপ্ট করা হয়েছে।",
+          description: "আপনার সেশন এনক্রিপ্ট করা হয়েছে।",
         })
         router.push('/')
       } else {
@@ -65,6 +82,30 @@ export default function LoginPage() {
       })
     } finally {
       setIsHandshaking(false)
+    }
+  }
+
+  const handleVerify2FA = async (code: string): Promise<boolean> => {
+    if (!pendingSecret) return false;
+    
+    try {
+      const response = await fetch('/api/v1/auth/verify-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: code, secret: pendingSecret })
+      });
+      
+      const data = await response.json();
+      
+      if (data.status === 'VERIFIED') {
+        AuthGuard.establishSession(data.upgradeToken);
+        toast({ title: "2FA ভেরিফিকেশন সফল", description: "সাম্রাজ্যে স্বাগতম।" });
+        router.push('/');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
     }
   }
 
@@ -140,6 +181,12 @@ export default function LoginPage() {
           </div>
         </CardContent>
       </Card>
+
+      <TOTPVerificationDialog 
+        isOpen={show2FA} 
+        onVerify={handleVerify2FA} 
+        onCancel={() => setShow2FA(false)} 
+      />
     </div>
   )
 }
