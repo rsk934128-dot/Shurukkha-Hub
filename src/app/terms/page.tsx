@@ -11,6 +11,7 @@ import { AppLogo } from '@/components/ui/app-logo'
 export default function ImperialTerms() {
   return (
     <div className="min-h-screen bg-[#05070a] text-foreground font-body selection:bg-primary/30">
+      {/* Immersive Background */}
       <div className="fixed inset-0 bg-primary/5 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] pointer-events-none z-0" />
       
       <main className="relative z-10 container mx-auto px-6 py-20 max-w-4xl">
@@ -21,6 +22,7 @@ export default function ImperialTerms() {
         </Link>
 
         <div className="space-y-12">
+          {/* Header */}
           <div className="text-center space-y-6">
             <div className="relative inline-block">
                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
@@ -35,6 +37,7 @@ export default function ImperialTerms() {
             </p>
           </div>
 
+          {/* Terms Grid */}
           <div className="grid gap-8">
             <TermCard 
               icon={UserCheck}
@@ -61,6 +64,7 @@ export default function ImperialTerms() {
             />
           </div>
 
+          {/* Disclaimer */}
           <div className="p-8 bg-destructive/5 border border-destructive/20 rounded-[2.5rem] text-center space-y-4">
              <div className="flex justify-center items-center gap-3 text-destructive">
                 <Scale size={24} />
@@ -72,8 +76,15 @@ export default function ImperialTerms() {
           </div>
         </div>
 
+        {/* Footer Navigation */}
         <footer className="mt-20 pt-12 border-t border-white/5 text-center opacity-40">
+           <div className="flex justify-center gap-8 text-[9px] uppercase font-bold tracking-widest text-primary/40 mb-6">
+              <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Protocols</Link>
+              <Link href="/terms" className="hover:text-primary transition-colors text-primary">Imperial Terms</Link>
+              <Link href="/audit" className="hover:text-primary transition-colors">Forensic Audit</Link>
+           </div>
            <p className="text-[10px] uppercase tracking-[0.5em]">Authored with Authority for Sirajganj District Administration</p>
+           <p className="text-[8px] font-mono mt-2 uppercase tracking-widest">Project: 42ND_ARCHIVE | v31.0_SOVEREIGN</p>
         </footer>
       </main>
     </div>

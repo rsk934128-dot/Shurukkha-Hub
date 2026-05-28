@@ -220,7 +220,7 @@ export default function WelcomeLanding() {
                 <div className="space-y-8">
                    <div className="space-y-4">
                       <h4 className="text-primary font-bold uppercase tracking-[0.4em] text-xs flex items-center gap-3">
-                         <Shield size={18} /> IMPERIAL SECURITY PROTOCOL
+                         <ShieldCheck size={18} /> IMPERIAL SECURITY PROTOCOL
                       </h4>
                       <h3 className="text-4xl md:text-6xl font-headline font-bold leading-tight">
                          আপনার সাম্রাজ্য, <br />

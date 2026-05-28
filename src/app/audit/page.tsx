@@ -83,6 +83,11 @@ export default function ForensicAudit() {
         </div>
 
         <footer className="mt-20 pt-12 border-t border-white/5 text-center opacity-40">
+           <div className="flex justify-center gap-8 text-[9px] uppercase font-bold tracking-widest text-primary/40 mb-6">
+              <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Protocols</Link>
+              <Link href="/terms" className="hover:text-primary transition-colors">Imperial Terms</Link>
+              <Link href="/audit" className="hover:text-primary transition-colors text-primary">Forensic Audit</Link>
+           </div>
            <p className="text-[10px] uppercase tracking-[0.5em]">Powered by RSA v2 Protocol & Shurukkha Hub Architecture</p>
         </footer>
       </main>
@@ -92,7 +97,7 @@ export default function ForensicAudit() {
 
 function AuditCard({ icon: Icon, title, desc }: any) {
   return (
-    <Card className="bg-card/40 border-white/5 hover:border-accent/30 transition-all duration-500 rounded-[2rem] overflow-hidden group">
+    <Card className="bg-card/40 border-white/5 hover:border-primary/30 transition-all duration-500 rounded-[2rem] overflow-hidden group">
       <CardContent className="p-8 space-y-4">
         <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20 group-hover:bg-accent/20 transition-all duration-500">
           <Icon size={28} />
