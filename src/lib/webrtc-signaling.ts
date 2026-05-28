@@ -3,7 +3,7 @@
 /**
  * @fileOverview WebRTC Signaling Service for Shurukkha Hub.
  * Manages the exchange of offers, answers, and ICE candidates via Firestore.
- * This is a critical component for the DEOS Command Center.
+ * Updated: Uses merge:true to prevent metadata erasure during signaling.
  */
 
 import { db } from './firebase';
@@ -35,7 +35,7 @@ export class WebRTCManager {
   };
 
   /**
-   * Initialize a new call (Offer side - Citizen App)
+   * Initialize a new call (Offer side)
    */
   async createCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
     this.peerConnection = new RTCPeerConnection(this.rtcConfig);
@@ -45,7 +45,9 @@ export class WebRTCManager {
     });
 
     this.peerConnection.ontrack = (event) => {
-      onRemoteStream(event.streams[0]);
+      if (event.streams && event.streams[0]) {
+        onRemoteStream(event.streams[0]);
+      }
     };
 
     const sessionRef = doc(db, 'webrtc_sessions', this.sessionId);
@@ -67,7 +69,8 @@ export class WebRTCManager {
       type: offerDescription.type,
     };
 
-    await setDoc(sessionRef, { offer });
+    // Use setDoc with merge: true to avoid wiping metadata (callerId, recipientId)
+    await setDoc(sessionRef, { offer }, { merge: true });
 
     // Listen for Answer
     onSnapshot(sessionRef, (snapshot) => {
@@ -83,16 +86,14 @@ export class WebRTCManager {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const data = change.doc.data();
-          if (data.candidate) {
-            this.peerConnection?.addIceCandidate(new RTCIceCandidate(data));
-          }
+          this.peerConnection?.addIceCandidate(new RTCIceCandidate(data));
         }
       });
     });
   }
 
   /**
-   * Join an existing call (Answer side - Dispatcher Console)
+   * Join an existing call (Answer side)
    */
   async answerCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
     this.peerConnection = new RTCPeerConnection(this.rtcConfig);
@@ -102,7 +103,9 @@ export class WebRTCManager {
     });
 
     this.peerConnection.ontrack = (event) => {
-      onRemoteStream(event.streams[0]);
+      if (event.streams && event.streams[0]) {
+        onRemoteStream(event.streams[0]);
+      }
     };
 
     const sessionRef = doc(db, 'webrtc_sessions', this.sessionId);
@@ -143,7 +146,9 @@ export class WebRTCManager {
   }
 
   dispose() {
-    this.peerConnection?.close();
-    this.peerConnection = null;
+    if (this.peerConnection) {
+      this.peerConnection.close();
+      this.peerConnection = null;
+    }
   }
 }

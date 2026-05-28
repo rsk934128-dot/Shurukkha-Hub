@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -150,14 +149,17 @@ export default function ShurukkhaDashboard() {
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
             const data = change.doc.data();
-            setActiveCall({
-              sessionId: change.doc.id,
-              callerId: data.callerId,
-              callerName: data.callerName,
-              callerAvatar: data.callerAvatar,
-              type: data.type,
-              isIncoming: true
-            });
+            // Avoid re-triggering if already in call
+            if (!activeCall) {
+              setActiveCall({
+                sessionId: change.doc.id,
+                callerId: data.callerId,
+                callerName: data.callerName,
+                callerAvatar: data.callerAvatar,
+                type: data.type,
+                isIncoming: true
+              });
+            }
           }
         });
       });
@@ -193,7 +195,7 @@ export default function ShurukkhaDashboard() {
         unsubscribeMyCalls();
       };
     }
-  }, [user, firestore, activeCall])
+  }, [user?.uid, firestore]) // Only depend on UID to avoid loop
 
   useEffect(() => {
     const handleConnectivityChange = () => {

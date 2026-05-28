@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -38,6 +37,14 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const timerRef = useRef<any>(null)
   const { playAlertSound } = useAudioEngine()
 
+  // Reset status when a new call starts
+  useEffect(() => {
+    if (callData) {
+      setStatus('ringing');
+      setTimer(0);
+    }
+  }, [callData?.sessionId]);
+
   useEffect(() => {
     if (!callData) return;
 
@@ -70,7 +77,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       stopTimer();
       cleanupStreams();
     };
-  }, [callData]);
+  }, [callData?.sessionId]);
 
   useEffect(() => {
     if (localVideoRef.current && localStream) localVideoRef.current.srcObject = localStream;
@@ -121,7 +128,8 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     if (callData) {
       try {
         await updateDoc(doc(db, 'webrtc_sessions', callData.sessionId), { status: 'ended' });
-        setTimeout(() => deleteDoc(doc(db, 'webrtc_sessions', callData.sessionId)), 2000);
+        // Delay deletion slightly to let the other side see the status
+        setTimeout(() => deleteDoc(doc(db, 'webrtc_sessions', callData.sessionId)), 1000);
       } catch (e) {}
     }
     cleanupStreams();
@@ -133,14 +141,20 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     localStream?.getTracks().forEach(t => t.stop());
     remoteStream?.getTracks().forEach(t => t.stop());
     webrtcRef.current?.dispose();
+    setLocalStream(null);
+    setRemoteStream(null);
   }
 
   const startTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => setTimer(prev => prev + 1), 1000);
   }
 
   const stopTimer = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
   }
 
   const formatTime = (s: number) => {
@@ -161,7 +175,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         
         <div className="relative aspect-video bg-slate-950 flex items-center justify-center group">
           {/* Main Video View (Remote) */}
-          {callData.type === 'video' && status === 'connected' ? (
+          {callData.type === 'video' && status === 'connected' && remoteStream ? (
             <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
           ) : (
             <div className="flex flex-col items-center gap-6">
