@@ -6,9 +6,12 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { SelfMaintenanceDaemon } from '@/lib/self-maintenance-daemon'
 import { SovereignGuard } from '@/lib/sovereign-guard'
+import { db } from '@/lib/firebase'
+import { collection, query, where, onSnapshot } from 'firebase/firestore'
 
 export function ImperialOverview() {
   const [stats, setStats] = useState(SelfMaintenanceDaemon.getStats());
+  const [treasuryBalance, setTreasuryBalance] = useState(12450000);
   const guardStats = SovereignGuard.getStats();
 
   useEffect(() => {
@@ -18,7 +21,23 @@ export function ImperialOverview() {
     const interval = setInterval(() => {
       setStats(SelfMaintenanceDaemon.getStats());
     }, 5000);
-    return () => clearInterval(interval);
+
+    // Listen for ledger updates to increment balance
+    const q = query(collection(db, "audit_trails"), where("action", "==", "SETTLEMENT_COMPLETED"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let totalFees = 186750; // Base historical fees
+      snapshot.docs.forEach(doc => {
+        const fee = doc.data().details?.feeCollected || 0;
+        totalFees += fee;
+      });
+      // Mocked total balance logic
+      setTreasuryBalance(12450000 + (totalFees - 186750) * 66); 
+    });
+
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+    };
   }, [])
 
   const metrics = [
@@ -45,10 +64,10 @@ export function ImperialOverview() {
     },
     { 
       label: 'Imperial Treasury', 
-      val: '৳১২,৪৫০,০০০', 
+      val: `৳${treasuryBalance.toLocaleString()}`, 
       icon: TrendingUp, 
       color: 'text-primary', 
-      desc: 'রেভিনিউ প্রসেসিং স্থিতিশীল' 
+      desc: 'রাজস্ব প্রবাহ রিয়েল-টাইমে আপডেট হচ্ছে' 
     }
   ];
 

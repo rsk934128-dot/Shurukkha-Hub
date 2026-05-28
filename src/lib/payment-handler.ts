@@ -5,7 +5,7 @@
 
 import { IntegrationBridge } from './integration-bridge';
 import { db } from './firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, limit } from 'firebase/firestore';
 import { FraudRecovery } from './fraud-recovery-protocol';
 import { EconomicForecaster } from './economic-forecaster';
 import { AuthGuard } from './auth-guard';
@@ -97,6 +97,66 @@ export class PaymentHandler {
     });
 
     return invoiceData;
+  }
+
+  /**
+   * Simulates a full financial cycle from picking a merchant to final settlement.
+   */
+  static async simulateFinancialCycle(onLog: (msg: string) => void) {
+    onLog("[INITIATING]: Picking Active Merchant from Registry...");
+    
+    // Step 1: Pick a merchant
+    const merchantsSnap = await getDocs(query(collection(db, "merchants"), limit(1)));
+    const merchant = !merchantsSnap.empty ? { id: merchantsSnap.docs[0].id, ...merchantsSnap.docs[0].data() } : { businessName: 'Sirajganj Handloom House', merchantId: 'SMID-4242' };
+    
+    onLog(`[MERCHANT]: Selected ${merchant.businessName} (${merchant.merchantId})`);
+    
+    // Step 2: Generate Invoice
+    onLog("[INVOICE]: Generating Sovereign Bill...");
+    const invoice = await this.generateInvoice(merchant, 25000, "Imperial Protection & Gateway Service");
+    onLog(`[SUCCESS]: Invoice ${invoice.invoiceId} generated. Amount: ৳${invoice.amount}`);
+
+    // Step 3: Zero-Trust Handshake
+    onLog("[SECURITY]: Executing Zero-Trust Handshake (RSA v2)...");
+    await new Promise(r => setTimeout(r, 1000));
+    onLog("[SUCCESS]: Identity Verified via Node 42.");
+
+    // Step 4: Atomic Settlement
+    const intent: PaymentIntent = {
+      amount: invoice.amount,
+      currency: 'BDT',
+      source: 'VIRTUAL_ACCOUNT',
+      target: 'TREASURY',
+      merchantId: merchant.merchantId
+    };
+
+    const risk = this.predictRisk(intent);
+    const { fee, netAmount } = this.calculateSettlement(intent.amount);
+    const settlementId = 'set_full_' + Math.random().toString(36).substring(2, 10);
+    const receipt = this.generateReceipt(intent, settlementId);
+
+    onLog(`[REVENUE]: Imperial Fee ৳${fee} collected. Net Settlement: ৳${netAmount}`);
+
+    await addDoc(collection(db, "audit_trails"), {
+      action: 'SETTLEMENT_COMPLETED',
+      details: { 
+        settlementId, 
+        invoiceId: invoice.invoiceId,
+        merchantId: merchant.merchantId,
+        amount: intent.amount, 
+        feeCollected: fee,
+        netSettled: netAmount,
+        risk, 
+        receipt,
+        purity: 'ZERO_TRUST_VERIFIED'
+      },
+      signature: IntegrationBridge.generateSignature({ settlementId, status: 'VERIFIED' }),
+      timestamp: serverTimestamp(),
+      performedBy: 'Autonomous_Revenue_Engine'
+    });
+
+    onLog(`[COMPLETED]: Cycle Finished. Settlement ID: ${settlementId}`);
+    return { success: true, settlementId, fee };
   }
 
   static async initiateSettlement(intent: PaymentIntent) {

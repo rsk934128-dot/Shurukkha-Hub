@@ -70,25 +70,22 @@ export function BankDirectory() {
     }
   }
 
-  const handleDummyTest = async () => {
+  const handleFullCycleTest = async () => {
     setLoading(true)
     setTerminalLogs([])
     setActiveStep(1)
     try {
-      await PaymentHandler.triggerDummyPayment((msg) => {
+      await PaymentHandler.simulateFinancialCycle((msg) => {
         setTerminalLogs(prev => [...prev, msg])
-        if (msg.includes('REVENUE_ENGINE')) setActiveStep(1)
-        if (msg.includes('Fee')) setActiveStep(2)
-        if (msg.includes('Risk')) setActiveStep(3)
-        if (msg.includes('রেভিনিউ জেনারেটেড')) {
-          setActiveStep(5)
-          setRevenueStats(prev => ({
-            ...prev,
-            totalFees: prev.totalFees + 150,
-            totalProcessed: prev.totalProcessed + 10000
-          }))
-        }
+        if (msg.includes('[MERCHANT]')) setActiveStep(1)
+        if (msg.includes('[INVOICE]')) setActiveStep(2)
+        if (msg.includes('[SECURITY]')) setActiveStep(3)
+        if (msg.includes('[REVENUE]')) setActiveStep(4)
+        if (msg.includes('[COMPLETED]')) setActiveStep(5)
       })
+      toast({ title: "STRESS TEST COMPLETED", description: "Ledger updated with atomic settlement." });
+    } catch (e) {
+      toast({ title: "STRESS TEST FAILED", variant: "destructive" });
     } finally {
       setLoading(false)
     }
@@ -97,7 +94,7 @@ export function BankDirectory() {
   const handleWebhookTest = async () => {
     setLoading(true)
     setTerminalLogs([])
-    onLog("[WEBHOOK_SIMULATOR]: Mocking bKash Payload...");
+    setTerminalLogs(prev => [...prev, "[WEBHOOK_SIMULATOR]: Mocking bKash Payload..."]);
     setTimeout(() => {
       setTerminalLogs(prev => [...prev, "> [WEBHOOK_SENT]: Payload verified with RSA_v2 signature."]);
       setTerminalLogs(prev => [...prev, "> [SETTLEMENT]: Imperial Tax collected successfully."]);
@@ -106,21 +103,17 @@ export function BankDirectory() {
     }, 1500);
   }
 
-  function onLog(msg: string) {
-    setTerminalLogs(prev => [...prev, msg]);
-  }
-
   const filteredBanks = banks.filter(b => 
     b.bankName.toLowerCase().includes(search.toLowerCase()) || 
     b.country.toLowerCase().includes(search.toLowerCase())
   )
 
   const steps = [
-    { id: 1, label: 'Auth', icon: Signal },
-    { id: 2, label: 'Tax', icon: DollarSign },
-    { id: 3, label: 'Risk', icon: ShieldCheck },
-    { id: 4, label: 'Vault', icon: Landmark },
-    { id: 5, label: 'Settle', icon: Activity },
+    { id: 1, label: 'Merchant', icon: UserCheck },
+    { id: 2, label: 'Invoice', icon: FileText },
+    { id: 3, label: 'Security', icon: ShieldCheck },
+    { id: 4, label: 'Revenue', icon: DollarSign },
+    { id: 5, label: 'Ledger', icon: ListOrdered },
   ]
 
   return (
@@ -145,8 +138,13 @@ export function BankDirectory() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={handleSync} disabled={loading} className="h-8 md:h-9 border-primary/20 text-primary gap-1 md:gap-2 px-2 md:px-3">
+            <Button size="sm" variant="outline" onClick={handleSync} disabled={loading} className="h-8 md:h-9 border-primary/20 text-primary gap-2 px-3">
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              <span className="hidden sm:inline">Sync Grid</span>
+            </Button>
+            <Button size="sm" onClick={handleFullCycleTest} disabled={loading} className="h-8 md:h-9 bg-accent text-background font-bold gap-2 px-3">
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="currentColor" />}
+              STRESS TEST
             </Button>
           </div>
         </div>
@@ -241,7 +239,7 @@ export function BankDirectory() {
                         </div>
                         <div>
                           <p className="text-[10px] font-bold uppercase tracking-widest text-foreground">{log.action.replace(/_/g, ' ')}</p>
-                          <p className="text-[8px] text-muted-foreground font-mono">HASH: {log.signature.substring(0, 20)}...</p>
+                          <p className="text-[8px] text-muted-foreground font-mono">HASH: {log.signature?.substring(0, 20)}...</p>
                         </div>
                       </div>
                       <Badge variant="outline" className="text-[7px] border-white/10 bg-black/40">
@@ -372,9 +370,6 @@ export function BankDirectory() {
               <div className="flex gap-1 md:gap-2">
                 <Button size="sm" onClick={handleWebhookTest} disabled={loading} className="h-6 md:h-7 text-[7px] md:text-[8px] bg-primary text-background font-bold px-2 rounded-lg">
                   SIM_HOOK
-                </Button>
-                <Button size="sm" onClick={handleDummyTest} disabled={loading} className="h-6 md:h-7 text-[7px] md:text-[8px] bg-accent text-background font-bold px-2 rounded-lg">
-                  SETTLE_TEST
                 </Button>
               </div>
             </CardHeader>
