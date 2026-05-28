@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -36,6 +35,9 @@ import { SovereignAudit } from '@/lib/sovereign-audit'
 import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { signOut } from 'firebase/auth'
+import { AuthGuard } from '@/lib/auth-guard'
+import { DeviceValidator } from '@/lib/device-fingerprint-validator'
+import { useRouter } from 'next/navigation'
 
 export default function ShurukkhaDashboard() {
   const [isOffline, setIsOffline] = useState(false)
@@ -43,21 +45,51 @@ export default function ShurukkhaDashboard() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [isAutoMode, setIsAutoMode] = useState(false)
   const [isLockedDown, setIsLockedDown] = useState(false)
+  const [sessionValid, setSessionValid] = useState(true)
   
   const { firestore } = useFirestore()
   const { auth } = useAuth()
   const { user, loading: authLoading } = useUser()
   const { toast } = useToast()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login')
+      return
+    }
+
+    if (user && !AuthGuard.isValidSession()) {
+      setSessionValid(false)
+      toast({
+        title: "সেশন শেষ হয়েছে",
+        description: "নিরাপত্তার স্বার্থে আবার লগইন করুন।",
+        variant: "destructive"
+      })
+      router.push('/login')
+    }
+
+    // Check device integrity
+    const storedFp = localStorage.getItem('sovereign_device_id')
+    if (storedFp && !DeviceValidator.validateIntegrity(storedFp)) {
+      handleEmergencyKillSwitch()
+      toast({
+        title: "SECURITY VIOLATION",
+        description: "অননুমোদিত ডিভাইস শনাক্ত হয়েছে। সিস্টেম লকডাউন করা হচ্ছে।",
+        variant: "destructive"
+      })
+    }
+  }, [user, authLoading, router])
 
   useEffect(() => {
     if (user && firestore) {
-      // Sync user profile to Firestore
       const userRef = doc(firestore, "users", user.uid);
       setDoc(userRef, {
         displayName: user.displayName,
         email: user.email,
         photoURL: user.photoURL,
-        lastLogin: new Date().toISOString()
+        lastLogin: new Date().toISOString(),
+        deviceFingerprint: DeviceValidator.generateFingerprint()
       }, { merge: true });
     }
   }, [user, firestore])
@@ -79,9 +111,7 @@ export default function ShurukkhaDashboard() {
 
     const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
 
-    SovereignAudit.logMilestone('Phase_23.0', 'Global Banking & Sovereign Grid Integration Complete');
-    SovereignAudit.logMilestone('Phase_24.0', 'Merchant Gateway Orchestration & Redundancy Matrix Active');
-    SovereignAudit.logMilestone('Phase_24.5', 'Sovereign DNS Root Authority Initialized (.sheikh)');
+    SovereignAudit.logMilestone('Phase_28.0', 'Imperial Multi-Layered Authentication & Zero-Trust Matrix Active');
 
     return () => {
       window.removeEventListener('online', handleOnline)
@@ -107,11 +137,8 @@ export default function ShurukkhaDashboard() {
     setIsAutoMode(false)
     AutonomousOrchestrator.setAutoMode(false)
     IntegrationBridge.setLockdown(true)
-    toast({
-      title: "EMERGENCY STOP & LOCKDOWN ACTIVATED",
-      description: "সব স্বয়ংক্রিয় কার্যক্রম এবং বাহ্যিক কানেকশন বন্ধ করা হয়েছে।",
-      variant: "destructive"
-    })
+    sessionStorage.clear()
+    router.push('/login')
   }
 
   const syncOfflineData = async () => {
@@ -138,17 +165,18 @@ export default function ShurukkhaDashboard() {
 
   const handleLogout = () => {
     if (auth) {
+      sessionStorage.clear()
       signOut(auth).then(() => {
         toast({ title: "সফলভাবে লগআউট করা হয়েছে" })
       })
     }
   }
 
-  if (authLoading) {
+  if (authLoading || (user && !sessionValid)) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         <Loader2 className="animate-spin text-primary" size={48} />
-        <p className="text-xs uppercase tracking-[0.3em] font-bold text-primary/60 animate-pulse">Initializing Sovereign Hub...</p>
+        <p className="text-xs uppercase tracking-[0.3em] font-bold text-primary/60 animate-pulse">Establishing Sovereign Handshake...</p>
       </div>
     )
   }
@@ -169,21 +197,20 @@ export default function ShurukkhaDashboard() {
                 </Badge>
               </div>
               <div className="flex items-center gap-1 md:gap-2">
-                <span className="text-[8px] md:text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">v24.5</span>
+                <span className="text-[8px] md:text-[10px] text-muted-foreground font-body font-medium uppercase tracking-[0.2em]">v28.0</span>
                 {isLockedDown && <Badge variant="destructive" className="h-3 md:h-4 text-[6px] md:text-[8px] animate-pulse px-1">LOCKDOWN</Badge>}
               </div>
             </div>
           </div>
           
           <div className="flex items-center gap-2 md:gap-6">
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-accent/5 border border-accent/20 rounded-full">
+              <Lock size={12} className="text-accent" />
+              <span className="text-[9px] font-mono text-accent uppercase tracking-tighter">Encrypted_Session_Active</span>
+            </div>
+            
             <SovereignStatusWidget />
             
-            <Link href="/partnerships" className="hidden lg:block">
-              <Button variant="ghost" size="sm" className={`h-8 text-[10px] font-bold gap-2 ${isLockedDown ? 'text-destructive' : 'text-primary/60 hover:text-primary'}`}>
-                <Globe size={14} /> PARTNERSHIP
-              </Button>
-            </Link>
-
             {user ? (
               <div className="flex items-center gap-3">
                 <div className="hidden sm:block text-right">

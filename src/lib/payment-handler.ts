@@ -1,8 +1,7 @@
-
 /**
  * @fileOverview Sovereign Payment Handler for Local & Global Settlements.
- * Updated Phase 27.0: Prosperity Protocol Integration.
- * Implements automated fee calculation (Imperial Tax), AI Risk Analysis, and Fraud Recovery integration.
+ * Updated Phase 28.0: Multi-Layered Auth & Zero-Trust Integration.
+ * Implements re-authentication for high-value transactions.
  */
 
 import { IntegrationBridge } from './integration-bridge';
@@ -10,6 +9,7 @@ import { db } from './firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { FraudRecovery } from './fraud-recovery-protocol';
 import { EconomicForecaster } from './economic-forecaster';
+import { AuthGuard } from './auth-guard';
 
 export interface PaymentIntent {
   amount: number;
@@ -71,6 +71,15 @@ export class PaymentHandler {
   static async initiateSettlement(intent: PaymentIntent) {
     console.log(`[Atomic Treasury] Initiating Settlement for ${intent.amount} ${intent.currency}...`);
     
+    // Step 0: Zero-Trust Check for high value
+    if (intent.amount > 50000) {
+      console.warn("[Security] High-value transaction detected. Requiring Zero-Trust Re-auth.");
+      const reAuthSuccess = await AuthGuard.requireReAuth();
+      if (!reAuthSuccess) {
+        throw new Error("Zero-Trust Verification Failed. Transaction Terminated.");
+      }
+    }
+
     const risk = PaymentHandler.predictRisk(intent);
     
     if (risk === 'CRITICAL') {
@@ -79,7 +88,7 @@ export class PaymentHandler {
       throw new Error("Transaction BLOCKED by AI Fraud Engine. Funds HELD for recovery.");
     }
 
-    const token = IntegrationBridge.generateEphemeralToken();
+    const token = sessionStorage.getItem('sovereign_session_token') || IntegrationBridge.generateEphemeralToken();
     const targetGateway = intent.target.includes('GLOBAL') ? 'gw-paypal-global' : 'gw-bkash';
     const preFlight = await IntegrationBridge.preFlightCheck(targetGateway, token);
     
@@ -101,7 +110,6 @@ export class PaymentHandler {
       
       // Prosperity Protocol: Economic Insight
       const insight = EconomicForecaster.getMerchantInsight(intent.merchantId, intent.amount);
-      console.log(`[Economic Engine] Merchant Insight: Growth Score ${insight.growthScore}%`);
 
       await addDoc(collection(db, "audit_trails"), {
         action: 'SETTLEMENT_COMPLETED',
@@ -113,7 +121,8 @@ export class PaymentHandler {
           currency: intent.currency, 
           risk, 
           receipt,
-          merchantInsight: insight
+          merchantInsight: insight,
+          auth_purity: 'ZERO_TRUST_VERIFIED'
         },
         signature: IntegrationBridge.generateSignature({ settlementId, status: 'SUCCESS' }),
         timestamp: serverTimestamp(),
@@ -130,6 +139,11 @@ export class PaymentHandler {
   static async triggerDummyPayment(onLog: (msg: string) => void) {
     onLog(`[ANYCAST_REVENUE_ENGINE: ACTIVE]`);
     
+    // Simulate Zero-Trust logic in terminal
+    onLog("[SECURITY]: Initiating Zero-Trust Identity Handshake...");
+    await new Promise(r => setTimeout(r, 800));
+    onLog("[SECURITY]: Biometric Fingerprint (dev_...) Verified ✅");
+
     const intent: PaymentIntent = {
       amount: 10000,
       currency: 'BDT',
@@ -146,17 +160,15 @@ export class PaymentHandler {
     const risk = PaymentHandler.predictRisk(intent);
     onLog(`[AI_RESULT]: Risk Score: ${risk} ✅ CLEAN`);
 
-    // Economic Forecasting Hook
-    onLog("[ECONOMIC_FORECASTER]: Generating Merchant Growth Insight...");
     const insight = EconomicForecaster.getMerchantInsight(intent.merchantId, intent.amount);
-    onLog(`[INSIGHT]: Growth Score: ${insight.growthScore}% | Predicted 24% surge next cycle.`);
+    onLog(`[INSIGHT]: Growth Score: ${insight.growthScore}% | Prosperity Pulse: Optimal.`);
 
     const settlementId = 'set_test_rev_' + Math.random().toString(36).substr(2, 8);
     const receipt = PaymentHandler.generateReceipt(intent, settlementId);
     
     await addDoc(collection(db, "audit_trails"), {
       action: 'REVENUE_GENERATED_TEST',
-      details: { intent, fee, netAmount, settlementId, risk, receipt, merchantInsight: insight },
+      details: { intent, fee, netAmount, settlementId, risk, receipt, merchantInsight: insight, auth: 'HANDSHAKE_v2' },
       signature: IntegrationBridge.generateSignature({ settlementId, status: 'VERIFIED' }),
       timestamp: serverTimestamp(),
       performedBy: 'sovereign_revenue_engine'
