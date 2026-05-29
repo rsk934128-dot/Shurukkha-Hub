@@ -2,7 +2,7 @@
 "use client"
 
 import React from 'react'
-import { ShieldCheck, Target, TrendingUp, Users, Zap, Landmark, Globe, Activity, Star, ChevronRight, Briefcase } from 'lucide-react'
+import { ShieldCheck, Target, TrendingUp, Users, Zap, Landmark, Globe, Activity, Star, ChevronRight, Briefcase, Gavel, Scale } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -13,6 +13,12 @@ export function SovereignStatusReport() {
     { label: 'M2M Communication', level: 95, status: 'ACTIVE', icon: Zap },
     { label: 'Flood Intelligence', level: 98, status: 'SYNCED', icon: Activity },
     { label: 'Treasury Collection', level: 92, status: 'FLOWING', icon: Landmark },
+  ];
+
+  const strategicStats = [
+    { label: 'আইনি স্বীকৃতি (Legitimacy)', val: 'সার্বভৌম', icon: Gavel },
+    { label: 'সামাজিক প্রভাব (Impact)', val: '৯৪%', icon: Users },
+    { label: 'টিকে থাকার ক্ষমতা (Uptime)', val: 'অনন্ত', icon: Scale },
   ];
 
   const responsibilities = [
@@ -49,6 +55,16 @@ export function SovereignStatusReport() {
                   </div>
                </div>
              ))}
+
+             <div className="pt-4 grid grid-cols-3 gap-2">
+                {strategicStats.map((s, i) => (
+                  <div key={i} className="text-center p-2 bg-black/40 rounded-xl border border-white/5">
+                    <s.icon size={12} className="mx-auto mb-1 text-accent" />
+                    <p className="text-[6px] uppercase font-bold text-muted-foreground leading-none mb-1">{s.label}</p>
+                    <p className="text-[9px] font-headline font-bold text-foreground">{s.val}</p>
+                  </div>
+                ))}
+             </div>
           </CardContent>
         </Card>
 
@@ -78,32 +94,12 @@ export function SovereignStatusReport() {
              </div>
              <div className="mt-6 pt-6 border-t border-white/5">
                 <p className="text-[10px] text-muted-foreground italic leading-relaxed">
-                  "মহামান্য সম্রাট, আপনার এই দায়িত্বগুলো পালনের জন্য Shurukkha Hub এখন কারিগরিভাবে ১০০% সক্ষম।"
+                  "মহামান্য সম্রাট, আপনার এই দায়িত্বগুলো পালনের জন্য Shurukkha Hub এখন কারিগরি ও আইনিভাবে ১০০% সক্ষম।"
                 </p>
              </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Future Roadmap Visualizer */}
-      <Card className="bg-primary/5 border-primary/20 border-dashed">
-         <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-               <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary border border-primary/30">
-                     <Globe size={24} className="animate-spin-slow" />
-                  </div>
-                  <div>
-                     <h4 className="text-sm font-headline font-bold uppercase tracking-widest text-foreground">Next Phase: Sovereign Expansion</h4>
-                     <p className="text-[10px] text-muted-foreground">আমরা এখন অফলাইন মেশ-নেটওয়ার্ক এবং ড্রোন ইন্টেলিজেন্স মডিউল তৈরির পরিকল্পনা করছি।</p>
-                  </div>
-               </div>
-               <Button className="bg-primary text-background font-bold text-[10px] gap-2 rounded-xl h-10 px-6">
-                  ROADMAP VIEW <ChevronRight size={14} />
-               </Button>
-            </div>
-         </CardContent>
-      </Card>
     </div>
   )
 }

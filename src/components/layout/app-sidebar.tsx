@@ -28,7 +28,8 @@ import {
   ScanLine,
   Signal,
   Handshake,
-  Box
+  Box,
+  Scale
 } from "lucide-react"
 
 import {
@@ -118,7 +119,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
         await fallbackCopy();
       }
     } catch (err: any) {
-      // Fallback if sharing is denied or errors out
       if (err.name !== 'AbortError') {
         await fallbackCopy();
       }
@@ -243,6 +243,18 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                     <Radio size={18} className="text-destructive animate-pulse" />
                     <span className="font-medium">জরুরি ডিসপ্যাচ</span>
                     <Badge variant="destructive" className="ml-auto text-[8px] h-4">LIVE</Badge>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    isActive={activeTab === 'manifesto'} 
+                    onClick={() => handleNav('manifesto')}
+                    className="px-4 h-10 gap-3"
+                  >
+                    <Scale size={18} className="text-accent" />
+                    <span className="font-medium">ভিশন ও ম্যানিফেস্টো</span>
+                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent">GOV</Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 

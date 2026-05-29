@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode, MessageSquare, Handshake, Box } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode, MessageSquare, Handshake, Box, Scale } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { AIAdviceTool } from '@/components/intelligence/ai-advice-tool'
@@ -24,6 +24,7 @@ import { SovereignAssistantChat } from '@/components/intelligence/sovereign-assi
 import { PartnershipReviewBoard } from '@/components/dashboard/partnership-review-board'
 import { SovereignStatusReport } from '@/components/dashboard/sovereign-status-report'
 import { ReliefManagement } from '@/components/dashboard/relief-management'
+import { ImperialManifesto } from '@/components/dashboard/imperial-manifesto'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFirestore, useUser, useAuth } from '@/firebase'
@@ -146,7 +147,7 @@ export default function ShurukkhaDashboard() {
   const handleSidebarNavigate = (view: string) => {
     if (view === 'lens') { setIsLensOpen(true); return; }
     setActiveView(view);
-    if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile', 'messages', 'partnerships', 'relief'].includes(view)) {
+    if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile', 'messages', 'partnerships', 'relief', 'manifesto'].includes(view)) {
       setActiveSubTab(view);
     }
   }
@@ -215,6 +216,7 @@ export default function ShurukkhaDashboard() {
                 <TabsContent value="ops" className="h-[calc(100vh-220px)] md:h-[calc(100vh-250px)]"><DispatcherConsole /></TabsContent>
                 <TabsContent value="intelligence"><IncidentReviewBoard /></TabsContent>
                 <TabsContent value="relief"><ReliefManagement /></TabsContent>
+                <TabsContent value="manifesto"><ImperialManifesto /></TabsContent>
                 <TabsContent value="analytics"><SystemHealth /></TabsContent>
                 <TabsContent value="audits"><AuditPanel /></TabsContent>
                 <TabsContent value="integrations" className="space-y-6">
