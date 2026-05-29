@@ -1,23 +1,18 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode, MessageSquare, Handshake } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
-import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
 import { AIAdviceTool } from '@/components/intelligence/ai-advice-tool'
-import { EmergencyDirectory } from '@/components/dashboard/emergency-directory'
 import { IncidentReport } from '@/components/dashboard/incident-report'
-import { ResourceMap } from '@/components/dashboard/resource-map'
-import { DisasterFeed } from '@/components/dashboard/disaster-feed'
 import { DispatcherConsole } from '@/components/dashboard/dispatcher-console'
-import { IntegrationPanel } from '@/components/dashboard/integration-panel'
 import { SystemHealth } from '@/components/dashboard/system-health'
 import { NetworkStatusBoard } from '@/components/dashboard/network-status-board'
 import { SovereignNetworkMap } from '@/components/dashboard/sovereign-network-map'
 import { SovereignDomainManager } from '@/components/dashboard/sovereign-domain-manager'
 import { BankDirectory } from '@/components/treasury/bank-directory'
-import { AlertCenter } from '@/components/dashboard/alert-center'
 import { SovereignStatusWidget } from '@/components/dashboard/sovereign-status-widget'
 import { AuditPanel } from '@/components/dashboard/audit-panel'
 import { ImperialOverview } from '@/components/dashboard/imperial-overview'
@@ -25,24 +20,13 @@ import { SovereignIDCard } from '@/components/dashboard/sovereign-id-card'
 import { IncidentReviewBoard } from '@/components/dashboard/incident-review-board'
 import { CommunicationConsole } from '@/components/dashboard/communication-console'
 import { SovereignLens } from '@/components/dashboard/sovereign-lens'
-import { CallOverlay } from '@/components/dashboard/call-overlay'
 import { SovereignAssistantChat } from '@/components/intelligence/sovereign-assistant-chat'
 import { PartnershipReviewBoard } from '@/components/dashboard/partnership-review-board'
-import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
-import { DisasterStorage } from '@/lib/disaster-storage'
 import { useFirestore, useUser, useAuth } from '@/firebase'
-import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc, onSnapshot, query, where, limit } from 'firebase/firestore'
+import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
-import { AutonomousOrchestrator } from '@/lib/orchestrator'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { IntegrationBridge } from '@/lib/integration-bridge'
-import { SovereignAudit } from '@/lib/sovereign-audit'
-import Link from 'next/link'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { signOut } from 'firebase/auth'
 import { AuthGuard } from '@/lib/auth-guard'
 import { DeviceValidator } from '@/lib/device-fingerprint-validator'
@@ -51,8 +35,8 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { AppLogo } from '@/components/ui/app-logo'
 import { CommunicationOrchestrator } from '@/lib/communication-orchestrator'
-import { db } from '@/lib/firebase'
 import { NotificationManager } from '@/lib/notification-manager'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 const ADMIN_EMAILS = ['rubels1k994@gmail.com', 'rsk755734@gmail.com'];
 
@@ -64,14 +48,12 @@ export default function ShurukkhaDashboard() {
   const [survivalMode, setSurvivalMode] = useState(false)
   const [isCheckingSession, setIsCheckingCheckingSession] = useState(true)
   const [isLensOpen, setIsLensOpen] = useState(false)
-  const [activeCall, setActiveCall] = useState<any>(null)
   
   const firestore = useFirestore()
   const auth = useAuth()
   const { user, loading: authLoading } = useUser()
   const { toast } = useToast()
   const router = useRouter()
-  const lastProcessedMsgId = useRef<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -124,87 +106,8 @@ export default function ShurukkhaDashboard() {
       };
 
       fetchRole();
-
-      // Notification Listener: New Messages
-      const msgQuery = query(
-        collection(db, "messages"),
-        where("recipientId", "==", user.uid),
-        limit(5)
-      );
-
-      const unsubscribeMsgs = onSnapshot(msgQuery, (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added' && activeView !== 'messages') {
-            const data = change.doc.data();
-            if (data.senderId !== user.uid && lastProcessedMsgId.current !== change.doc.id) {
-               NotificationManager.sendNotification(
-                 "নতুন মেসেজ প্রাপ্ত হয়েছে",
-                 `আপনার পোর্টালে একজন নাগরিক মেসেজ পাঠিয়েছেন।`,
-                 'new-msg'
-               );
-               lastProcessedMsgId.current = change.doc.id;
-            }
-          }
-        });
-      });
-
-      // Notification Listener: Incoming Calls
-      const callsQ = query(
-        collection(db, 'webrtc_sessions'),
-        where('recipientId', '==', user.uid),
-        where('status', '==', 'ringing')
-      );
-
-      const unsubscribeCalls = onSnapshot(callsQ, (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added' && !activeCall) {
-            const data = change.doc.data();
-            setActiveCall({
-              sessionId: change.doc.id,
-              callerId: data.callerId,
-              callerName: data.callerName,
-              callerAvatar: data.callerAvatar,
-              type: data.type,
-              isIncoming: true
-            });
-            
-            NotificationManager.sendNotification(
-              "ইনকামিং কল (Incoming Call)",
-              `${data.callerName} আপনাকে কল দিচ্ছেন।`,
-              'incoming-call'
-            );
-          }
-        });
-      });
-
-      // Notification Listener: Missed Calls
-      const missedCallsQ = query(
-        collection(db, 'webrtc_sessions'),
-        where('recipientId', '==', user.uid),
-        where('status', '==', 'ended')
-      );
-
-      const unsubscribeMissed = onSnapshot(missedCallsQ, (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added') {
-            const data = change.doc.data();
-            // In a real app we'd check if it was never 'connected'
-            NotificationManager.sendNotification(
-              "মিসকল (Missed Call)",
-              `${data.callerName || 'অজ্ঞাত'} থেকে একটি মিসকল পাওয়া গেছে।`,
-              'missed-call'
-            );
-          }
-        });
-      });
-
-      return () => {
-        unsubscribeMsgs();
-        unsubscribeCalls();
-        unsubscribeMissed();
-      };
     }
-  }, [user?.uid, firestore, activeView, activeCall])
+  }, [user?.uid, firestore])
 
   useEffect(() => {
     const handleConnectivityChange = () => {
@@ -318,10 +221,7 @@ export default function ShurukkhaDashboard() {
         </div>
       </div>
       <SovereignLens isOpen={isLensOpen} onClose={() => setIsLensOpen(false)} />
-      <CallOverlay callData={activeCall} onClose={() => setActiveCall(null)} />
       <SovereignAssistantChat />
-      <AlertCenter />
-      <Toaster />
     </SidebarProvider>
   )
 }

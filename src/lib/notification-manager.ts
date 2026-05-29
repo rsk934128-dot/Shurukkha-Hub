@@ -1,7 +1,7 @@
 
 /**
  * @fileOverview Sovereign Notification Manager.
- * Communicates with Service Worker to manage persistent active signals and push notifications.
+ * Communicates with Service Worker to manage persistent active signals and push notifications with actions.
  */
 
 export const NotificationManager = {
@@ -53,6 +53,30 @@ export const NotificationManager = {
       registration.active.postMessage({
         action: 'SHOW_NOTIFICATION',
         payload: { title, body, tag }
+      });
+    }
+  },
+
+  /**
+   * Sends a special call notification with Action Buttons.
+   */
+  async sendCallNotification(callerName: string, callType: string, sessionId: string) {
+    if (typeof window === 'undefined') return;
+    if (Notification.permission !== 'granted') return;
+
+    const registration = await navigator.serviceWorker.ready;
+    if (registration && registration.active) {
+      registration.active.postMessage({
+        action: 'SHOW_NOTIFICATION',
+        payload: { 
+          title: `ইনকামিং কল: ${callerName}`, 
+          body: callType, 
+          tag: `call-${sessionId}`,
+          actions: [
+            { action: 'accept-call', title: 'কল রিসিভ করুন ✅' },
+            { action: 'decline-call', title: 'বাতিল করুন ❌' }
+          ]
+        }
       });
     }
   },

@@ -2,6 +2,7 @@
 'use client';
 import { useEffect } from 'react';
 import { initializeFirebase, FirebaseClientProvider } from '@/firebase';
+import { GlobalSignalHandler } from '@/components/layout/global-signal-handler';
 import './globals.css';
 
 const { firebaseApp, firestore, auth } = initializeFirebase();
@@ -49,6 +50,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased selection:bg-primary/30">
         <FirebaseClientProvider firebaseApp={firebaseApp} firestore={firestore} auth={auth}>
+          <GlobalSignalHandler />
           {children}
         </FirebaseClientProvider>
       </body>
