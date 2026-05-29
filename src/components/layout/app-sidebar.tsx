@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -29,7 +28,8 @@ import {
   Signal,
   Handshake,
   Box,
-  Scale
+  Scale,
+  Settings
 } from "lucide-react"
 
 import {
@@ -243,6 +243,18 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                     <Radio size={18} className="text-destructive animate-pulse" />
                     <span className="font-medium">জরুরি ডিসপ্যাচ</span>
                     <Badge variant="destructive" className="ml-auto text-[8px] h-4">LIVE</Badge>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    isActive={activeTab === 'management'} 
+                    onClick={() => handleNav('management')}
+                    className="px-4 h-10 gap-3"
+                  >
+                    <Settings size={18} className="text-primary" />
+                    <span className="font-medium">প্রশাসনিক কমান্ড</span>
+                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-primary/20 text-primary">MGMT</Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
