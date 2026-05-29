@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { Shield, Globe, Lock, LogIn, Loader2, Key, Fingerprint, Star, Zap, ArrowRight, ArrowLeft, Mail, Eye, EyeOff, UserPlus, User } from 'lucide-react'
+import { Shield, Globe, Lock, LogIn, Loader2, Key, Fingerprint, Star, Zap, ArrowRight, ArrowLeft, Mail, Eye, EyeOff, UserPlus, User, Smartphone } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +22,7 @@ import { useToast } from '@/hooks/use-toast'
 import { doc, getDoc } from 'firebase/firestore'
 import { TOTPVerificationDialog } from '@/components/auth/totp-verification-dialog'
 import { BiometricPrompt } from '@/components/auth/biometric-prompt'
+import { PhoneAuthDialog } from '@/components/auth/phone-auth-dialog'
 import { AppLogo } from '@/components/ui/app-logo'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
@@ -39,23 +39,25 @@ export default function LoginPage() {
   const [isRegistering, setIsRegistering] = useState(false)
   const [isHandshaking, setIsHandshaking] = useState(false)
   const [isSigningIn, setIsSigningIn] = useState(false)
-  const [authMethod, setAuthMethod] = useState<'google' | 'email'>('email')
+  const [authMethod, setAuthMethod] = useState<'google' | 'email' | 'phone'>('email')
   
   const [show2FA, setShow2FA] = useState(false)
   const [showBiometric, setShowBiometric] = useState(false)
   const [showSecurityKey, setShowSecurityKey] = useState(false)
+  const [showPhoneAuth, setShowPhoneAuth] = useState(false)
   const [pendingSecret, setPendingSecret] = useState<string | null>(null)
   const [handshakeComplete, setHandshakeComplete] = useState(false)
   
   const router = useRouter()
   const { toast } = useToast()
 
-  const performHandshake = useCallback(async () => {
-    if (!user || !firestore || isHandshaking || handshakeComplete) return
+  const performHandshake = useCallback(async (customIdToken?: string) => {
+    if ((!user && !customIdToken) || !firestore || isHandshaking || handshakeComplete) return
     setIsHandshaking(true)
     
     try {
-      const userRef = doc(firestore, "users", user.uid);
+      const activeUser = user;
+      const userRef = doc(firestore, "users", activeUser?.uid || 'temp');
       let userData = null;
       
       try {
@@ -72,7 +74,7 @@ export default function LoginPage() {
         return;
       }
 
-      const idToken = await user.getIdToken()
+      const idToken = customIdToken || (await activeUser?.getIdToken())
       const fingerprint = DeviceValidator.generateFingerprint()
       
       const response = await fetch('/api/v1/auth/handshake', {
@@ -184,6 +186,11 @@ export default function LoginPage() {
       toast({ title: "প্রবেশাধিকার নাকচ", description: msg, variant: "destructive" })
       setIsSigningIn(false)
     }
+  }
+
+  const handlePhoneAuthSuccess = (idToken: string) => {
+    setShowPhoneAuth(false);
+    performHandshake(idToken);
   }
 
   const handleVerify2FA = async (code: string): Promise<boolean> => {
@@ -330,14 +337,25 @@ export default function LoginPage() {
                     <span className="text-[10px] uppercase font-bold text-muted-foreground">অথবা</span>
                     <div className="h-px bg-white/5 flex-1" />
                   </div>
-                  <Button 
-                    type="button"
-                    variant="outline"
-                    onClick={() => setAuthMethod('google')}
-                    className="w-full h-12 border-primary/20 bg-primary/5 text-primary text-[10px] uppercase tracking-widest font-bold"
-                  >
-                    <Globe size={16} className="mr-2" /> Google দিয়ে প্রবেশ
-                  </Button>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      onClick={() => setAuthMethod('google')}
+                      className="h-12 border-primary/20 bg-primary/5 text-primary text-[9px] uppercase tracking-widest font-bold"
+                    >
+                      <Globe size={14} className="mr-2" /> Google
+                    </Button>
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowPhoneAuth(true)}
+                      className="h-12 border-accent/20 bg-accent/5 text-accent text-[9px] uppercase tracking-widest font-bold"
+                    >
+                      <Smartphone size={14} className="mr-2" /> Mobile
+                    </Button>
+                  </div>
                 </form>
               ) : (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
@@ -386,6 +404,7 @@ export default function LoginPage() {
       <TOTPVerificationDialog isOpen={show2FA} onVerify={handleVerify2FA} onCancel={() => setShow2FA(false)} />
       <BiometricPrompt isOpen={showBiometric} onVerify={() => { setShowBiometric(false); performHandshake(); }} onCancel={() => setShowBiometric(false)} actionName="Imperial Access" />
       <BiometricPrompt isOpen={showSecurityKey} onVerify={() => { setShowSecurityKey(false); performHandshake(); }} onCancel={() => setShowSecurityKey(false)} actionName="Hardware Key Access" />
+      <PhoneAuthDialog isOpen={showPhoneAuth} onSuccess={handlePhoneAuthSuccess} onCancel={() => setShowPhoneAuth(false)} />
     </div>
   )
 }
