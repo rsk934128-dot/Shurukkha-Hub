@@ -279,7 +279,8 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                     <SearchCode size={18} className={activeTab === 'intelligence' ? "text-accent" : "text-muted-foreground"} />
                     <span className="font-medium">ইন্টেলিজেন্স বোর্ড</span>
                     <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent">RECON</Badge>
-                  </SidebarMenuItem>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
 
                 <SidebarMenuItem>
                   <SidebarMenuButton 
