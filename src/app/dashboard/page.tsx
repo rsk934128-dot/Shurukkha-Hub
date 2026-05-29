@@ -25,6 +25,7 @@ import { PartnershipReviewBoard } from '@/components/dashboard/partnership-revie
 import { SovereignStatusReport } from '@/components/dashboard/sovereign-status-report'
 import { ReliefManagement } from '@/components/dashboard/relief-management'
 import { ImperialManifesto } from '@/components/dashboard/imperial-manifesto'
+import { NotificationHub } from '@/components/dashboard/notification-hub'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFirestore, useUser, useAuth } from '@/firebase'
@@ -147,7 +148,7 @@ export default function ShurukkhaDashboard() {
   const handleSidebarNavigate = (view: string) => {
     if (view === 'lens') { setIsLensOpen(true); return; }
     setActiveView(view);
-    if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile', 'messages', 'partnerships', 'relief', 'manifesto'].includes(view)) {
+    if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile', 'messages', 'partnerships', 'relief', 'manifesto', 'signals'].includes(view)) {
       setActiveSubTab(view);
     }
   }
@@ -214,6 +215,7 @@ export default function ShurukkhaDashboard() {
             {(activeView !== 'citizen' && activeView !== 'profile' && activeView !== 'messages') && (
               <Tabs value={activeSubTab} onValueChange={handleSidebarNavigate} className="w-full">
                 <TabsContent value="ops" className="h-[calc(100vh-220px)] md:h-[calc(100vh-250px)]"><DispatcherConsole /></TabsContent>
+                <TabsContent value="signals"><NotificationHub /></TabsContent>
                 <TabsContent value="intelligence"><IncidentReviewBoard /></TabsContent>
                 <TabsContent value="relief"><ReliefManagement /></TabsContent>
                 <TabsContent value="manifesto"><ImperialManifesto /></TabsContent>

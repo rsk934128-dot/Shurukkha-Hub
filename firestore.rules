@@ -22,7 +22,7 @@ service cloud.firestore {
       allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
 
-    // Merchants: Only Admins can manage the registry
+    // Merchants
     match /merchants/{merchantId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
@@ -36,15 +36,10 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Relief Management
-    match /relief_inventory/{itemId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-
-    match /relief_distributions/{distId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+    // External Notifications (Signal Hub)
+    match /external_notifications/{notifId} {
+      allow read, write: if isAdmin();
+      allow create: if isAuthenticated();
     }
 
     // Standard collections
@@ -52,7 +47,9 @@ service cloud.firestore {
     match /messages/{messageId} { allow read, write: if isAuthenticated(); }
     match /incidents/{incidentId} { allow read, write: if isAuthenticated(); }
     match /sovereign_domains/{domainId} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /integrations/{integrationId} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /partner_requests/{requestId} { allow read: if isAdmin(); allow create: if isAuthenticated(); }
+    match /relief_inventory/{itemId} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
+    match /relief_distributions/{distId} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
     match /suspect_profiles/{profileId} { allow read: if isAdmin(); allow write: if isAdmin(); }
     match /webrtc_sessions/{sessionId} {
       allow read, write: if isAuthenticated();

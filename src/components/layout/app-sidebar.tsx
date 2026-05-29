@@ -248,6 +248,18 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
 
                 <SidebarMenuItem>
                   <SidebarMenuButton 
+                    isActive={activeTab === 'signals'} 
+                    onClick={() => handleNav('signals')}
+                    className="px-4 h-10 gap-3"
+                  >
+                    <Signal size={18} className="text-accent animate-pulse" />
+                    <span className="font-medium">সিগন্যাল হাব</span>
+                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent">NEW</Badge>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
                     isActive={activeTab === 'manifesto'} 
                     onClick={() => handleNav('manifesto')}
                     className="px-4 h-10 gap-3"
@@ -267,8 +279,7 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                     <SearchCode size={18} className={activeTab === 'intelligence' ? "text-accent" : "text-muted-foreground"} />
                     <span className="font-medium">ইন্টেলিজেন্স বোর্ড</span>
                     <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent">RECON</Badge>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                  </SidebarMenuItem>
 
                 <SidebarMenuItem>
                   <SidebarMenuButton 
@@ -288,7 +299,7 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                     onClick={() => handleNav('partnerships')}
                     className="px-4 h-10 gap-3"
                   >
-                    <Handshake size={18} className={activeTab === 'partnerships' ? "text-primary" : "text-muted-foreground"} />
+                    <Handshake size={18} className="text-primary" />
                     <span className="font-medium">অংশীদারিত্ব আবেদন</span>
                     <Badge variant="outline" className="ml-auto text-[7px] h-3 border-primary/20 text-primary">NEW</Badge>
                   </SidebarMenuButton>
