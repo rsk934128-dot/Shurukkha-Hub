@@ -42,6 +42,13 @@ export default function WelcomeLanding() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  const scrollToFeatures = () => {
+    const element = document.getElementById('modules');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#05070a] text-foreground font-body overflow-x-hidden selection:bg-primary/30">
       {/* Immersive Background Effects */}
@@ -115,7 +122,12 @@ export default function WelcomeLanding() {
                 {user ? "ড্যাশবোর্ডে ফিরে যান" : "সাম্রাজ্যে প্রবেশ করুন"} <Zap size={28} className="fill-current group-hover:rotate-12 transition-transform" />
               </Button>
             </Link>
-            <Button size="lg" variant="outline" className="h-20 px-12 border-white/10 font-bold text-2xl rounded-[2.5rem] gap-4 w-full sm:w-auto bg-white/5 hover:bg-white/10 transition-all border-dashed">
+            <Button 
+              size="lg" 
+              variant="outline" 
+              onClick={scrollToFeatures}
+              className="h-20 px-12 border-white/10 font-bold text-2xl rounded-[2.5rem] gap-4 w-full sm:w-auto bg-white/5 hover:bg-white/10 transition-all border-dashed"
+            >
               ফিচারগুলো দেখুন <ChevronRight size={28} />
             </Button>
           </div>
