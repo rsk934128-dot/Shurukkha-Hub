@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label'
 import { MerchantGrowthChart } from '@/components/dashboard/merchant-growth-chart'
 import { AppLogo } from '@/components/ui/app-logo'
 import { MerchantRegistry } from './merchant-registry'
+import { ComplianceVault } from './compliance-vault'
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { errorEmitter } from '@/firebase/error-emitter'
@@ -44,7 +45,6 @@ export function BankDirectory() {
   useEffect(() => {
     handleSync()
     
-    // Client-side filtering to bypass indexing issues
     const q = query(
       collection(db, "audit_trails"), 
       orderBy("timestamp", "desc"),
@@ -58,7 +58,6 @@ export function BankDirectory() {
       ).slice(0, 50);
       setLedgerLogs(filtered);
       
-      // Update local revenue stats based on successful settlements
       const settlements = filtered.filter((l: any) => l.action === 'SETTLEMENT_COMPLETED');
       if (settlements.length > 0) {
         let totalProcessed = 12450000;
@@ -109,24 +108,10 @@ export function BankDirectory() {
       })
       toast({ title: "STRESS TEST COMPLETED", description: "Ledger updated with atomic settlement." });
     } catch (e: any) {
-      console.error("[Stress Test Error]", e);
-      toast({ title: "STRESS TEST FAILED", description: "Check terminal for error signature.", variant: "destructive" });
-      setTerminalLogs(prev => [...prev, `[FATAL_ERROR]: ${e.message || "Unknown Failure"}`]);
+      toast({ title: "STRESS TEST FAILED", variant: "destructive" });
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleWebhookTest = async () => {
-    setLoading(true)
-    setTerminalLogs([])
-    setTerminalLogs(prev => [...prev, "[WEBHOOK_SIMULATOR]: Mocking bKash Payload..."]);
-    setTimeout(() => {
-      setTerminalLogs(prev => [...prev, "> [WEBHOOK_SENT]: Payload verified with RSA_v2 signature."]);
-      setTerminalLogs(prev => [...prev, "> [SETTLEMENT]: Imperial Tax collected successfully."]);
-      toast({ title: "Webhook Handshake Successful" });
-      setLoading(false);
-    }, 1500);
   }
 
   const filteredBanks = banks.filter(b => 
@@ -180,6 +165,7 @@ export function BankDirectory() {
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
             <TabsTrigger value="revenue" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><TrendingUp size={12}/> রেভিনিউ</TabsTrigger>
+            <TabsTrigger value="compliance" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><ShieldCheck size={12}/> কমপ্লায়েন্স (L1)</TabsTrigger>
             <TabsTrigger value="ledger" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><ListOrdered size={12}/> লাইভ লেজার</TabsTrigger>
             <TabsTrigger value="merchants" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Store size={12}/> মার্চেন্ট</TabsTrigger>
             <TabsTrigger value="fraud" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold uppercase tracking-widest"><ShieldX size={12}/> ফ্রড</TabsTrigger>
@@ -187,6 +173,10 @@ export function BankDirectory() {
             <TabsTrigger value="local" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><Smartphone size={12}/> লোকাল</TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="compliance" className="flex-1 p-4 md:p-6 m-0">
+          <ComplianceVault />
+        </TabsContent>
 
         <TabsContent value="revenue" className="flex-1 p-4 md:p-6 m-0 space-y-4 md:space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
@@ -387,37 +377,6 @@ export function BankDirectory() {
               })}
             </div>
           </div>
-
-          <Card className="bg-black/40 border-accent/20 overflow-hidden shadow-2xl">
-            <CardHeader className="bg-accent/5 border-b border-accent/10 py-2 md:py-3 p-4 flex flex-row items-center justify-between">
-              <CardTitle className="text-[8px] md:text-[10px] font-headline font-bold text-accent uppercase tracking-widest flex items-center gap-2">
-                <Terminal size={12} /> REVENUE_ENGINE Terminal
-              </CardTitle>
-              <div className="flex gap-1 md:gap-2">
-                <Button size="sm" onClick={handleWebhookTest} disabled={loading} className="h-6 md:h-7 text-[7px] md:text-[8px] bg-primary text-background font-bold px-2 rounded-lg">
-                  SIM_HOOK
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[150px] md:h-[250px] bg-black/60 p-3 md:p-4">
-                {terminalLogs.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full opacity-20">
-                     <Signal size={32} className="mb-2" />
-                     <p className="text-[8px] md:text-[9px] font-mono uppercase tracking-widest">Awaiting Command...</p>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    {terminalLogs.map((log, i) => (
-                      <div key={i} className="text-[8px] md:text-[9px] font-mono text-accent/80 leading-relaxed">
-                        <span className="text-accent mr-1">&gt;</span> {log}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </Card>
