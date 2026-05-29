@@ -31,10 +31,12 @@ export function DispatcherConsole() {
   const [analyzing, setAnalyzing] = useState(false)
   const [isCalling, setIsCalling] = useState(false)
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [activeTab, setActiveTab] = useState<'map' | 'comm'>('map')
-  const videoRef = useRef<HTMLVideoElement>(null)
+  
+  const remoteVideoRef = useRef<HTMLVideoElement>(null)
+  const localVideoRef = useRef<HTMLVideoElement>(null)
   const webrtcRef = useRef<WebRTCManager | null>(null)
-  const localStreamRef = useRef<MediaStream | null>(null)
   const lastAlertId = useRef<string | null>(null)
   
   const { toast } = useToast()
@@ -67,10 +69,16 @@ export function DispatcherConsole() {
   }, [selectedAlert, playAlertSound, toast])
 
   useEffect(() => {
-    if (videoRef.current && remoteStream) {
-      videoRef.current.srcObject = remoteStream;
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream])
+
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream])
 
   const handleCall = async () => {
     if (!selectedAlert) return;
@@ -78,7 +86,7 @@ export function DispatcherConsole() {
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localStreamRef.current = stream;
+      setLocalStream(stream);
       webrtcRef.current = new WebRTCManager(selectedAlert.id);
       await webrtcRef.current.answerCall(stream, (remote) => {
         setRemoteStream(remote);
@@ -90,12 +98,12 @@ export function DispatcherConsole() {
   }
 
   const endCall = () => {
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
-      localStreamRef.current = null;
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+      setLocalStream(null);
     }
-    webrtcRef.current?.dispose();
     setRemoteStream(null);
+    webrtcRef.current?.dispose();
     setIsCalling(false);
   }
 
@@ -150,7 +158,7 @@ export function DispatcherConsole() {
     <div className={`h-full flex flex-col gap-4 md:gap-6 transition-all duration-1000 ${isCalling ? 'call-active-glow' : 'animate-in fade-in'}`}>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 h-full min-h-0">
         
-        {/* Left: Emergency Feed - Optimized for scroll on mobile */}
+        {/* Left: Emergency Feed */}
         <div className="lg:col-span-3 space-y-4 md:space-y-6 flex flex-col min-h-0 order-2 lg:order-1">
            <Card className="bg-card/40 border-primary/20 flex flex-col flex-1 overflow-hidden neon-glow-primary min-h-[300px] lg:min-h-[400px]">
               <CardHeader className="bg-primary/10 border-b border-white/5 py-2 md:py-3 flex flex-row items-center justify-between">
@@ -182,7 +190,7 @@ export function DispatcherConsole() {
            </Card>
         </div>
 
-        {/* Center: Strategic Panel - Higher visibility on mobile */}
+        {/* Center: Strategic Panel */}
         <div className="lg:col-span-6 flex flex-col min-h-[400px] md:min-h-0 order-1 lg:order-2">
           <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-2">
@@ -199,15 +207,31 @@ export function DispatcherConsole() {
             
             <TabsContent value="map" className="flex-1 mt-0 relative min-h-0 rounded-2xl overflow-hidden border border-white/5">
                <ResourceMap />
+               
+               {/* Call Interface Overlay */}
                {isCalling && (
-                 <div className="absolute inset-x-0 bottom-4 md:bottom-8 flex justify-center z-[70] animate-in slide-in-from-bottom-5 px-4">
-                   <MediaControls onHangUp={endCall} className="w-full max-w-xs" />
-                 </div>
-               )}
-               {isCalling && remoteStream && (
-                 <div className="absolute top-2 right-2 md:top-4 md:right-4 w-40 md:w-64 aspect-video bg-black rounded-xl md:rounded-3xl border-2 border-accent shadow-2xl overflow-hidden z-[60] animate-in zoom-in-95">
-                    <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                    <Badge className="absolute top-2 left-2 bg-red-600 animate-pulse text-[6px] md:text-[7px] border-none">HUD</Badge>
+                 <div className="absolute inset-0 z-[60] bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-500">
+                    <div className="absolute top-4 right-4 w-48 md:w-80 aspect-video bg-black rounded-2xl md:rounded-3xl border-2 border-accent shadow-2xl overflow-hidden animate-in zoom-in-95 group/remote">
+                       {remoteStream ? (
+                         <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                       ) : (
+                         <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 gap-2">
+                            <Loader2 className="animate-spin text-accent" size={24} />
+                            <p className="text-[7px] uppercase font-bold text-accent tracking-widest animate-pulse">Waiting for Stream...</p>
+                         </div>
+                       )}
+                       <Badge className="absolute top-2 left-2 bg-red-600 animate-pulse text-[6px] md:text-[7px] border-none px-2 h-4 uppercase">CITIZEN_RECON</Badge>
+                       
+                       {/* Local PIP in Dispatcher HUD */}
+                       <div className="absolute bottom-2 right-2 w-16 md:w-24 aspect-video bg-black border border-white/20 rounded-lg overflow-hidden z-20">
+                          <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+                          <Badge className="absolute top-0.5 left-0.5 bg-black/40 text-[5px] uppercase px-1 h-2.5">Local</Badge>
+                       </div>
+                    </div>
+
+                    <div className="absolute inset-x-0 bottom-8 flex justify-center px-4">
+                      <MediaControls onHangUp={endCall} className="w-full max-w-xs scale-90 md:scale-100" />
+                    </div>
                  </div>
                )}
             </TabsContent>
@@ -218,7 +242,7 @@ export function DispatcherConsole() {
           </Tabs>
         </div>
 
-        {/* Right: Tactical Ops - Action panel */}
+        {/* Right: Tactical Ops */}
         <div className="lg:col-span-3 flex flex-col gap-4 md:gap-6 min-h-0 order-3">
           <Card className="bg-card/40 border-accent/20 flex-1 flex flex-col overflow-hidden relative neon-glow-accent min-h-[300px] lg:min-h-[400px]">
              <CardHeader className="bg-accent/10 border-b border-white/5 py-3 md:py-4">

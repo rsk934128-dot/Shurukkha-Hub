@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react'
-import { ShieldAlert, Loader2, Video, VideoOff, PhoneOff, CheckCircle2 } from 'lucide-react'
+import { ShieldAlert, Loader2, Video, VideoOff, PhoneOff, CheckCircle2, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { db } from '@/lib/firebase'
@@ -15,18 +15,26 @@ export function SOSButton() {
   const [activeSosId, setActiveSosId] = useState<string | null>(null)
   const [isCalling, setIsCalling] = useState(false)
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
+  
+  const localVideoRef = useRef<HTMLVideoElement>(null)
+  const remoteVideoRef = useRef<HTMLVideoElement>(null)
   const webrtcRef = useRef<WebRTCManager | null>(null)
   
   const { toast } = useToast()
 
   useEffect(() => {
-    if (videoRef.current && localStream) {
-      videoRef.current.srcObject = localStream;
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
     }
   }, [localStream])
 
-  // Cleanup on unmount or SOS reset
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream])
+
   useEffect(() => {
     return () => {
       endCall();
@@ -90,6 +98,7 @@ export function SOSButton() {
       webrtcRef.current = new WebRTCManager(activeSosId);
       await webrtcRef.current.createCall(stream, (remote) => {
         console.log("[SOS Call] Remote stream received");
+        setRemoteStream(remote);
       });
 
       toast({ title: "লাইভ ভিডিও ফিড শুরু হয়েছে" });
@@ -100,15 +109,11 @@ export function SOSButton() {
   }
 
   const endCall = () => {
-    // Explicitly stop hardware tracks
     if (localStream) {
-      localStream.getTracks().forEach(track => {
-        track.stop();
-        console.log(`[SOS Kill-Switch] Hardware track stopped: ${track.kind}`);
-      });
+      localStream.getTracks().forEach(track => track.stop());
       setLocalStream(null);
     }
-    
+    setRemoteStream(null);
     webrtcRef.current?.dispose();
     setIsCalling(false);
   }
@@ -139,11 +144,28 @@ export function SOSButton() {
 
             {isCalling ? (
               <div className="space-y-4">
-                <div className="aspect-video bg-black rounded-2xl border-2 border-accent overflow-hidden relative">
-                   <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                   <Badge className="absolute top-2 left-2 bg-red-600 animate-pulse text-[8px]">LIVE_FEED</Badge>
+                <div className="aspect-video bg-black rounded-2xl border-2 border-accent overflow-hidden relative group/video">
+                   {/* Main Remote View */}
+                   {remoteStream ? (
+                     <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                   ) : (
+                     <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 gap-3">
+                        <Loader2 className="animate-spin text-accent" size={32} />
+                        <p className="text-[10px] font-mono text-accent uppercase tracking-widest animate-pulse">Waiting for Responder...</p>
+                     </div>
+                   )}
+                   
+                   {/* Local PIP View */}
+                   <div className="absolute bottom-3 right-3 w-24 md:w-32 aspect-video bg-black rounded-lg border border-white/20 shadow-2xl overflow-hidden z-20">
+                      <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+                      <Badge className="absolute top-1 left-1 bg-black/40 text-[6px] uppercase px-1 h-3">You</Badge>
+                   </div>
+
+                   <Badge className="absolute top-2 left-2 bg-red-600 animate-pulse text-[8px] px-2 h-4 flex items-center gap-1 uppercase font-bold">
+                     <div className="w-1.5 h-1.5 bg-white rounded-full" /> LIVE_HUD
+                   </Badge>
                 </div>
-                <Button onClick={endCall} variant="destructive" className="w-full h-12 gap-2 rounded-xl font-bold">
+                <Button onClick={endCall} variant="destructive" className="w-full h-12 gap-2 rounded-xl font-bold shadow-lg shadow-destructive/20">
                   <PhoneOff size={18} /> কল শেষ করুন
                 </Button>
               </div>
@@ -153,7 +175,7 @@ export function SOSButton() {
               </Button>
             )}
             
-            <Button variant="ghost" onClick={() => { endCall(); setActiveSosId(null); }} className="w-full text-[10px] uppercase font-bold text-muted-foreground">
+            <Button variant="ghost" onClick={() => { endCall(); setActiveSosId(null); }} className="w-full text-[10px] uppercase font-bold text-muted-foreground hover:text-primary">
               নতুন সংকেত পাঠান
             </Button>
           </div>

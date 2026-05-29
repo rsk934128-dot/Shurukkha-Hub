@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * @fileOverview WebRTC Signaling Service for Shurukkha Hub.
- * Manages the exchange of offers, answers, and ICE candidates via Firestore.
- * Updated Phase 3.6: Ensures bi-directional track propagation and reliable stream syncing.
+ * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
+ * Optimized Phase 31.8: Implements Bi-directional Track Propagation.
+ * Ensures reliable remote stream reception for both Offerer and Answerer.
  */
 
 import { db } from './firebase';
@@ -15,7 +15,6 @@ import {
   addDoc, 
   updateDoc, 
   getDoc,
-  DocumentData
 } from 'firebase/firestore';
 
 export class WebRTCManager {
@@ -23,22 +22,20 @@ export class WebRTCManager {
   private peerConnection: RTCPeerConnection | null = null;
   private candidateQueue: RTCIceCandidateInit[] = [];
   private isProcessingRemoteDescription = false;
+  private remoteStream: MediaStream = new MediaStream();
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
   }
 
-  // Configuration for ICE Servers
   private rtcConfig: RTCConfiguration = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
     ],
   };
 
-  /**
-   * Buffers candidates until remote description is available.
-   */
   private async addCandidate(candidate: RTCIceCandidateInit) {
     if (this.peerConnection && this.peerConnection.remoteDescription) {
       try {
@@ -51,9 +48,6 @@ export class WebRTCManager {
     }
   }
 
-  /**
-   * Processes all buffered candidates once connection is ready.
-   */
   private async flushCandidates() {
     if (!this.peerConnection || !this.peerConnection.remoteDescription) return;
     while (this.candidateQueue.length > 0) {
@@ -69,19 +63,21 @@ export class WebRTCManager {
   }
 
   /**
-   * Initialize a new call (Offer side)
+   * Initialize a new call (Offerer / Caller side)
    */
   async createCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
     this.peerConnection = new RTCPeerConnection(this.rtcConfig);
     
-    // SETUP: Set ontrack before adding local tracks to catch events early
+    // Set up ontrack immediately
     this.peerConnection.ontrack = (event) => {
-      console.log("[WebRTC] Remote track received on Offer side");
-      if (event.streams && event.streams[0]) {
-        onRemoteStream(event.streams[0]);
-      }
+      console.log("[WebRTC] Track received on Caller side");
+      event.streams[0].getTracks().forEach((track) => {
+        this.remoteStream.addTrack(track);
+      });
+      onRemoteStream(this.remoteStream);
     };
 
+    // Add local tracks
     localStream.getTracks().forEach(track => {
       this.peerConnection?.addTrack(track, localStream);
     });
@@ -89,14 +85,13 @@ export class WebRTCManager {
     const sessionRef = doc(db, 'webrtc_sessions', this.sessionId);
     const candidatesCollection = collection(sessionRef, 'ice_candidates');
 
-    // Collect ICE Candidates and tag as 'caller'
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
         addDoc(candidatesCollection, { ...event.candidate.toJSON(), owner: 'caller' });
       }
     };
 
-    // Create Offer
+    // Create and set local description
     const offerDescription = await this.peerConnection.createOffer();
     await this.peerConnection.setLocalDescription(offerDescription);
 
@@ -107,33 +102,31 @@ export class WebRTCManager {
 
     await setDoc(sessionRef, { offer }, { merge: true });
 
-    // Listen for Answer with Mutex Guard
+    // Listen for Answer
     onSnapshot(sessionRef, async (snapshot) => {
       const data = snapshot.data();
       if (!this.peerConnection || this.isProcessingRemoteDescription) return;
 
-      // EXCEPTION GUARD: Only set remote answer if we are currently in 'have-local-offer' state
       if (data?.answer && this.peerConnection.signalingState === 'have-local-offer') {
         this.isProcessingRemoteDescription = true;
         try {
           const answerDescription = new RTCSessionDescription(data.answer);
           await this.peerConnection.setRemoteDescription(answerDescription);
-          console.log("[WebRTC] Remote description set on Offer side (Answer received)");
+          console.log("[WebRTC] Answer set on Caller side");
           await this.flushCandidates();
         } catch (e) {
-          console.warn("[WebRTC] Failed to set remote answer", e);
+          console.error("[WebRTC] Failed to set remote answer", e);
         } finally {
           this.isProcessingRemoteDescription = false;
         }
       }
     });
 
-    // Listen for remote ICE candidates
+    // Listen for candidates
     onSnapshot(candidatesCollection, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const data = change.doc.data();
-          // Only add candidates sent by the recipient
           if (data.owner !== 'caller') {
             this.addCandidate(data as RTCIceCandidateInit);
           }
@@ -143,19 +136,21 @@ export class WebRTCManager {
   }
 
   /**
-   * Join an existing call (Answer side)
+   * Join an existing call (Answerer / Recipient side)
    */
   async answerCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
     this.peerConnection = new RTCPeerConnection(this.rtcConfig);
 
-    // SETUP: Set ontrack before adding local tracks
+    // Set up ontrack immediately
     this.peerConnection.ontrack = (event) => {
-      console.log("[WebRTC] Remote track received on Answer side");
-      if (event.streams && event.streams[0]) {
-        onRemoteStream(event.streams[0]);
-      }
+      console.log("[WebRTC] Track received on Recipient side");
+      event.streams[0].getTracks().forEach((track) => {
+        this.remoteStream.addTrack(track);
+      });
+      onRemoteStream(this.remoteStream);
     };
 
+    // Add local tracks before answering
     localStream.getTracks().forEach(track => {
       this.peerConnection?.addTrack(track, localStream);
     });
@@ -163,7 +158,6 @@ export class WebRTCManager {
     const sessionRef = doc(db, 'webrtc_sessions', this.sessionId);
     const candidatesCollection = collection(sessionRef, 'ice_candidates');
 
-    // Collect ICE Candidates and tag as 'recipient'
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
         addDoc(candidatesCollection, { ...event.candidate.toJSON(), owner: 'recipient' });
@@ -173,10 +167,10 @@ export class WebRTCManager {
     const sessionSnapshot = await getDoc(sessionRef);
     const sessionData = sessionSnapshot.data();
     
-    if (sessionData?.offer && this.peerConnection.signalingState === 'stable') {
+    if (sessionData?.offer) {
       try {
         await this.peerConnection.setRemoteDescription(new RTCSessionDescription(sessionData.offer));
-        console.log("[WebRTC] Remote description set on Answer side (Offer received)");
+        console.log("[WebRTC] Offer set on Recipient side");
 
         const answerDescription = await this.peerConnection.createAnswer();
         await this.peerConnection.setLocalDescription(answerDescription);
@@ -189,16 +183,15 @@ export class WebRTCManager {
         await updateDoc(sessionRef, { answer });
         await this.flushCandidates();
       } catch (e) {
-        console.warn("[WebRTC] Failed to set remote offer or create answer", e);
+        console.error("[WebRTC] Failed to set offer or create answer", e);
       }
     }
 
-    // Listen for remote ICE candidates
+    // Listen for candidates
     onSnapshot(candidatesCollection, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const data = change.doc.data();
-          // Only add candidates sent by the caller
           if (data.owner !== 'recipient') {
             this.addCandidate(data as RTCIceCandidateInit);
           }
@@ -214,5 +207,6 @@ export class WebRTCManager {
     }
     this.candidateQueue = [];
     this.isProcessingRemoteDescription = false;
+    this.remoteStream = new MediaStream();
   }
 }
