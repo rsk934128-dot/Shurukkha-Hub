@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { ShieldCheck, Globe, Zap, Key, Share2, Send, CheckCircle2, Building2, Lock, Cpu, ArrowLeft, Activity, Sparkles, Network } from 'lucide-react'
+import { ShieldCheck, Globe, Zap, Key, Share2, Send, CheckCircle2, Building2, Lock, Cpu, ArrowLeft, Activity, Sparkles, Network, Users, Landmark, HeartPulse } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -90,25 +90,31 @@ export default function PartnershipHub() {
                  </h1>
                </div>
                <p className="text-muted-foreground text-lg font-light leading-relaxed max-w-2xl">
-                 আপনার সিস্টেমকে সিরাজগঞ্জ সুরক্ষা সাম্রাজ্যের সাথে একীভূত করুন। আমাদের "Universal Webhook Engine" এবং "RSA v2 Bridge" ব্যবহার করে রিয়েল-টাইম ইমার্জেন্সি টেলিম্যাট্রি এবং ডিসপ্যাচ কমান্ড এক্সেস করুন।
+                 আপনার সিস্টেমকে সিরাজগঞ্জ সুরক্ষা সাম্রাজ্যের সাথে একীভূত করুন। আমাদের সাপোর্টাররা সরাসরি গেটওয়ে এবং ইন্টেলিজেন্স শেয়ারিংয়ের মাধ্যমে পোর্টালে অবদান রাখতে পারেন।
                </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[
-                { icon: Lock, title: "RSA v2 Security", desc: "SHA256withRSA ডিজিটাল সিগনেচার মেকানিজম দ্বারা প্রতিটি রিকোয়েস্ট সুরক্ষিত।" },
-                { icon: Zap, title: "Universal Engine", desc: "০.৫ms ল্যাটেন্সিতে ইভেন্ট ব্রডকাস্টিং এবং অটোমেটেড ডিসপ্যাচ সিঙ্ক।" },
-                { icon: Network, title: "Anycast Distributed", desc: "৪২টি ডিস্ট্রিবিউটেড নোডের মাধ্যমে আপনার কানেক্টিভিটি নিশ্চিত করা হয়।" },
-                { icon: Share2, title: "Developer SDK", desc: "মাল্টি-ল্যাঙ্গুয়েজ ইন্টিগ্রেশন সাপোর্ট এবং কমপ্রিহেনসিভ এপিআই ডকুমেন্টেশন।" }
-              ].map((item, idx) => (
-                <Card key={idx} className="bg-card/40 border-white/5 hover:border-primary/20 transition-all duration-500 rounded-3xl p-6 group">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:bg-primary/20 transition-colors">
-                    <item.icon size={24} />
-                  </div>
-                  <h3 className="font-headline font-bold text-lg text-foreground uppercase tracking-tight mb-2">{item.title}</h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed font-light">{item.desc}</p>
-                </Card>
-              ))}
+              <SupportRoleCard 
+                icon={Network}
+                title="প্রযুক্তিগত প্লাগইন"
+                desc="আপনার ওয়েবসাইট বা অ্যাপে আমাদের 'Signal Hub' এপিআই প্লাগইন করুন এবং রিয়েল-টাইম অ্যালার্ট রিসিভ করুন।"
+              />
+              <SupportRoleCard 
+                icon={Landmark}
+                title="আর্থিক নোড"
+                desc="মার্চেন্ট হিসেবে যুক্ত হয়ে কর প্রদান করুন এবং অজেয় রাজকীয় সেটলমেন্ট ও নিরাপত্তা নিশ্চিত করুন।"
+              />
+              <SupportRoleCard 
+                icon={HeartPulse}
+                title="অপারেশনাল সাপোর্ট"
+                desc="রেসপন্ডার হিসেবে যুক্ত হয়ে ফিল্ডে সাহায্য করুন। আপনার প্রতিটি কাজ ইমিউটেবল অডিট ট্রেইলে নথিবদ্ধ হবে।"
+              />
+              <SupportRoleCard 
+                icon={Users}
+                title="সামাজিক অংশগ্রহণ"
+                desc="নাগরিক হিসেবে তথ্য দিয়ে এবং ভেরিফাইড আইডি ব্যবহারের মাধ্যমে সাম্রাজ্যের শক্তি বৃদ্ধি করুন।"
+              />
             </div>
 
             <div className="p-6 bg-accent/5 border border-accent/20 rounded-3xl space-y-4">
@@ -158,12 +164,12 @@ export default function PartnershipHub() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">ব্যবহারের উদ্দেশ্য (Use Case)</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">সহযোগিতার ধরণ ও উদ্দেশ্য</label>
                     <Textarea 
                       required
                       value={form.useCase}
                       onChange={e => setForm({...form, useCase: e.target.value})}
-                      placeholder="আপনার অ্যাপ কীভাবে আমাদের ডেটা বা কমান্ড ব্রিজ ব্যবহার করবে..." 
+                      placeholder="আপনার অ্যাপ বা প্রতিষ্ঠান কীভাবে আমাদের সাম্রাজ্যের সহযোগী হবে..." 
                       className="bg-background/50 border-white/10 h-32 rounded-xl focus:ring-primary resize-none"
                     />
                   </div>
@@ -174,7 +180,7 @@ export default function PartnershipHub() {
                       </span>
                     ) : (
                       <span className="flex items-center gap-2">
-                        রিকোয়েস্ট পাঠান <Send size={18} className="group-hover:translate-x-1 transition-transform" />
+                        আবেদন পাঠান <Send size={18} className="group-hover:translate-x-1 transition-transform" />
                       </span>
                     )}
                   </Button>
@@ -205,5 +211,17 @@ export default function PartnershipHub() {
         </footer>
       </main>
     </div>
+  )
+}
+
+function SupportRoleCard({ icon: Icon, title, desc }: any) {
+  return (
+    <Card className="bg-card/40 border-white/5 hover:border-primary/20 transition-all duration-500 rounded-3xl p-6 group">
+      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:bg-primary/20 transition-colors">
+        <Icon size={24} />
+      </div>
+      <h3 className="font-headline font-bold text-lg text-foreground uppercase tracking-tight mb-2">{title}</h3>
+      <p className="text-xs text-muted-foreground leading-relaxed font-light">{desc}</p>
+    </Card>
   )
 }

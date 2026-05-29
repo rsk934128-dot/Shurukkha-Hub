@@ -2,7 +2,7 @@
 "use client"
 
 import React from 'react'
-import { Scale, ShieldCheck, TrendingUp, AlertTriangle, Globe, Star, Zap, Landmark, Users, Gavel, History, Target } from 'lucide-react'
+import { Scale, ShieldCheck, TrendingUp, AlertTriangle, Globe, Star, Zap, Landmark, Users, Gavel, History, Target, Handshake, Network } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
@@ -21,10 +21,10 @@ export function ImperialManifesto() {
       desc: "এর ক্ষমতা কেবল তথ্য আদান-প্রদানে সীমাবদ্ধ নয়। এটি রাজস্ব সংগ্রহ (Treasury), জরুরি উদ্ধার (SOS) এবং তথ্যের বিশুদ্ধতা (Audit) নিয়ন্ত্রণের চূড়ান্ত চাবিকাঠি।"
     },
     {
-      title: "প্রশ্নমুখীর হওয়ার ঝুঁকি (Scrutiny Risk)",
-      icon: AlertTriangle,
-      color: "text-destructive",
-      desc: "রাষ্ট্রীয় কাজে স্বচ্ছতা নিয়ে প্রশ্ন উঠতে পারে। তবে আমাদের 'Immutable Audit Trail' এবং RSA v2 এনক্রিপশন প্রমাণ করবে যে প্রতিটি সেকেন্ডের রেকর্ড অপরিবর্তনীয় এবং সত্য।"
+      title: "অংশীদারিত্ব ও সাপোর্ট (Support & Synergy)",
+      icon: Handshake,
+      color: "text-primary",
+      desc: "সহযোগীরা মার্চেন্ট হিসেবে রাজস্বে অবদান রাখতে পারে, অথবা টেকনিক্যাল প্লাগইন হিসেবে আমাদের এপিআই ব্যবহার করে পুরো ইকোসিস্টেমের সুরক্ষা বৃদ্ধি করতে পারে।"
     },
     {
       title: "টিকে থাকার স্থায়িত্ব (Sustainability)",
@@ -37,6 +37,12 @@ export function ImperialManifesto() {
       icon: TrendingUp,
       color: "text-accent",
       desc: "এর সাফল্য পরিমাপ করা হবে 'শূন্য প্রাণহানি' এবং 'অর্থনৈতিক স্বচ্ছতা' দিয়ে। ভবিষ্যতে এটি ব্লুটুথ মেশ-নেটওয়ার্ক এবং স্যাটেলাইট লিঙ্কের মাধ্যমে মহাকাশ পর্যন্ত বিস্তৃত হওয়ার সম্ভাবনা রাখে।"
+    },
+    {
+      title: "বৈশ্বিক কানেক্টিভিটি (Anycast Hub)",
+      icon: Network,
+      color: "text-accent",
+      desc: "সহযোগীরা আমাদের বৈশ্বিক নোডের অংশ হয়ে ডাটা অফলোডিং এবং ল্যাটেন্সি কমানোর কাজে অবদান রাখতে পারে, যা সাম্রাজ্যকে বৈশ্বিকভাবে অজেয় করবে।"
     }
   ];
 
@@ -51,7 +57,7 @@ export function ImperialManifesto() {
             <CardTitle className="text-xl md:text-2xl font-headline font-bold uppercase tracking-widest text-primary flex items-center gap-3">
               <ShieldCheck className="animate-pulse" /> IMPERIAL VISION & STRATEGY
             </CardTitle>
-            <p className="text-[10px] md:text-xs text-muted-foreground uppercase font-bold tracking-[0.3em]">সাম্রাজ্যের স্বীকৃতি, ক্ষমতা ও স্থায়িত্বের রাজকীয় খতিয়ান</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground uppercase font-bold tracking-[0.3em]">সাম্রাজ্যের স্বীকৃতি, ক্ষমতা ও সহযোগীদের রাজকীয় খতিয়ান</p>
           </div>
           <Badge className="bg-accent text-background font-bold tracking-widest px-4 h-8 uppercase">SOVEREIGN_DOC_V1</Badge>
         </div>
@@ -91,7 +97,7 @@ export function ImperialManifesto() {
               </div>
            </div>
            <p className="max-w-2xl mx-auto text-xs md:text-sm text-muted-foreground leading-relaxed italic">
-             "মহামান্য সম্রাট, আপনার এই পরিকাঠামোটি কেবল একটি প্রযুক্তির প্রদর্শনী নয়; এটি একটি জাতির নিরাপত্তার গ্যারান্টি। সমাজ এটাকে প্রকৃতির বিরুদ্ধে মানুষের বিজয়ের হাতিয়ার হিসেবে দেখবে। এর স্বীকৃতি হবে আকাশচুম্বী এবং এর ক্ষমতা হবে প্রজাদের কল্যাণে উৎসর্গীকৃত।"
+             "মহামান্য সম্রাট, যারা আপনার সাপোর্টার হিসেবে যুক্ত হবে, তারা কেবল ব্যবহারকারী নয়, বরং তারা এই অজেয় পরিকাঠামোর এক একটি গুরুত্বপূর্ণ পিলার। সমাজ ও রাষ্ট্র তাদের অবদানকে রাজকীয় কৃতজ্ঞতার সাথে স্মরণ করবে।"
            </p>
         </div>
       </CardContent>
