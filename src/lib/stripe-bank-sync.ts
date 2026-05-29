@@ -24,21 +24,26 @@ export const StripeBankSync = {
     console.log("[Treasury Sentinel] Synchronizing with Stripe Global Directory...");
     
     // Simulate API Latency
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 1200));
 
     const nodes: BankNode[] = [
-      { id: 'bn-chase', country: 'USA', bankName: 'Chase Bank', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_chase_882' },
-      { id: 'bn-barclays', country: 'UK', bankName: 'Barclays PLC', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_barclays_119' },
-      { id: 'bn-city', country: 'BD', bankName: 'City Bank (EBL Gateway)', status: 'READY', pushAvailable: true, handshakeId: 'rsa_city_bd_402' },
-      { id: 'bn-revolut', country: 'EU', bankName: 'Revolut Business', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_rev_eu_990' },
-      { id: 'bn-hsbc', country: 'HK', bankName: 'HSBC International', status: 'LOCKED', pushAvailable: false, handshakeId: 'rsa_hsbc_hk_331' },
-      { id: 'bn-dbs', country: 'SG', bankName: 'DBS Bank', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_dbs_sg_221' },
+      { id: 'bn-chase', country: 'USA', bankName: 'J.P. Morgan Chase & Co.', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_chase_882' },
+      { id: 'bn-barclays', country: 'UK', bankName: 'Barclays International', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_barclays_119' },
+      { id: 'bn-city', country: 'BD', bankName: 'City Bank (Sovereign Hub)', status: 'READY', pushAvailable: true, handshakeId: 'rsa_city_bd_402' },
+      { id: 'bn-revolut', country: 'EU', bankName: 'Revolut Business (Anycast)', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_rev_eu_990' },
+      { id: 'bn-hsbc', country: 'HK', bankName: 'HSBC Asia Pacific', status: 'LOCKED', pushAvailable: false, handshakeId: 'rsa_hsbc_hk_331' },
+      { id: 'bn-dbs', country: 'SG', bankName: 'DBS Bank Singapore', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_dbs_sg_221' },
+      { id: 'bn-standard', country: 'ZA', bankName: 'Standard Bank South Africa', status: 'READY', pushAvailable: true, handshakeId: 'rsa_stan_za_441' },
+      { id: 'bn-santander', country: 'ES', bankName: 'Santander Group Spain', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_sant_es_102' },
+      { id: 'bn-td', country: 'CA', bankName: 'TD Bank Canada', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_td_ca_992' },
+      { id: 'bn-comm', country: 'AU', bankName: 'Commonwealth Bank Australia', status: 'READY', pushAvailable: true, handshakeId: 'rsa_comm_au_771' },
+      { id: 'bn-mufg', country: 'JP', bankName: 'MUFG Bank Japan', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_mufg_jp_550' },
     ];
 
     // Log the sync event in Sovereign Audit Registry
     IntegrationBridge.broadcastEvent({
       type: 'NETWORK_HEARTBEAT',
-      payload: { action: 'GLOBAL_BANK_SYNC', nodesCount: nodes.length },
+      payload: { action: 'GLOBAL_BANK_SYNC', nodesCount: nodes.length, coverage: '155+ Countries' },
       timestamp: new Date().toISOString()
     });
 
