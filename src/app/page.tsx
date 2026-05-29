@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useEffect, useState } from 'react'
@@ -23,7 +22,8 @@ import {
   Fingerprint,
   Swords,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Play
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -31,6 +31,16 @@ import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { AppLogo } from '@/components/ui/app-logo'
 import { useUser } from '@/firebase'
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"
+import Autoplay from "embla-carousel-autoplay"
+import { PlaceHolderImages } from '@/lib/placeholder-images'
+import Image from 'next/image'
 
 export default function WelcomeLanding() {
   const [scrolled, setScrolled] = useState(false)
@@ -49,17 +59,38 @@ export default function WelcomeLanding() {
     }
   }
 
+  const banners = [
+    {
+      img: PlaceHolderImages.find(i => i.id === 'hero-banner-river')?.imageUrl || "https://picsum.photos/seed/42/1200/600",
+      title: "যমুনা পাড়ের অজেয় সুরক্ষা",
+      desc: "এআই চালিত বন্যা পূর্বাভাস এবং রিয়েল-টাইম ডিসপ্যাচ কমান্ড সেন্টার।",
+      badge: "RIVER INTELLIGENCE"
+    },
+    {
+      img: PlaceHolderImages.find(i => i.id === 'hero-banner-command')?.imageUrl || "https://picsum.photos/seed/43/1200/600",
+      title: "রাজকীয় প্রশাসনিক কমান্ড",
+      desc: "৪২টি ডিস্ট্রিবিউটেড নোডের মাধ্যমে জেলা শাসনের ডিজিটাল সার্বভৌমত্ব।",
+      badge: "SOVEREIGN GRID"
+    },
+    {
+      img: PlaceHolderImages.find(i => i.id === 'hero-banner-rescue')?.imageUrl || "https://picsum.photos/seed/44/1200/600",
+      title: "অটোনোমাস রেসকিউ নেটওয়ার্ক",
+      desc: "এক ক্লিকে SOS ট্রিগার এবং এআই ভিডিও রিকন সাপোর্ট সিস্টেম।",
+      badge: "MISSION CRITICAL"
+    },
+    {
+      img: PlaceHolderImages.find(i => i.id === 'hero-banner-treasury')?.imageUrl || "https://picsum.photos/seed/45/1200/600",
+      title: "গ্লোবাল ট্রেজারি ও ফিন্যান্স",
+      desc: "১৫৫+ দেশের ব্যাংকিং নোড এবং ক্রিপ্টো সেটলমেন্টের সমন্বিত ব্যবস্থা।",
+      badge: "IMPERIAL TREASURY"
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-[#05070a] text-foreground font-body overflow-x-hidden selection:bg-primary/30">
       {/* Immersive Background Effects */}
       <div className="fixed inset-0 bg-primary/5 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] pointer-events-none z-0" />
-      <div className="fixed top-0 left-0 w-full h-[800px] bg-gradient-to-b from-primary/10 via-transparent to-transparent pointer-events-none z-0" />
       
-      {/* Huge Background Watermark */}
-      <div className="fixed top-1/4 -right-48 opacity-[0.02] rotate-12 pointer-events-none z-0">
-        <AppLogo size={1000} />
-      </div>
-
       {/* Persistent Navigation */}
       <nav className={`fixed top-0 w-full z-[100] transition-all duration-500 border-b ${scrolled ? 'bg-background/80 backdrop-blur-xl border-white/10 py-4' : 'bg-transparent border-transparent py-8'}`}>
         <div className="container mx-auto px-6 flex justify-between items-center">
@@ -92,60 +123,90 @@ export default function WelcomeLanding() {
       </nav>
 
       <main className="relative z-10">
-        {/* Hero Section */}
-        <section id="home" className="container mx-auto px-6 pt-52 pb-40 text-center relative">
-          <div className="flex justify-center mb-12 animate-in zoom-in duration-1000">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-primary/20 blur-3xl animate-pulse rounded-full group-hover:bg-primary/30 transition-all" />
-              <AppLogo size={200} className="animate-sos-pulse relative z-10" />
-              <div className="absolute -top-4 -right-4">
-                 <Badge variant="outline" className="border-accent/40 text-accent py-1 px-4 gap-2 animate-bounce bg-accent/5 uppercase font-bold tracking-widest text-[10px]">
-                   <Star size={12} fill="currentColor" /> PHASE 31.0 SOVEREIGN
-                 </Badge>
-              </div>
+        {/* Dynamic Banner Carousel Section */}
+        <section id="home" className="relative w-full overflow-hidden">
+          <Carousel 
+            plugins={[Autoplay({ delay: 5000 })]}
+            className="w-full h-[100vh]"
+          >
+            <CarouselContent>
+              {banners.map((banner, index) => (
+                <CarouselItem key={index} className="relative h-[100vh] w-full p-0">
+                  <div className="absolute inset-0 z-0">
+                    <Image 
+                      src={banner.img} 
+                      alt={banner.title} 
+                      fill 
+                      className="object-cover brightness-50 contrast-125 transition-transform duration-[10000ms] scale-110 group-hover:scale-100" 
+                      priority
+                      data-ai-hint="cinematic background"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#05070a] via-transparent to-transparent opacity-80" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#05070a]/60 via-transparent to-[#05070a]/60" />
+                  </div>
+                  
+                  <div className="container mx-auto px-6 h-full flex flex-col justify-center items-center text-center relative z-10 mt-10 md:mt-20">
+                    <Badge variant="outline" className="mb-6 border-accent/50 text-accent py-1.5 px-6 gap-2 bg-accent/5 uppercase font-bold tracking-widest text-[10px] md:text-xs animate-in slide-in-from-top-4 duration-700">
+                      <Star size={14} fill="currentColor" /> {banner.badge}
+                    </Badge>
+                    
+                    <h2 className="text-4xl md:text-8xl font-headline font-bold leading-tight mb-6 tracking-tighter text-white animate-in fade-in slide-in-from-bottom-6 duration-1000">
+                      {banner.title.split(':').map((part, i) => (
+                        <span key={i}>
+                          {part} {i === 0 && <br className="hidden md:block" />}
+                        </span>
+                      ))}
+                    </h2>
+                    
+                    <p className="max-w-3xl mx-auto text-muted-foreground text-sm md:text-2xl mb-12 leading-relaxed font-light animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                      {banner.desc}
+                    </p>
+                    
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+                      <Link href={user ? "/dashboard" : "/login"} className="w-full sm:w-auto">
+                        <Button size="lg" className="h-16 px-10 md:h-20 md:px-12 bg-primary text-background font-bold text-lg md:text-2xl rounded-[2rem] gap-4 w-full shadow-[0_0_60px_rgba(117,151,255,0.4)] transition-all hover:scale-105 active:scale-95 group">
+                          {user ? "ড্যাশবোর্ডে ফিরে যান" : "সাম্রাজ্যে প্রবেশ করুন"} <Zap size={28} className="fill-current group-hover:rotate-12 transition-transform" />
+                        </Button>
+                      </Link>
+                      <Button 
+                        size="lg" 
+                        variant="outline" 
+                        onClick={scrollToFeatures}
+                        className="h-16 px-10 md:h-20 md:px-12 border-white/10 font-bold text-lg md:text-2xl rounded-[2rem] gap-4 w-full sm:w-auto bg-white/5 hover:bg-white/10 transition-all border-dashed"
+                      >
+                        বিস্তারিত দেখুন <ChevronRight size={28} />
+                      </Button>
+                    </div>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex gap-4 no-print">
+               <CarouselPrevious className="relative static translate-y-0 h-12 w-12 md:h-16 md:w-16 bg-black/40 border-white/10 text-white hover:bg-primary hover:text-background transition-all rounded-2xl" />
+               <CarouselNext className="relative static translate-y-0 h-12 w-12 md:h-16 md:w-16 bg-black/40 border-white/10 text-white hover:bg-primary hover:text-background transition-all rounded-2xl" />
             </div>
-          </div>
-          
-          <h2 className="text-6xl md:text-9xl font-headline font-bold leading-tight mb-8 tracking-tighter animate-in slide-in-from-bottom-10 duration-700">
-            সিরাজগঞ্জ সুরক্ষা: <br />
-            <span className="text-primary bg-clip-text">সার্বভৌমত্বের</span> নতুন দিগন্ত
-          </h2>
-          
-          <p className="max-w-2xl mx-auto text-muted-foreground text-lg md:text-2xl mb-16 leading-relaxed font-light animate-in slide-in-from-bottom-20 duration-1000">
-            এটি কেবল একটি অ্যাপ নয়; এটি একটি ডিস্ট্রিক্ট-স্কেল মিশন-ক্রিটিকাল ইমার্জেন্সি ইনফ্রাস্ট্রাকচার। 
-            এআই-চালিত দুর্যোগ ব্যবস্থাপনা এবং সভারেন পেমেন্ট গ্রিডের এক অপূর্ব সমন্বয়।
-          </p>
-          
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-8 animate-in slide-in-from-bottom-24 duration-1000">
-            <Link href={user ? "/dashboard" : "/login"} className="w-full sm:w-auto">
-              <Button size="lg" className="h-20 px-12 bg-primary text-background font-bold text-2xl rounded-[2.5rem] gap-4 w-full shadow-[0_0_60px_rgba(117,151,255,0.4)] transition-all hover:scale-105 active:scale-95 group">
-                {user ? "ড্যাশবোর্ডে ফিরে যান" : "সাম্রাজ্যে প্রবেশ করুন"} <Zap size={28} className="fill-current group-hover:rotate-12 transition-transform" />
-              </Button>
-            </Link>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              onClick={scrollToFeatures}
-              className="h-20 px-12 border-white/10 font-bold text-2xl rounded-[2.5rem] gap-4 w-full sm:w-auto bg-white/5 hover:bg-white/10 transition-all border-dashed"
-            >
-              ফিচারগুলো দেখুন <ChevronRight size={28} />
-            </Button>
-          </div>
-
-          <div className="mt-24 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto border-t border-white/5 pt-12 opacity-50">
-             {[
-               { label: 'Latency', val: '0.004ms' },
-               { label: 'Uptime', val: 'Sovereign' },
-               { label: 'Grid Nodes', val: '42' },
-               { label: 'Integrity', val: '100%' }
-             ].map((stat, idx) => (
-               <div key={idx} className="text-center">
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-primary/60">{stat.label}</p>
-                  <p className="text-xl font-headline font-bold text-foreground mt-1">{stat.val}</p>
-               </div>
-             ))}
-          </div>
+          </Carousel>
         </section>
+
+        {/* Floating Quick Stats Over Carousel */}
+        <div className="relative -mt-20 z-30 container mx-auto px-6">
+           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 bg-[#05070a]/60 backdrop-blur-3xl p-6 md:p-10 rounded-[2.5rem] border border-white/10 shadow-2xl">
+              {[
+                { label: 'Network Latency', val: '0.004ms', icon: Zap },
+                { label: 'Uptime Protocol', val: 'Sovereign', icon: ShieldCheck },
+                { label: 'Grid Distribution', val: '42 Nodes', icon: Globe },
+                { label: 'Data Integrity', val: '100% Pure', icon: Activity }
+              ].map((stat, idx) => (
+                <div key={idx} className="text-center md:text-left space-y-1">
+                   <div className="flex items-center justify-center md:justify-start gap-2 text-primary/60">
+                      <stat.icon size={14} />
+                      <p className="text-[10px] uppercase font-bold tracking-widest">{stat.label}</p>
+                   </div>
+                   <p className="text-xl md:text-3xl font-headline font-bold text-white mt-1">{stat.val}</p>
+                </div>
+              ))}
+           </div>
+        </div>
 
         {/* Feature Showcase Grid */}
         <section id="modules" className="container mx-auto px-6 py-40 border-t border-white/5 relative bg-white/[0.01]">
