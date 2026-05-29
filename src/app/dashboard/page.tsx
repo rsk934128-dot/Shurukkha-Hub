@@ -22,6 +22,7 @@ import { CommunicationConsole } from '@/components/dashboard/communication-conso
 import { SovereignLens } from '@/components/dashboard/sovereign-lens'
 import { SovereignAssistantChat } from '@/components/intelligence/sovereign-assistant-chat'
 import { PartnershipReviewBoard } from '@/components/dashboard/partnership-review-board'
+import { SovereignStatusReport } from '@/components/dashboard/sovereign-status-report'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFirestore, useUser, useAuth } from '@/firebase'
@@ -185,7 +186,12 @@ export default function ShurukkhaDashboard() {
           </header>
 
           <main className="flex-1 px-3 md:px-6 py-4 md:py-6 overflow-x-hidden">
-            {(userRole === 'admin' || userRole === 'authority') && activeView !== 'profile' && activeView !== 'citizen' && activeView !== 'messages' && <div className="mb-4 md:mb-8"><ImperialOverview /></div>}
+            {(userRole === 'admin' || userRole === 'authority') && activeView !== 'profile' && activeView !== 'citizen' && activeView !== 'messages' && (
+              <div className="space-y-6 md:space-y-8 mb-6 md:mb-8">
+                <ImperialOverview />
+                <SovereignStatusReport />
+              </div>
+            )}
 
             {activeView === 'citizen' && (
               <div className="max-w-md mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-5">
