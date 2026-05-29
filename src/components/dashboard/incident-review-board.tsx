@@ -282,6 +282,10 @@ export function IncidentReviewBoard() {
       {/* Image Zoom Dialog */}
       <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
         <DialogContent className="max-w-4xl bg-black/90 border-primary/20 p-0 overflow-hidden rounded-[2rem]">
+          <DialogHeader className="sr-only">
+            <DialogTitle>ইন্টেলিজেন্স ফরেনসিক ভিউ</DialogTitle>
+            <DialogDescription>ঘটনার বিস্তারিত ছবির একটি বড় সংস্করণ প্রদর্শিত হচ্ছে।</DialogDescription>
+          </DialogHeader>
           <div className="relative w-full aspect-video">
             {selectedImage && (
               <img 
