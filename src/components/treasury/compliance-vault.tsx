@@ -1,4 +1,3 @@
-
 "use client"
 
 import React from 'react'
@@ -6,6 +5,7 @@ import { ShieldCheck, Landmark, Globe, Key, CreditCard, Zap, CheckCircle2, User,
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Button } from '@/components/ui/button'
 
 export function ComplianceVault() {
   const complianceData = {
