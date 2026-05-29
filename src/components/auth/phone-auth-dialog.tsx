@@ -1,6 +1,7 @@
+
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Smartphone, ShieldCheck, Loader2, MessageSquare, ArrowRight, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -25,17 +26,49 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
   
   const auth = useAuth()
   const { toast } = useToast()
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
+  // Reset state when dialog closes
   useEffect(() => {
-    if (isOpen && !window.recaptchaVerifier && auth) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+    if (!isOpen) {
+      setStep('phone');
+      setOtp('');
+      setConfirmationResult(null);
+      if (recaptchaVerifierRef.current) {
+        try {
+          recaptchaVerifierRef.current.clear();
+        } catch (e) {
+          // ignore cleanup errors
+        }
+        recaptchaVerifierRef.current = null;
+      }
+    }
+  }, [isOpen]);
+
+  const initRecaptcha = () => {
+    if (!auth || recaptchaVerifierRef.current || !containerRef.current) return;
+    
+    try {
+      const verifier = new RecaptchaVerifier(auth, containerRef.current, {
         'size': 'invisible',
         'callback': () => {
           console.log("[Recaptcha] Verified");
+        },
+        'expired-callback': () => {
+          console.log("[Recaptcha] Expired - Resetting...");
+          if (recaptchaVerifierRef.current) {
+            recaptchaVerifierRef.current.clear();
+            recaptchaVerifierRef.current = null;
+          }
         }
       });
+      recaptchaVerifierRef.current = verifier;
+    } catch (error) {
+      console.error("[Recaptcha] Initialization failed:", error);
+      toast({ title: "Recaptcha Error", description: "নিরাপত্তা যাচাইকরণ মডিউলটি চালু করা সম্ভব হয়নি।", variant: "destructive" });
     }
-  }, [isOpen, auth]);
+  }
 
   const handleSendOtp = async () => {
     if (!phoneNumber || phoneNumber.length < 11) {
@@ -45,14 +78,34 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
 
     setLoading(true);
     try {
-      const appVerifier = window.recaptchaVerifier;
-      const result = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+      // Ensure recaptcha is initialized
+      if (!recaptchaVerifierRef.current) {
+        initRecaptcha();
+      }
+      
+      if (!recaptchaVerifierRef.current) {
+        throw new Error("Recaptcha failed to initialize.");
+      }
+
+      const result = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifierRef.current);
       setConfirmationResult(result);
       setStep('otp');
       toast({ title: "OTP পাঠানো হয়েছে", description: "আপনার মোবাইলে আসা ৬ ডিজিটের কোডটি দিন।" });
     } catch (error: any) {
       console.error("SMS Error:", error);
-      toast({ title: "SMS পাঠানো ব্যর্থ", description: "দয়া করে আবার চেষ্টা করুন বা নম্বর যাচাই করুন।", variant: "destructive" });
+      let msg = "SMS পাঠানো ব্যর্থ। দয়া করে আবার চেষ্টা করুন বা নম্বর যাচাই করুন।";
+      if (error.code === 'auth/invalid-phone-number') msg = "প্রদত্ত মোবাইল নম্বরটি সঠিক নয়।";
+      if (error.code === 'auth/too-many-requests') msg = "অত্যধিক চেষ্টা করা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।";
+      
+      toast({ title: "প্রবেশাধিকার নাকচ", description: msg, variant: "destructive" });
+      
+      // Reset verifier on error to allow retry
+      if (recaptchaVerifierRef.current) {
+        try {
+          recaptchaVerifierRef.current.clear();
+        } catch (e) {}
+        recaptchaVerifierRef.current = null;
+      }
     } finally {
       setLoading(false);
     }
@@ -68,6 +121,7 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
       toast({ title: "পরিচয় নিশ্চিত", description: "সাম্রাজ্যে আপনাকে স্বাগতম।" });
       onSuccess(idToken);
     } catch (error: any) {
+      console.error("OTP Error:", error);
       toast({ title: "ভুল OTP", description: "প্রদত্ত কোডটি সঠিক নয়।", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -77,7 +131,8 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="max-w-sm bg-card border-primary/20 backdrop-blur-xl rounded-[2rem]">
-        <div id="recaptcha-container"></div>
+        {/* Recaptcha Container - Hidden but must be in DOM */}
+        <div ref={containerRef} id="recaptcha-container"></div>
         
         <DialogHeader className="text-center">
           <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto border border-primary/20 mb-4">
@@ -99,6 +154,7 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder="+88017XXXXXXXX"
+                disabled={loading}
                 className="bg-background/50 border-primary/20 h-12 text-center text-lg font-mono"
               />
             </div>
@@ -109,6 +165,7 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').substring(0, 6))}
                 placeholder="000000"
+                disabled={loading}
                 className="bg-background/50 border-primary/20 h-14 text-center text-2xl font-mono tracking-[0.5em]"
               />
             </div>
@@ -127,6 +184,7 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
           <Button 
             variant="ghost" 
             onClick={onCancel}
+            disabled={loading}
             className="text-[10px] uppercase font-bold text-muted-foreground"
           >
             বাতিল করুন
@@ -135,10 +193,4 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
       </DialogContent>
     </Dialog>
   )
-}
-
-declare global {
-  interface Window {
-    recaptchaVerifier: any;
-  }
 }
