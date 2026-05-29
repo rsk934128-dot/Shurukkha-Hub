@@ -14,10 +14,12 @@ export default function RootLayout({
   
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then((reg) => {
-        console.log('[ServiceWorker] Registered with scope:', reg.scope);
-      }).catch((err) => {
-        console.error('[ServiceWorker] Registration failed:', err);
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then((reg) => {
+          console.log('[Sovereign SW] Registered with scope:', reg.scope);
+        }).catch((err) => {
+          console.error('[Sovereign SW] Registration failed:', err);
+        });
       });
     }
   }, []);

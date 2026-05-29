@@ -1,6 +1,7 @@
+
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
@@ -34,7 +35,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { DisasterStorage } from '@/lib/disaster-storage'
 import { useFirestore, useUser, useAuth } from '@/firebase'
-import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc, onSnapshot, query, where } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc, onSnapshot, query, where, limit } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
 import { AutonomousOrchestrator } from '@/lib/orchestrator'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -51,16 +52,13 @@ import { AppSidebar } from '@/components/layout/app-sidebar'
 import { AppLogo } from '@/components/ui/app-logo'
 import { CommunicationOrchestrator } from '@/lib/communication-orchestrator'
 import { db } from '@/lib/firebase'
+import { NotificationManager } from '@/lib/notification-manager'
 
 const ADMIN_EMAILS = ['rubels1k994@gmail.com', 'rsk755734@gmail.com'];
 
 export default function ShurukkhaDashboard() {
   const [isOffline, setIsOffline] = useState(false)
   const [userRole, setUserRole] = useState<'citizen' | 'authority' | 'admin'>('citizen')
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [isAutoMode, setIsAutoMode] = useState(false)
-  const [isLockedDown, setIsLockedDown] = useState(false)
-  const [sessionValid, setSessionValid] = useState(true)
   const [activeView, setActiveView] = useState('citizen')
   const [activeSubTab, setActiveSubTab] = useState('ops')
   const [survivalMode, setSurvivalMode] = useState(false)
@@ -73,6 +71,7 @@ export default function ShurukkhaDashboard() {
   const { user, loading: authLoading } = useUser()
   const { toast } = useToast()
   const router = useRouter()
+  const lastProcessedMsgId = useRef<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -84,7 +83,6 @@ export default function ShurukkhaDashboard() {
 
     const checkSession = () => {
       if (!AuthGuard.isValidSession()) {
-        setSessionValid(false)
         router.replace('/login')
       } else {
         setIsCheckingCheckingSession(false)
@@ -92,19 +90,8 @@ export default function ShurukkhaDashboard() {
     }
 
     const timer = setTimeout(checkSession, 800);
-
-    const storedFp = localStorage.getItem('sovereign_device_id')
-    if (storedFp && !DeviceValidator.validateIntegrity(storedFp)) {
-      handleEmergencyKillSwitch()
-      toast({
-        title: "SECURITY VIOLATION",
-        description: "অননুমোদিত ডিভাইস শনাক্ত হয়েছে।",
-        variant: "destructive"
-      })
-    }
-
     return () => clearTimeout(timer);
-  }, [user, authLoading, router, toast])
+  }, [user, authLoading, router])
 
   useEffect(() => {
     if (user && firestore) {
@@ -131,7 +118,6 @@ export default function ShurukkhaDashboard() {
             setActiveView('ops');
           }
         } catch (e) {
-          console.warn("[Dashboard] Role fetch failed. Defaulting to citizen.");
           const currentRole = isAdmin ? 'admin' : 'citizen';
           setUserRole(currentRole as any);
         }
@@ -139,7 +125,30 @@ export default function ShurukkhaDashboard() {
 
       fetchRole();
 
-      // Universal Call Listener
+      // Notification Listener: New Messages
+      const msgQuery = query(
+        collection(db, "messages"),
+        where("recipientId", "==", user.uid),
+        limit(5)
+      );
+
+      const unsubscribeMsgs = onSnapshot(msgQuery, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added' && activeView !== 'messages') {
+            const data = change.doc.data();
+            if (data.senderId !== user.uid && lastProcessedMsgId.current !== change.doc.id) {
+               NotificationManager.sendNotification(
+                 "নতুন মেসেজ প্রাপ্ত হয়েছে",
+                 `আপনার পোর্টালে একজন নাগরিক মেসেজ পাঠিয়েছেন।`,
+                 'new-msg'
+               );
+               lastProcessedMsgId.current = change.doc.id;
+            }
+          }
+        });
+      });
+
+      // Notification Listener: Incoming Calls
       const callsQ = query(
         collection(db, 'webrtc_sessions'),
         where('recipientId', '==', user.uid),
@@ -158,38 +167,44 @@ export default function ShurukkhaDashboard() {
               type: data.type,
               isIncoming: true
             });
+            
+            NotificationManager.sendNotification(
+              "ইনকামিং কল (Incoming Call)",
+              `${data.callerName} আপনাকে কল দিচ্ছেন।`,
+              'incoming-call'
+            );
           }
         });
       });
 
-      const myCallsQ = query(
+      // Notification Listener: Missed Calls
+      const missedCallsQ = query(
         collection(db, 'webrtc_sessions'),
-        where('callerId', '==', user.uid),
-        where('status', '==', 'ringing')
+        where('recipientId', '==', user.uid),
+        where('status', '==', 'ended')
       );
 
-      const unsubscribeMyCalls = onSnapshot(myCallsQ, (snapshot) => {
+      const unsubscribeMissed = onSnapshot(missedCallsQ, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added' && !activeCall) {
+          if (change.type === 'added') {
             const data = change.doc.data();
-            setActiveCall({
-              sessionId: change.doc.id,
-              callerId: data.callerId,
-              callerName: data.recipientName || 'Identity',
-              callerAvatar: data.recipientAvatar,
-              type: data.type,
-              isIncoming: false
-            });
+            // In a real app we'd check if it was never 'connected'
+            NotificationManager.sendNotification(
+              "মিসকল (Missed Call)",
+              `${data.callerName || 'অজ্ঞাত'} থেকে একটি মিসকল পাওয়া গেছে।`,
+              'missed-call'
+            );
           }
         });
       });
 
       return () => {
+        unsubscribeMsgs();
         unsubscribeCalls();
-        unsubscribeMyCalls();
+        unsubscribeMissed();
       };
     }
-  }, [user?.uid, firestore])
+  }, [user?.uid, firestore, activeView, activeCall])
 
   useEffect(() => {
     const handleConnectivityChange = () => {
@@ -206,23 +221,17 @@ export default function ShurukkhaDashboard() {
     window.addEventListener('offline', handleConnectivityChange)
     handleConnectivityChange();
     
-    const unsubscribeOrchestrator = AutonomousOrchestrator.startMonitoring()
     return () => {
       window.removeEventListener('online', handleConnectivityChange)
       window.removeEventListener('offline', handleConnectivityChange)
-      unsubscribeOrchestrator()
     }
   }, [toast])
-
-  const handleEmergencyKillSwitch = () => {
-    AuthGuard.clearSession();
-    router.replace('/login')
-  }
 
   const handleLogout = async () => {
     if (auth) {
       try {
         AuthGuard.clearSession();
+        NotificationManager.deactivateSovereignSignal();
         await signOut(auth)
         window.location.assign('/')
       } catch (e) { toast({ title: "লগআউট ব্যর্থ হয়েছে", variant: "destructive" }) }
@@ -237,7 +246,7 @@ export default function ShurukkhaDashboard() {
     }
   }
 
-  if (authLoading || isCheckingSession || (user && !sessionValid)) {
+  if (authLoading || isCheckingSession) {
     return (
       <div className="min-h-screen bg-[#05070a] flex flex-col items-center justify-center gap-8">
         <AppLogo size={120} className="animate-sos-pulse" />

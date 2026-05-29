@@ -25,7 +25,8 @@ import {
   MessageSquare,
   Power,
   Wifi,
-  ScanLine
+  ScanLine,
+  Signal
 } from "lucide-react"
 
 import {
@@ -131,7 +132,7 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${signalActive ? 'bg-accent animate-pulse shadow-[0_0_8px_hsl(var(--accent))]' : 'bg-muted'}`} />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  {signalActive ? 'Status: Active' : 'Status: Off'}
+                  {signalActive ? 'Signal: Online' : 'Signal: Offline'}
                 </span>
               </div>
               <Switch 
@@ -141,7 +142,7 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
               />
             </div>
             <p className="text-[8px] text-muted-foreground leading-relaxed italic">
-              {signalActive ? 'ব্যাকগ্রাউন্ডে আপনি সর্বদা অনলাইনে আছেন।' : 'সুইচ অন করলে নোটিফিকেশন বারে স্ট্যাটাস দেখাবে।'}
+              {signalActive ? 'ব্যাকগ্রাউন্ডে আপনি সর্বদা অনলাইনে আছেন। মেসেজ ও কল আসলে নোটিফিকেশন পাবেন।' : 'সক্রিয় করলে পোর্টালে না থাকলেও মিসকল ও মেসেজ নোটিফিকেশন পাবেন।'}
             </p>
           </div>
         </SidebarGroup>
@@ -176,7 +177,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Intelligence Lens for Admin/Authority */}
         {(userRole === 'authority' || userRole === 'admin') && (
            <SidebarGroup>
             <SidebarGroupLabel className="text-[10px] uppercase font-bold text-accent/50 px-4">স্ক্যানিং লেন্স</SidebarGroupLabel>
