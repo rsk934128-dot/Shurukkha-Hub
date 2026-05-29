@@ -72,6 +72,27 @@ export const IntegrationBridge = {
     return { status: 'PASSED' };
   },
 
+  /**
+   * Registers an external application in the Sovereign Grid.
+   */
+  async registerApp(name: string, webhook: string, events: string[]) {
+    const appId = 'app_' + Math.random().toString(36).substring(2, 10);
+    const apiKey = 'sk_bridge_' + Math.random().toString(36).substring(2, 24);
+    
+    const appData = {
+      appId,
+      apiKey,
+      name,
+      webhook,
+      subscribedEvents: events,
+      status: 'active',
+      registeredAt: new Date().toISOString()
+    };
+
+    await addDoc(collection(db, "integrations"), appData);
+    return appData;
+  },
+
   generateEphemeralToken: () => {
     const salt = Math.random().toString(36).substring(2, 15);
     const ts = Date.now().toString();
@@ -80,7 +101,7 @@ export const IntegrationBridge = {
     // Cross-platform Base64 with UTF-8 support
     const encoded = typeof window !== 'undefined' 
       ? btoa(unescape(encodeURIComponent(rawData)))
-      : Buffer.from(rawData).toString('base64');
+      : btoa(rawData);
       
     return 'est_' + encoded.substring(0, 32);
   },
@@ -101,7 +122,7 @@ export const IntegrationBridge = {
     // Cross-platform Base64 with UTF-8 support (Important for Bengali chars)
     const base64 = typeof window !== 'undefined' 
       ? btoa(unescape(encodeURIComponent(combined)))
-      : Buffer.from(combined).toString('base64');
+      : btoa(combined);
       
     return 'sig_sha256_rsa_v2_sovereign_' + base64.substring(0, 64);
   },

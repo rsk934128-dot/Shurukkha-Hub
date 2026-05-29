@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -129,8 +130,8 @@ export default function ShurukkhaDashboard() {
     handleConnectivityChange();
     
     return () => {
-      window.removeEventListener('online', handleConnectivityChange)
-      window.removeEventListener('offline', handleConnectivityChange)
+      removeEventListener('online', handleConnectivityChange)
+      removeEventListener('offline', handleConnectivityChange)
     }
   }, [toast])
 
