@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, ShieldCheck, Loader2, User, Volume2, Activity, Zap, X, Maximize2 } from 'lucide-react'
+import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, ShieldCheck, Loader2, User, Volume2, VolumeX, Activity, Zap, X, Maximize2, Smartphone, Speaker } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -28,8 +28,10 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
   const [isMuted, setIsMicMuted] = useState(false)
+  const [isSpeakerOn, setIsSpeakerOn] = useState(true)
   const [isCamOff, setIsCamOff] = useState(false)
   const [timer, setTimer] = useState(0)
+  const [proximityActive, setProximityActive] = useState(false)
   
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
@@ -38,6 +40,28 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const ringtoneIntervalRef = useRef<any>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const { playAlertSound } = useAudioEngine()
+
+  /**
+   * Virtual Proximity Sensor Simulation
+   * Screen turns off (black) if the phone is tilted towards the ear (Vertical)
+   */
+  useEffect(() => {
+    if (status !== 'connected' || callData?.type === 'video') return;
+
+    const handleOrientation = (event: DeviceOrientationEvent) => {
+      const beta = event.beta; // In front-back tilt
+      if (beta !== null && beta > 70 && beta < 110) {
+        setProximityActive(true); // Tilt detected (near ear)
+      } else {
+        setProximityActive(false);
+      }
+    };
+
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', handleOrientation);
+    }
+    return () => window.removeEventListener('deviceorientation', handleOrientation);
+  }, [status, callData?.type]);
 
   const stopRingtone = () => {
     if (ringtoneIntervalRef.current) {
@@ -126,7 +150,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: callData.type === 'video', 
-        audio: true 
+        audio: WebRTCManager.getAudioConstraints() 
       });
       streamRef.current = stream;
       setLocalStream(stream);
@@ -146,7 +170,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: callData.type === 'video', 
-        audio: true 
+        audio: WebRTCManager.getAudioConstraints()
       });
       streamRef.current = stream;
       setLocalStream(stream);
@@ -211,6 +235,16 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         </DialogHeader>
         
         <div className="relative w-full h-full bg-slate-950 flex items-center justify-center group overflow-hidden">
+          {/* Proximity Shield Overlay (Sensor Simulation) */}
+          {proximityActive && (
+            <div className="absolute inset-0 bg-black z-[100] flex items-center justify-center">
+               <div className="text-center opacity-10 flex flex-col items-center gap-4">
+                  <Smartphone size={100} className="text-white" />
+                  <p className="text-[10px] font-mono text-white uppercase tracking-[0.4em]">Screen_Inactive_Mode</p>
+               </div>
+            </div>
+          )}
+
           {/* Incoming Call UI */}
           {status === 'ringing' && callData.isIncoming && (
             <div className="flex flex-col items-center gap-8 z-50 animate-in fade-in zoom-in-95 duration-500 w-full px-6">
@@ -248,7 +282,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             </div>
           )}
 
-          {/* Video Display Area */}
+          {/* Connected Display Area */}
           <div className={`w-full h-full relative ${status === 'connected' ? 'block' : 'hidden'}`}>
              <video 
                 ref={remoteVideoRef} 
@@ -257,25 +291,30 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                 className={`w-full h-full object-cover ${callData.type === 'audio' ? 'hidden' : ''}`} 
              />
              {callData.type === 'audio' && (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-6 bg-slate-900 px-6">
+                <div className="w-full h-full flex flex-col items-center justify-center gap-6 bg-gradient-to-b from-slate-900 to-black px-6">
                    <div className="relative">
-                      <div className="absolute -inset-8 bg-accent/20 rounded-full blur-3xl animate-pulse" />
-                      <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-accent/40 relative z-10 shadow-2xl">
+                      <div className="absolute -inset-12 bg-accent/10 rounded-full blur-[60px] animate-pulse" />
+                      <Avatar className="h-40 w-40 md:h-56 md:w-56 border-8 border-accent/20 relative z-10 shadow-2xl">
                          <AvatarImage src={callData.callerAvatar} />
-                         <AvatarFallback className="bg-primary/10 text-4xl md:text-5xl font-headline font-bold text-primary">
+                         <AvatarFallback className="bg-primary/10 text-5xl md:text-6xl font-headline font-bold text-primary">
                             {callData.callerName?.[0] || 'S'}
                          </AvatarFallback>
                       </Avatar>
+                      {/* Audio Pulse Ring */}
+                      <div className="absolute -inset-4 border-2 border-accent/20 rounded-full animate-ping opacity-40" />
                    </div>
-                   <div className="text-center space-y-2">
-                      <h2 className="text-2xl md:text-3xl font-headline font-bold tracking-tight text-white">{callData.callerName}</h2>
-                      <Badge variant="outline" className="border-accent/40 text-accent uppercase tracking-widest text-[10px]">Secure Audio Link</Badge>
+                   <div className="text-center space-y-3">
+                      <h2 className="text-3xl md:text-4xl font-headline font-bold tracking-tight text-white">{callData.callerName}</h2>
+                      <div className="flex flex-col items-center gap-2">
+                        <Badge variant="outline" className="border-accent/40 text-accent uppercase tracking-widest text-[10px] bg-accent/5">Imperial Secure Audio</Badge>
+                        <p className="text-xl font-mono text-white/60">{formatTime(timer)}</p>
+                      </div>
                    </div>
                 </div>
              )}
           </div>
 
-          {/* Outgoing Ringing State */}
+          {/* Outgoing State */}
           {status === 'ringing' && !callData.isIncoming && (
              <div className="flex flex-col items-center gap-6 z-10 w-full px-6">
                 <div className="relative">
@@ -294,8 +333,8 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
              </div>
           )}
 
-          {/* Local Video Picture-in-Picture - Adaptive Position */}
-          <div className={`absolute bottom-24 right-4 md:top-6 md:right-6 w-32 md:w-48 aspect-[3/4] md:aspect-video bg-black rounded-2xl border border-white/20 shadow-2xl overflow-hidden z-20 ${status === 'connected' && callData.type === 'video' ? 'block' : 'hidden'}`}>
+          {/* Local PIP */}
+          <div className={`absolute bottom-32 right-4 md:top-6 md:right-6 w-32 md:w-48 aspect-[3/4] md:aspect-video bg-black rounded-2xl border border-white/20 shadow-2xl overflow-hidden z-20 ${status === 'connected' && callData.type === 'video' ? 'block' : 'hidden'}`}>
              <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
              <Badge className="absolute top-2 left-2 bg-black/40 text-[7px] uppercase">You</Badge>
           </div>
@@ -303,68 +342,76 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
           {/* HUD Indicators */}
           <div className="absolute top-6 left-6 flex flex-col gap-2 z-30">
             <Badge variant="outline" className="border-accent/40 text-accent bg-black/60 backdrop-blur-md text-[8px] uppercase tracking-widest gap-2">
-              <Activity size={10} className="animate-pulse" /> SOVEREIGN_V3.6
+              <Activity size={10} className="animate-pulse" /> M2M_SOVEREIGN_V2.0
             </Badge>
             {status === 'connected' && (
               <div className="flex items-center gap-2 text-[8px] font-mono text-white/40 bg-black/40 px-2 py-1 rounded">
-                 <ShieldCheck size={8} className="text-primary" /> {formatTime(timer)}
+                 <ShieldCheck size={8} className="text-primary" /> ENCRYPTED_LINK
               </div>
             )}
           </div>
 
-          {/* Controls - Mobile Optimized */}
+          {/* Enhanced Controls */}
           {(status === 'connected' || (status === 'ringing' && !callData.isIncoming)) && (
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 md:gap-6 z-40 bg-black/60 backdrop-blur-xl p-3 md:p-4 px-6 md:px-8 rounded-full border border-white/10 shadow-2xl transition-all w-[90%] md:w-auto justify-center">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => {
-                  const audioTrack = streamRef.current?.getAudioTracks()[0];
-                  if (audioTrack) {
-                    audioTrack.enabled = !audioTrack.enabled;
-                    setIsMicMuted(!audioTrack.enabled);
-                  }
-                }}
-                className={`h-12 w-12 rounded-full border border-white/10 ${isMuted ? 'bg-destructive/20 text-destructive' : 'text-white hover:bg-white/10'}`}
-              >
-                {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
-              </Button>
-              
-              {callData.type === 'video' && (
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 md:gap-8 z-40 bg-black/40 backdrop-blur-3xl p-4 px-6 md:px-12 rounded-[2.5rem] border border-white/10 shadow-2xl transition-all w-[95%] md:w-auto justify-center">
+              <div className="flex flex-col items-center gap-2">
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   onClick={() => {
-                    const videoTrack = streamRef.current?.getVideoTracks()[0];
-                    if (videoTrack) {
-                      videoTrack.enabled = !videoTrack.enabled;
-                      setIsCamOff(!videoTrack.enabled);
+                    const audioTrack = streamRef.current?.getAudioTracks()[0];
+                    if (audioTrack) {
+                      audioTrack.enabled = !audioTrack.enabled;
+                      setIsMicMuted(!audioTrack.enabled);
                     }
                   }}
-                  className={`h-12 w-12 rounded-full border border-white/10 ${isCamOff ? 'bg-destructive/20 text-destructive' : 'text-white hover:bg-white/10'}`}
+                  className={`h-14 w-14 rounded-full border border-white/5 transition-all ${isMuted ? 'bg-destructive/20 text-destructive border-destructive/30' : 'text-white hover:bg-white/10'}`}
                 >
-                  {isCamOff ? <VideoOff size={20} /> : <Video size={20} />}
+                  {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
                 </Button>
+                <span className="text-[8px] font-bold uppercase text-white/40 tracking-widest">Mute</span>
+              </div>
+              
+              <div className="flex flex-col items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setIsSpeakerOn(!isSpeakerOn)}
+                  className={`h-14 w-14 rounded-full border border-white/5 transition-all ${isSpeakerOn ? 'bg-accent/20 text-accent border-accent/30' : 'text-white/40'}`}
+                >
+                  {isSpeakerOn ? <Volume2 size={24} /> : <VolumeX size={24} />}
+                </Button>
+                <span className="text-[8px] font-bold uppercase text-white/40 tracking-widest">Speaker</span>
+              </div>
+
+              {callData.type === 'video' && (
+                <div className="flex flex-col items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => {
+                      const videoTrack = streamRef.current?.getVideoTracks()[0];
+                      if (videoTrack) {
+                        videoTrack.enabled = !videoTrack.enabled;
+                        setIsCamOff(!videoTrack.enabled);
+                      }
+                    }}
+                    className={`h-14 w-14 rounded-full border border-white/5 ${isCamOff ? 'bg-destructive/20 text-destructive' : 'text-white hover:bg-white/10'}`}
+                  >
+                    {isCamOff ? <VideoOff size={24} /> : <Video size={24} />}
+                  </Button>
+                  <span className="text-[8px] font-bold uppercase text-white/40 tracking-widest">Cam</span>
+                </div>
               )}
 
-              <Button onClick={handleEndCall} className="h-14 w-14 md:h-16 md:w-16 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-xl shadow-destructive/40 transition-transform active:scale-90 border-4 border-background">
-                <PhoneOff size={24} className="md:w-7 md:h-7" />
+              <Button onClick={handleEndCall} className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-transform active:scale-90 border-4 border-background">
+                <PhoneOff size={32} className="md:w-8 md:h-8" />
               </Button>
             </div>
           )}
 
-          {/* Mobile Back Button */}
-          <Button 
-            size="icon" 
-            variant="ghost" 
-            onClick={handleEndCall} 
-            className="absolute top-6 right-6 text-white/40 hover:text-white md:hidden h-10 w-10"
-          >
-            <X size={24} />
-          </Button>
-
-          {/* CRT Visual Effect */}
-          <div className="absolute inset-0 pointer-events-none opacity-5 md:opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] z-20" />
+          {/* CRT Effect */}
+          <div className="absolute inset-0 pointer-events-none opacity-5 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] z-20" />
         </div>
       </DialogContent>
     </Dialog>

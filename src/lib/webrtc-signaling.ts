@@ -2,8 +2,8 @@
 
 /**
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
- * Optimized Phase 31.8: Implements Bi-directional Track Propagation.
- * Ensures reliable remote stream reception for both Offerer and Answerer.
+ * Optimized Phase 31.9: Implements High-Fidelity Audio for M2M communication.
+ * Includes noise suppression, echo cancellation, and auto-gain control.
  */
 
 import { db } from './firebase';
@@ -36,6 +36,20 @@ export class WebRTCManager {
     ],
   };
 
+  /**
+   * Optimized Mobile Constraints for Beautiful Voice
+   */
+  static getAudioConstraints() {
+    return {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+      channelCount: 1,
+      sampleRate: 48000,
+      sampleSize: 16
+    };
+  }
+
   private async addCandidate(candidate: RTCIceCandidateInit) {
     if (this.peerConnection && this.peerConnection.remoteDescription) {
       try {
@@ -62,13 +76,9 @@ export class WebRTCManager {
     }
   }
 
-  /**
-   * Initialize a new call (Offerer / Caller side)
-   */
   async createCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
     this.peerConnection = new RTCPeerConnection(this.rtcConfig);
     
-    // Set up ontrack immediately
     this.peerConnection.ontrack = (event) => {
       console.log("[WebRTC] Track received on Caller side");
       event.streams[0].getTracks().forEach((track) => {
@@ -77,7 +87,6 @@ export class WebRTCManager {
       onRemoteStream(this.remoteStream);
     };
 
-    // Add local tracks
     localStream.getTracks().forEach(track => {
       this.peerConnection?.addTrack(track, localStream);
     });
@@ -91,7 +100,6 @@ export class WebRTCManager {
       }
     };
 
-    // Create and set local description
     const offerDescription = await this.peerConnection.createOffer();
     await this.peerConnection.setLocalDescription(offerDescription);
 
@@ -102,7 +110,6 @@ export class WebRTCManager {
 
     await setDoc(sessionRef, { offer }, { merge: true });
 
-    // Listen for Answer
     onSnapshot(sessionRef, async (snapshot) => {
       const data = snapshot.data();
       if (!this.peerConnection || this.isProcessingRemoteDescription) return;
@@ -112,7 +119,6 @@ export class WebRTCManager {
         try {
           const answerDescription = new RTCSessionDescription(data.answer);
           await this.peerConnection.setRemoteDescription(answerDescription);
-          console.log("[WebRTC] Answer set on Caller side");
           await this.flushCandidates();
         } catch (e) {
           console.error("[WebRTC] Failed to set remote answer", e);
@@ -122,7 +128,6 @@ export class WebRTCManager {
       }
     });
 
-    // Listen for candidates
     onSnapshot(candidatesCollection, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
@@ -135,13 +140,9 @@ export class WebRTCManager {
     });
   }
 
-  /**
-   * Join an existing call (Answerer / Recipient side)
-   */
   async answerCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
     this.peerConnection = new RTCPeerConnection(this.rtcConfig);
 
-    // Set up ontrack immediately
     this.peerConnection.ontrack = (event) => {
       console.log("[WebRTC] Track received on Recipient side");
       event.streams[0].getTracks().forEach((track) => {
@@ -150,7 +151,6 @@ export class WebRTCManager {
       onRemoteStream(this.remoteStream);
     };
 
-    // Add local tracks before answering
     localStream.getTracks().forEach(track => {
       this.peerConnection?.addTrack(track, localStream);
     });
@@ -170,8 +170,6 @@ export class WebRTCManager {
     if (sessionData?.offer) {
       try {
         await this.peerConnection.setRemoteDescription(new RTCSessionDescription(sessionData.offer));
-        console.log("[WebRTC] Offer set on Recipient side");
-
         const answerDescription = await this.peerConnection.createAnswer();
         await this.peerConnection.setLocalDescription(answerDescription);
 
@@ -187,7 +185,6 @@ export class WebRTCManager {
       }
     }
 
-    // Listen for candidates
     onSnapshot(candidatesCollection, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
