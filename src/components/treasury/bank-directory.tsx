@@ -15,7 +15,7 @@ import { EconomicForecaster } from '@/lib/economic-forecaster'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Label } from '@/components/ui/label'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { MerchantGrowthChart } from '@/components/dashboard/merchant-growth-chart'
 import { AppLogo } from '@/components/ui/app-logo'
 import { MerchantRegistry } from './merchant-registry'
@@ -318,34 +318,33 @@ export function BankDirectory() {
              <Badge variant="outline" className="text-[7px] border-primary/40 text-primary">STRIPE_CONNECT_V2</Badge>
           </div>
           <ScrollArea className="h-[400px] md:h-[500px]">
-            <div className="overflow-x-auto min-w-full">
-              <Table>
-                <TableHeader className="bg-muted/30 sticky top-0 z-10">
-                  <TableRow>
-                    <TableHead className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Country</TableHead>
-                    <TableHead className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Bank Node</TableHead>
-                    <TableHead className="text-right text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredBanks.map((bank) => (
-                    <TableRow key={bank.id} className="group hover:bg-primary/5 border-white/5">
-                      <TableCell><span className="text-[9px] md:text-xs font-bold text-foreground/70">{bank.country}</span></TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                           <span className="text-[9px] md:text-sm font-medium truncate max-w-[150px] md:max-w-none block">{bank.bankName}</span>
-                           <span className="text-[7px] font-mono text-muted-foreground uppercase">{bank.handshakeId}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" variant="ghost" className="h-7 text-[8px] uppercase tracking-tighter hover:text-primary" disabled={!bank.pushAvailable}>
-                           Push Funds
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <div className="p-4 space-y-3">
+              {filteredBanks.map((bank) => (
+                <div key={bank.id} className="p-4 bg-card/60 border border-white/5 rounded-2xl flex items-center justify-between group hover:border-primary/30 transition-all">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-12 w-12 rounded-xl border border-white/10">
+                      <AvatarImage src={bank.logoUrl} alt={bank.bankName} />
+                      <AvatarFallback className="bg-muted text-[10px] font-bold">{bank.bankName.substring(0, 2)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-foreground">{bank.bankName}</h4>
+                        <Badge variant="outline" className="text-[7px] border-white/10 uppercase h-4">{bank.country}</Badge>
+                      </div>
+                      <p className="text-[9px] text-muted-foreground font-mono mt-1">NODE_ID: {bank.handshakeId}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Badge className={`${bank.status === 'CONNECTED' ? 'bg-green-500/10 text-green-500 border-green-500/20' : bank.status === 'LOCKED' ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-accent/10 text-accent border-accent/20'} text-[7px] uppercase font-bold`}>
+                      {bank.status}
+                    </Badge>
+                    <Button size="sm" variant="ghost" className="h-8 text-[8px] uppercase font-bold tracking-tighter hover:bg-primary/10 text-primary" disabled={!bank.pushAvailable}>
+                      {bank.pushAvailable ? <Zap size={12} className="mr-1" /> : <Lock size={12} className="mr-1" />}
+                      Push Funds
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           </ScrollArea>
         </TabsContent>
