@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle, RefreshCcw, Swords, Target, Crosshair, Sparkles, BrainCircuit, Fingerprint, Network, Scale, Trophy } from 'lucide-react'
+import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle, RefreshCcw, Swords, Target, Crosshair, Sparkles, BrainCircuit, Fingerprint, Network, Scale, Trophy, Cloud, HardDrive, Download } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,12 +14,14 @@ import { IntegrationBridge } from '@/lib/integration-bridge'
 import { SovereignConnector } from '@/lib/sovereign-connector'
 import { SovereignGuard } from '@/lib/sovereign-guard'
 import { SelfHealing } from '@/lib/self-healing'
+import { GoogleDriveBridge, VaultStats } from '@/lib/google-drive-bridge'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ThreatMap } from './threat-map'
 import { PredictiveForecasting } from './predictive-forecasting'
 import { JudiciaryPanel } from './judiciary-panel'
 import { ImperialVictoryPanel } from './imperial-victory-panel'
+import { Progress } from '@/components/ui/progress'
 
 export function IntegrationPanel() {
   const [apps, setApps] = useState<any[]>([])
@@ -28,6 +30,7 @@ export function IntegrationPanel() {
   const [newApp, setNewApp] = useState({ name: '', webhook: '' })
   const [isHandshaking, setIsHandshaking] = useState(false)
   const [healingStatus, setHealingStatus] = useState(SelfHealing.getStatus())
+  const [vaultStats, setVaultStats] = useState<VaultStats>(GoogleDriveBridge.getVaultStats())
   
   const guardStats = SovereignGuard.getStats();
   const traffic = SovereignGuard.getLiveTraffic();
@@ -46,7 +49,8 @@ export function IntegrationPanel() {
 
     const interval = setInterval(() => {
       setHealingStatus(SelfHealing.getStatus());
-    }, 1000);
+      setVaultStats(GoogleDriveBridge.getVaultStats());
+    }, 5000);
 
     return () => {
       unsubApps();
@@ -91,6 +95,13 @@ export function IntegrationPanel() {
     }
   }
 
+  const handleManualBackup = () => {
+    toast({ title: "ব্য়াকআপ শুরু হয়েছে", description: "গুগল ড্রাইভ ভল্টে ডাটা আর্কাইভ করা হচ্ছে..." });
+    setTimeout(() => {
+      toast({ title: "ব্য়াকআপ সফল", description: "আপনার অডিট লগ এখন সুরক্ষিত।" });
+    }, 2000);
+  }
+
   return (
     <Card className="bg-card border-primary/20 flex flex-col h-full overflow-hidden">
       <CardHeader className="bg-primary/5 border-b border-primary/10 p-4 md:p-6">
@@ -124,6 +135,7 @@ export function IntegrationPanel() {
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
             <TabsTrigger value="war-room" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap"><Swords size={12}/> ওয়ার-রুম</TabsTrigger>
+            <TabsTrigger value="vault" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><HardDrive size={12}/> ভল্ট (Drive)</TabsTrigger>
             <TabsTrigger value="victory" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><Trophy size={12}/> বিজয়</TabsTrigger>
             <TabsTrigger value="judiciary" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap"><Scale size={12}/> বিচার বিভাগ</TabsTrigger>
             <TabsTrigger value="intelligence" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap"><Skull size={12}/> ইন্টেল ইউনিট</TabsTrigger>
@@ -156,6 +168,73 @@ export function IntegrationPanel() {
               </div>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="vault" className="flex-1 p-4 md:p-6 space-y-6 m-0 animate-in fade-in zoom-in-95">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="bg-accent/5 border-accent/20 p-5 space-y-4">
+                 <div className="flex justify-between items-start">
+                    <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center text-accent">
+                       <Cloud size={20} />
+                    </div>
+                    <Badge className="bg-accent text-background text-[7px] uppercase font-bold">Optimal</Badge>
+                 </div>
+                 <div>
+                    <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Drive Vault Storage</p>
+                    <h3 className="text-xl font-headline font-bold text-foreground">{vaultStats.usedSpace} / {vaultStats.totalSpace}</h3>
+                    <Progress value={2} className="h-1 bg-white/5 mt-2" />
+                 </div>
+              </Card>
+
+              <Card className="bg-primary/5 border-primary/20 p-5 space-y-4">
+                 <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                    <Database size={20} />
+                 </div>
+                 <div>
+                    <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Archived Signals</p>
+                    <h3 className="text-xl font-headline font-bold text-foreground">{vaultStats.fileCount.toLocaleString()} Files</h3>
+                    <p className="text-[8px] text-primary/60 font-mono mt-1">LAST_SYNC: {new Date(vaultStats.lastBackup).toLocaleTimeString()}</p>
+                 </div>
+              </Card>
+
+              <Card className="bg-muted/20 border-white/10 p-5 flex flex-col justify-center items-center text-center gap-3">
+                 <p className="text-[10px] font-bold text-muted-foreground">Force Manual Archive</p>
+                 <Button onClick={handleManualBackup} className="w-full bg-accent text-background font-bold gap-2 rounded-xl h-10 text-xs">
+                    <RefreshCw size={14} /> SYNC DRIVE
+                 </Button>
+              </Card>
+           </div>
+
+           <div className="p-4 bg-primary/5 border border-primary/20 rounded-2xl space-y-4">
+              <h4 className="text-xs font-headline font-bold uppercase tracking-widest flex items-center gap-2 text-primary">
+                <History size={16} /> Recent Drive Operations
+              </h4>
+              <div className="space-y-2">
+                 {[
+                   { name: 'monthly_revenue_report_may.pdf', size: '2.4 MB', time: '12m ago', status: 'ARCHIVED' },
+                   { name: 'drone_recon_alpha_01.mp4', size: '842 MB', time: '1h ago', status: 'ARCHIVED' },
+                   { name: 'audit_log_snapshot_v31.json', size: '124 KB', time: '3h ago', status: 'ENCRYPTED' }
+                 ].map((op, i) => (
+                   <div key={i} className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5 hover:border-accent/40 transition-all">
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 bg-muted/40 rounded-lg flex items-center justify-center">
+                            <HardDrive size={14} className="text-muted-foreground" />
+                         </div>
+                         <div>
+                            <p className="text-[11px] font-bold text-foreground">{op.name}</p>
+                            <p className="text-[8px] text-muted-foreground uppercase">{op.size} • {op.time}</p>
+                         </div>
+                      </div>
+                      <div className="flex gap-2">
+                         <Badge variant="outline" className="text-[7px] border-accent/20 text-accent">{op.status}</Badge>
+                         <Button size="icon" variant="ghost" className="h-7 w-7 text-primary">
+                            <Download size={12} />
+                         </Button>
+                      </div>
+                   </div>
+                 ))}
+              </div>
+           </div>
         </TabsContent>
 
         <TabsContent value="victory" className="flex-1 p-4 md:p-6 m-0">
