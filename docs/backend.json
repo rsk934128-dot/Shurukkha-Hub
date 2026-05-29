@@ -68,6 +68,35 @@
         }
       },
       "required": ["status", "timestamp", "location"]
+    },
+    "ReliefItem": {
+      "title": "Relief Item",
+      "description": "Inventory tracking for emergency supplies.",
+      "type": "object",
+      "properties": {
+        "itemName": { "type": "string" },
+        "category": { "type": "string", "enum": ["Food", "Medical", "Water", "Clothing", "Shelter"] },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "lastUpdated": { "type": "string", "format": "date-time" },
+        "warehouseLocation": { "type": "string" }
+      },
+      "required": ["itemName", "category", "quantity", "unit"]
+    },
+    "DistributionRecord": {
+      "title": "Distribution Record",
+      "description": "Ledger of relief distribution events.",
+      "type": "object",
+      "properties": {
+        "targetArea": { "type": "string" },
+        "itemIds": { "type": "array", "items": { "type": "string" } },
+        "quantities": { "type": "array", "items": { "type": "number" } },
+        "recipientCount": { "type": "number" },
+        "status": { "type": "string", "enum": ["planned", "in-transit", "delivered"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "authorizedBy": { "type": "string" }
+      },
+      "required": ["targetArea", "status", "timestamp"]
     }
   },
   "auth": {
@@ -85,6 +114,14 @@
     "/sos_alerts/{alertId}": {
       "schema": "SOSAlert",
       "description": "Active emergency distress signals with forensic timeline."
+    },
+    "/relief_inventory/{itemId}": {
+      "schema": "ReliefItem",
+      "description": "Global inventory list for the district."
+    },
+    "/relief_distributions/{distId}": {
+      "schema": "DistributionRecord",
+      "description": "History of relief distribution missions."
     }
   }
 }

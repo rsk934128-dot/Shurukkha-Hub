@@ -27,7 +27,8 @@ import {
   Wifi,
   ScanLine,
   Signal,
-  Handshake
+  Handshake,
+  Box
 } from "lucide-react"
 
 import {
@@ -254,6 +255,18 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                     <SearchCode size={18} className={activeTab === 'intelligence' ? "text-accent" : "text-muted-foreground"} />
                     <span className="font-medium">ইন্টেলিজেন্স বোর্ড</span>
                     <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent">RECON</Badge>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    isActive={activeTab === 'relief'} 
+                    onClick={() => handleNav('relief')}
+                    className="px-4 h-10 gap-3"
+                  >
+                    <Box size={18} className="text-amber-500" />
+                    <span className="font-medium">ত্রাণ ও সম্পদ</span>
+                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-amber-500/20 text-amber-500">VAULT</Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 

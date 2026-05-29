@@ -36,6 +36,17 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Relief Management
+    match /relief_inventory/{itemId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /relief_distributions/{distId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
     // Standard collections
     match /audit_trails/{logId} { allow read: if isAdmin(); allow create: if isAuthenticated(); }
     match /messages/{messageId} { allow read, write: if isAuthenticated(); }
