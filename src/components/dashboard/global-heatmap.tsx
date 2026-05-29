@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
+import { ChartContainer } from '@/components/ui/chart'
 import { NetworkAuditor, RegionalTraffic } from '@/lib/network-auditor'
 import { Badge } from '@/components/ui/badge'
 import { Globe, Zap, Activity } from 'lucide-react'
@@ -22,14 +22,14 @@ export function GlobalHeatmap() {
           </Badge>
         </div>
         <p className="text-[10px] text-muted-foreground leading-relaxed">
-          আপনার ৪২টি সভারেন নোডের বৈশ্বিক ট্রানজেকশন ডিস্ট্রিবিউশন এবং ল্যাটেন্সি রিয়েল-টাইমে মনিটর করুন।
+          আপনার ৪২টি সভারেন নোডের বৈশ্বিক ট্রানজেকশন ডিস্ট্রিবিউশন এবং ল্যাটেন্সি রিয়েল-টাইমে মনিটর করুন। ইউজার বাড়লেও এই গ্রিড তা অটোমেটিক ব্যালেন্স করবে।
         </p>
       </div>
 
       <div className="h-[300px] w-full bg-black/40 rounded-2xl border border-white/5 relative overflow-hidden">
         {/* Background stylized world map simulation */}
         <div className="absolute inset-0 opacity-10 pointer-events-none flex items-center justify-center">
-          <Globe size={240} className="text-primary" />
+          <Globe size={240} className="text-primary animate-spin-slow" />
         </div>
         
         <ChartContainer config={{
@@ -48,7 +48,7 @@ export function GlobalHeatmap() {
                       <div className="bg-card border border-primary/20 p-3 rounded-xl shadow-2xl space-y-2">
                         <p className="text-xs font-headline font-bold text-primary uppercase">{item.region}</p>
                         <div className="space-y-1">
-                          <p className="text-[10px] text-foreground">Transactions: <span className="text-accent font-bold">{item.transactions}</span></p>
+                          <p className="text-[10px] text-foreground">Transactions: <span className="text-accent font-bold">{item.transactions.toLocaleString()}</span></p>
                           <p className="text-[10px] text-foreground">Latency: <span className="text-primary font-bold">{item.avgLatency}ms</span></p>
                           <p className="text-[10px] text-foreground">Nodes: <span className="text-accent font-bold">{item.activeNodes}</span></p>
                         </div>
@@ -60,7 +60,7 @@ export function GlobalHeatmap() {
               />
               <Scatter name="Global Traffic" data={data}>
                 {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.avgLatency < 10 ? "hsl(var(--accent))" : "hsl(var(--primary))"} />
+                  <Cell key={`cell-${index}`} fill={entry.avgLatency < 10 ? "hsl(var(--accent))" : "hsl(var(--primary))"} className="animate-pulse" />
                 ))}
               </Scatter>
             </ScatterChart>
@@ -70,8 +70,8 @@ export function GlobalHeatmap() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {data.map((region, idx) => (
-          <div key={idx} className="p-3 bg-muted/20 border border-white/5 rounded-xl space-y-1">
-            <p className="text-[9px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+          <div key={idx} className="p-3 bg-muted/20 border border-white/5 rounded-xl space-y-1 group hover:border-accent/40 transition-all">
+            <p className="text-[9px] uppercase font-bold text-muted-foreground flex items-center gap-1 group-hover:text-accent">
               <Zap size={10} className="text-accent" /> {region.region}
             </p>
             <div className="flex justify-between items-end">

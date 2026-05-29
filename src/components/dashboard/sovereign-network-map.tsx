@@ -32,12 +32,12 @@ export function SovereignNetworkMap() {
   ]
 
   return (
-    <Card className="bg-card border-primary/20 overflow-hidden">
-      <CardHeader className="bg-primary/5 border-b border-primary/10 py-3">
+    <Card className="bg-card border-primary/20 overflow-hidden shadow-2xl">
+      <CardHeader className="bg-primary/5 border-b border-primary/10 py-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-headline flex items-center gap-2 uppercase tracking-widest">
             <Cpu className="text-primary" size={16} />
-            SOVEREIGN NETWORK ARCHITECTURE (Phase 25.0)
+            SOVEREIGN NETWORK ARCHITECTURE (Phase 31.0)
           </CardTitle>
           <div className="flex gap-2">
             {pulse && (
@@ -54,14 +54,14 @@ export function SovereignNetworkMap() {
       
       <Tabs defaultValue="map" className="w-full">
         <div className="px-6 py-2 bg-muted/20 border-b border-white/5">
-          <TabsList className="bg-transparent border-none p-0 h-8">
-            <TabsTrigger value="map" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Globe size={12}/> Architecture Map</TabsTrigger>
-            <TabsTrigger value="heatmap" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><Map size={12}/> Global Traffic</TabsTrigger>
-            <TabsTrigger value="metrics" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><BarChart3 size={12}/> Growth Metrics</TabsTrigger>
+          <TabsList className="bg-transparent border-none p-0 h-8 flex gap-4">
+            <TabsTrigger value="map" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest border-b-2 border-transparent data-[state=active]:border-primary rounded-none px-0"><Globe size={12}/> Architecture Map</TabsTrigger>
+            <TabsTrigger value="heatmap" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest border-b-2 border-transparent data-[state=active]:border-accent rounded-none px-0"><Map size={12}/> Global Traffic</TabsTrigger>
+            <TabsTrigger value="metrics" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest border-b-2 border-transparent data-[state=active]:border-accent rounded-none px-0"><BarChart3 size={12}/> Growth Metrics</TabsTrigger>
           </TabsList>
         </div>
 
-        <TabsContent value="map" className="p-6 m-0">
+        <TabsContent value="map" className="p-6 m-0 animate-in fade-in duration-500">
           <div className="relative flex flex-col items-center gap-12">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full items-center">
               <div className="space-y-4 flex flex-col items-center">
@@ -85,7 +85,7 @@ export function SovereignNetworkMap() {
                   <NetworkNodeItem node={mainNodes[4]} />
                </div>
                
-               <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl space-y-3">
+               <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl space-y-3 shadow-inner">
                   <div className="flex items-center justify-between">
                     <h4 className="text-[10px] font-headline font-bold uppercase tracking-widest flex items-center gap-2">
                       <Server size={14} className="text-accent" /> Node Health Pulse
@@ -101,7 +101,7 @@ export function SovereignNetworkMap() {
                       />
                     ))}
                   </div>
-                  <p className="text-[8px] text-muted-foreground leading-relaxed">
+                  <p className="text-[8px] text-muted-foreground leading-relaxed italic">
                     আপনার ৪২টি ডিস্ট্রিবিউটেড নোড এখন Anycast রাউটিংয়ের মাধ্যমে core.sheikh ডোমেইন পরিচালনা করছে।
                   </p>
                </div>
@@ -109,11 +109,11 @@ export function SovereignNetworkMap() {
           </div>
         </TabsContent>
 
-        <TabsContent value="heatmap" className="p-6 m-0">
+        <TabsContent value="heatmap" className="p-6 m-0 animate-in slide-in-from-bottom-2 duration-500">
           <GlobalHeatmap />
         </TabsContent>
 
-        <TabsContent value="metrics" className="p-6 m-0 space-y-6">
+        <TabsContent value="metrics" className="p-6 m-0 space-y-6 animate-in fade-in duration-500">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="bg-primary/5 border-primary/20 p-4 space-y-2">
               <div className="flex items-center justify-between">
