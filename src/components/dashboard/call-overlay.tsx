@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, ShieldCheck, Loader2, User, Volume2, VolumeX, Activity, Zap, X, Maximize2, Smartphone, Speaker } from 'lucide-react'
+import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, ShieldCheck, Loader2, User, Volume2, VolumeX, Activity, Zap, X, Maximize2, Smartphone, Speaker, RefreshCw } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,7 @@ import { db } from '@/lib/firebase'
 import { doc, updateDoc, onSnapshot, deleteDoc } from 'firebase/firestore'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useToast } from '@/hooks/use-toast'
 
 interface CallOverlayProps {
   callData: {
@@ -30,6 +31,8 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const [isMuted, setIsMicMuted] = useState(false)
   const [isSpeakerOn, setIsSpeakerOn] = useState(true)
   const [isCamOff, setIsCamOff] = useState(false)
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false)
   const [timer, setTimer] = useState(0)
   const [proximityActive, setProximityActive] = useState(false)
   
@@ -40,6 +43,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const ringtoneIntervalRef = useRef<any>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const { playAlertSound } = useAudioEngine()
+  const { toast } = useToast()
 
   /**
    * Virtual Proximity Sensor Simulation
@@ -149,7 +153,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     if (!callData) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: callData.type === 'video', 
+        video: callData.type === 'video' ? { facingMode: 'user' } : false, 
         audio: WebRTCManager.getAudioConstraints() 
       });
       streamRef.current = stream;
@@ -169,7 +173,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     stopRingtone(); 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: callData.type === 'video', 
+        video: callData.type === 'video' ? { facingMode: 'user' } : false, 
         audio: WebRTCManager.getAudioConstraints()
       });
       streamRef.current = stream;
@@ -205,6 +209,48 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     setStatus('ended');
     onClose();
   }
+
+  /**
+   * Switch between Front and Back Camera
+   */
+  const handleSwitchCamera = async () => {
+    if (!localStream || !webrtcRef.current || callData?.type !== 'video' || isSwitchingCamera) return;
+    
+    setIsSwitchingCamera(true);
+    const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
+    
+    try {
+      // 1. Stop existing video track
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) videoTrack.stop();
+
+      // 2. Get new track with requested lens
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: newFacingMode },
+        audio: false // Keep same audio track
+      });
+      
+      const newVideoTrack = newStream.getVideoTracks()[0];
+
+      // 3. Update WebRTC Sender
+      await webrtcRef.current.replaceVideoTrack(newVideoTrack);
+
+      // 4. Update Local State
+      const updatedStream = new MediaStream([newVideoTrack, ...localStream.getAudioTracks()]);
+      setLocalStream(updatedStream);
+      setFacingMode(newFacingMode);
+      
+      toast({ 
+        title: newFacingMode === 'user' ? "Front Camera Active" : "Rear Camera Active",
+        description: "Lens successfully swapped." 
+      });
+    } catch (error) {
+      console.error("[Camera Switch] Failed", error);
+      toast({ title: "Camera Switch Failed", variant: "destructive" });
+    } finally {
+      setIsSwitchingCamera(false);
+    }
+  };
 
   const startTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -251,7 +297,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                <div className="relative">
                   <div className="absolute -inset-8 md:-inset-12 bg-primary/20 rounded-full blur-2xl md:blur-3xl animate-pulse" />
                   <Avatar className="h-40 w-40 md:h-48 md:w-48 border-4 border-primary/40 relative z-10 shadow-2xl">
-                    <AvatarImage src={callData.callerAvatar} />
+                    <AvatarImage src={callData.callerAvatar || undefined} />
                     <AvatarFallback className="bg-primary/10 text-5xl md:text-6xl font-headline font-bold text-primary">
                       {callData.callerName?.[0] || 'S'}
                     </AvatarFallback>
@@ -295,12 +341,11 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                    <div className="relative">
                       <div className="absolute -inset-12 bg-accent/10 rounded-full blur-[60px] animate-pulse" />
                       <Avatar className="h-40 w-40 md:h-56 md:w-56 border-8 border-accent/20 relative z-10 shadow-2xl">
-                         <AvatarImage src={callData.callerAvatar} />
+                         <AvatarImage src={callData.callerAvatar || undefined} />
                          <AvatarFallback className="bg-primary/10 text-5xl md:text-6xl font-headline font-bold text-primary">
                             {callData.callerName?.[0] || 'S'}
                          </AvatarFallback>
                       </Avatar>
-                      {/* Audio Pulse Ring */}
                       <div className="absolute -inset-4 border-2 border-accent/20 rounded-full animate-ping opacity-40" />
                    </div>
                    <div className="text-center space-y-3">
@@ -320,7 +365,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                 <div className="relative">
                    <div className="absolute -inset-8 bg-primary/20 rounded-full blur-3xl animate-pulse" />
                    <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-primary/40 relative z-10 shadow-2xl">
-                     <AvatarImage src={callData.callerAvatar} />
+                     <AvatarImage src={callData.callerAvatar || undefined} />
                      <AvatarFallback className="bg-primary/10 text-4xl md:text-5xl font-headline font-bold text-primary">
                        {callData.callerName?.[0] || 'S'}
                      </AvatarFallback>
@@ -335,7 +380,13 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
           {/* Local PIP */}
           <div className={`absolute bottom-32 right-4 md:top-6 md:right-6 w-32 md:w-48 aspect-[3/4] md:aspect-video bg-black rounded-2xl border border-white/20 shadow-2xl overflow-hidden z-20 ${status === 'connected' && callData.type === 'video' ? 'block' : 'hidden'}`}>
-             <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+             <video 
+              ref={localVideoRef} 
+              autoPlay 
+              playsInline 
+              muted 
+              className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`} 
+             />
              <Badge className="absolute top-2 left-2 bg-black/40 text-[7px] uppercase">You</Badge>
           </div>
 
@@ -353,7 +404,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
           {/* Enhanced Controls */}
           {(status === 'connected' || (status === 'ringing' && !callData.isIncoming)) && (
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 md:gap-8 z-40 bg-black/40 backdrop-blur-3xl p-4 px-6 md:px-12 rounded-[2.5rem] border border-white/10 shadow-2xl transition-all w-[95%] md:w-auto justify-center">
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-wrap items-center gap-4 md:gap-8 z-40 bg-black/40 backdrop-blur-3xl p-4 px-6 md:px-12 rounded-[2.5rem] border border-white/10 shadow-2xl transition-all w-[95%] md:w-auto justify-center">
               <div className="flex flex-col items-center gap-2">
                 <Button 
                   variant="ghost" 
@@ -383,6 +434,21 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                 </Button>
                 <span className="text-[8px] font-bold uppercase text-white/40 tracking-widest">Speaker</span>
               </div>
+
+              {callData.type === 'video' && status === 'connected' && (
+                <div className="flex flex-col items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={handleSwitchCamera}
+                    disabled={isSwitchingCamera}
+                    className="h-14 w-14 rounded-full border border-white/5 text-white hover:bg-white/10 transition-all"
+                  >
+                    <RefreshCw size={24} className={isSwitchingCamera ? 'animate-spin' : ''} />
+                  </Button>
+                  <span className="text-[8px] font-bold uppercase text-white/40 tracking-widest">Flip</span>
+                </div>
+              )}
 
               {callData.type === 'video' && (
                 <div className="flex flex-col items-center gap-2">

@@ -2,8 +2,7 @@
 
 /**
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
- * Optimized Phase 31.9: Implements High-Fidelity Audio for M2M communication.
- * Includes noise suppression, echo cancellation, and auto-gain control.
+ * Optimized Phase 31.9: Implements High-Fidelity Audio and Seamless Track Replacement.
  */
 
 import { db } from './firebase';
@@ -48,6 +47,20 @@ export class WebRTCManager {
       sampleRate: 48000,
       sampleSize: 16
     };
+  }
+
+  /**
+   * Replaces the current video track with a new one without dropping the connection.
+   * Crucial for Camera Switching (Front/Back).
+   */
+  async replaceVideoTrack(newTrack: MediaStreamTrack) {
+    if (!this.peerConnection) return;
+    const senders = this.peerConnection.getSenders();
+    const videoSender = senders.find(s => s.track?.kind === 'video');
+    if (videoSender) {
+      console.log("[WebRTC] Replacing video track with new lens source...");
+      await videoSender.replaceTrack(newTrack);
+    }
   }
 
   private async addCandidate(candidate: RTCIceCandidateInit) {
