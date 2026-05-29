@@ -11,6 +11,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { db } from '@/lib/firebase'
 import { collection, onSnapshot, query, addDoc, serverTimestamp } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
+import { errorEmitter } from '@/firebase/error-emitter'
+import { FirestorePermissionError } from '@/firebase/errors'
 
 export function SovereignDomainManager() {
   const [domains, setDomains] = useState<any[]>([])
@@ -23,6 +25,13 @@ export function SovereignDomainManager() {
     const q = query(collection(db, "sovereign_domains"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setDomains(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/sovereign_domains',
+          operation: 'list'
+        }));
+      }
     });
     return () => unsubscribe();
   }, [])
@@ -32,7 +41,7 @@ export function SovereignDomainManager() {
     setLoading(true)
     try {
       const domainFullName = `${newDomain.name}${newDomain.extension}`;
-      await addDoc(collection(db, "sovereign_domains"), {
+      const domainData = {
         domainName: newDomain.name,
         extension: newDomain.extension,
         fullName: domainFullName,
@@ -40,7 +49,9 @@ export function SovereignDomainManager() {
         status: 'propagating',
         dnsType: 'A',
         timestamp: serverTimestamp()
-      });
+      };
+
+      await addDoc(collection(db, "sovereign_domains"), domainData);
 
       setResolverLogs(prev => [`[DNS_REGISTRY] Registering ${domainFullName}...`, ...prev]);
       
@@ -50,8 +61,16 @@ export function SovereignDomainManager() {
       }, 1500);
 
       setNewDomain({ ...newDomain, name: '' });
-    } catch (e) {
-      toast({ title: "ব্যর্থ!", variant: "destructive" });
+    } catch (e: any) {
+      if (e.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/sovereign_domains',
+          operation: 'create',
+          requestResourceData: newDomain
+        }));
+      } else {
+        toast({ title: "ব্যর্থ!", variant: "destructive" });
+      }
     } finally {
       setLoading(false)
     }

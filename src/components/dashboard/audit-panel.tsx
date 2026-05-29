@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { db } from '@/lib/firebase'
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore'
+import { errorEmitter } from '@/firebase/error-emitter'
+import { FirestorePermissionError } from '@/firebase/errors'
 
 export function AuditPanel() {
   const [logs, setLogs] = useState<any[]>([])
@@ -19,6 +21,14 @@ export function AuditPanel() {
     const q = query(collection(db, "audit_trails"), orderBy("timestamp", "desc"), limit(50));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    }, async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/audit_trails',
+          operation: 'list'
+        }));
+      }
       setLoading(false);
     });
     return () => unsubscribe();

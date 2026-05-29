@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -13,6 +12,8 @@ import { collection, onSnapshot, query, orderBy, limit, doc, updateDoc, deleteDo
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import Image from 'next/image'
 import { useToast } from '@/hooks/use-toast'
+import { errorEmitter } from '@/firebase/error-emitter'
+import { FirestorePermissionError } from '@/firebase/errors'
 
 export function IncidentReviewBoard() {
   const [incidents, setIncidents] = useState<any[]>([])
@@ -26,6 +27,14 @@ export function IncidentReviewBoard() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setIncidents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
+    }, async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/incidents',
+          operation: 'list'
+        }));
+      }
+      setLoading(false);
     });
     return () => unsubscribe();
   }, [])
@@ -34,8 +43,16 @@ export function IncidentReviewBoard() {
     try {
       await updateDoc(doc(db, "incidents", id), { status });
       toast({ title: "স্ট্যাটাস আপডেট করা হয়েছে", description: `রিপোর্টটি এখন ${status} হিসেবে চিহ্নিত।` });
-    } catch (e) {
-      toast({ title: "ত্রুটি", variant: "destructive" });
+    } catch (e: any) {
+      if (e.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `/incidents/${id}`,
+          operation: 'update',
+          requestResourceData: { status }
+        }));
+      } else {
+        toast({ title: "ত্রুটি", variant: "destructive" });
+      }
     }
   }
 
@@ -44,8 +61,15 @@ export function IncidentReviewBoard() {
     try {
       await deleteDoc(doc(db, "incidents", id));
       toast({ title: "রিপোর্ট মুছে ফেলা হয়েছে" });
-    } catch (e) {
-      toast({ title: "ত্রুটি", variant: "destructive" });
+    } catch (e: any) {
+       if (e.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `/incidents/${id}`,
+          operation: 'delete'
+        }));
+      } else {
+        toast({ title: "ত্রুটি", variant: "destructive" });
+      }
     }
   }
 

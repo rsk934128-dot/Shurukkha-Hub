@@ -20,6 +20,8 @@ import { AppLogo } from '@/components/ui/app-logo'
 import { MerchantRegistry } from './merchant-registry'
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { errorEmitter } from '@/firebase/error-emitter'
+import { FirestorePermissionError } from '@/firebase/errors'
 
 export function BankDirectory() {
   const [banks, setBanks] = useState<BankNode[]>([])
@@ -67,6 +69,13 @@ export function BankDirectory() {
         });
         setRevenueStats(prev => ({ ...prev, totalProcessed, totalFees }));
       }
+    }, async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/audit_trails',
+          operation: 'list'
+        }));
+      }
     });
 
     return () => unsubscribe();
@@ -99,7 +108,7 @@ export function BankDirectory() {
         if (msg.includes('[COMPLETED]')) setActiveStep(5)
       })
       toast({ title: "STRESS TEST COMPLETED", description: "Ledger updated with atomic settlement." });
-    } catch (e) {
+    } catch (e: any) {
       console.error("[Stress Test Error]", e);
       toast({ title: "STRESS TEST FAILED", description: "Check terminal for error signature.", variant: "destructive" });
       setTerminalLogs(prev => [...prev, `[FATAL_ERROR]: ${e.message || "Unknown Failure"}`]);
@@ -315,7 +324,7 @@ export function BankDirectory() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
              </div>
-             <Badge variant="outline" className="text-[8px] border-primary/40 text-primary">STRIPE_CONNECT_V2</Badge>
+             <Badge variant="outline" className="text-[7px] border-primary/40 text-primary">STRIPE_CONNECT_V2</Badge>
           </div>
           <ScrollArea className="h-[400px] md:h-[500px]">
             <div className="overflow-x-auto min-w-full">
