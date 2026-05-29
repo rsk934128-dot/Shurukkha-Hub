@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -10,12 +11,24 @@ import { db } from '@/lib/firebase'
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
+import { useUser } from '@/firebase'
+
+const ADMIN_EMAILS = ['rubels1k994@gmail.com', 'rsk755734@gmail.com'];
 
 export function AlertCenter() {
+  const { user } = useUser()
   const [alerts, setAlerts] = useState<any[]>([])
   const [isOpen, setIsOpen] = useState(false)
 
+  const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
+
   useEffect(() => {
+    // Only subscribe if the user is an authorized admin
+    if (!isAdmin) {
+      setAlerts([]);
+      return;
+    }
+
     const alertsRef = collection(db, "suspect_profiles");
     const q = query(
       alertsRef, 
@@ -40,9 +53,10 @@ export function AlertCenter() {
     });
 
     return () => unsubscribe();
-  }, [isOpen])
+  }, [isOpen, isAdmin])
 
-  if (alerts.length === 0) return null;
+  // Don't render anything if there are no alerts or user is not an admin
+  if (!isAdmin || alerts.length === 0) return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-[100]">
