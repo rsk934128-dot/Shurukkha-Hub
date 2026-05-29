@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -22,6 +21,8 @@ import { PredictiveForecasting } from './predictive-forecasting'
 import { JudiciaryPanel } from './judiciary-panel'
 import { ImperialVictoryPanel } from './imperial-victory-panel'
 import { Progress } from '@/components/ui/progress'
+import { errorEmitter } from '@/firebase/error-emitter'
+import { FirestorePermissionError } from '@/firebase/errors'
 
 export function IntegrationPanel() {
   const [apps, setApps] = useState<any[]>([])
@@ -40,11 +41,25 @@ export function IntegrationPanel() {
     const appsQ = query(collection(db, "integrations"));
     const unsubApps = onSnapshot(appsQ, (snapshot) => {
       setApps(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/integrations',
+          operation: 'list'
+        }));
+      }
     });
 
     const suspectsQ = query(collection(db, "suspect_profiles"), orderBy("timestamp", "desc"), limit(15));
     const unsubSuspects = onSnapshot(suspectsQ, (snapshot) => {
       setSuspects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/suspect_profiles',
+          operation: 'list'
+        }));
+      }
     });
 
     const interval = setInterval(() => {
@@ -185,7 +200,21 @@ export function IntegrationPanel() {
         <TabsContent value="victory" className="flex-1 p-4 md:p-6 m-0">
           <ImperialVictoryPanel />
         </TabsContent>
-        {/* ... remaining tabs ... */}
+        <TabsContent value="judiciary" className="flex-1 p-4 md:p-6 m-0">
+          <JudiciaryPanel />
+        </TabsContent>
+        <TabsContent value="intelligence" className="flex-1 p-4 md:p-6 m-0">
+          {/* Intelligence sub-tabs or lists would go here */}
+        </TabsContent>
+        <TabsContent value="evolution" className="flex-1 p-4 md:p-6 m-0">
+          <PredictiveForecasting />
+        </TabsContent>
+        <TabsContent value="guard" className="flex-1 p-4 md:p-6 m-0">
+           {/* Guard rules and stats */}
+        </TabsContent>
+        <TabsContent value="apps" className="flex-1 p-4 md:p-6 m-0">
+           {/* Integration Apps list */}
+        </TabsContent>
       </Tabs>
     </Card>
   )

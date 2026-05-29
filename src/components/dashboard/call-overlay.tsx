@@ -11,6 +11,8 @@ import { doc, updateDoc, onSnapshot, deleteDoc } from 'firebase/firestore'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
+import { errorEmitter } from '@/firebase/error-emitter'
+import { FirestorePermissionError } from '@/firebase/errors'
 
 interface CallOverlayProps {
   callData: {
@@ -45,17 +47,13 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const { playAlertSound } = useAudioEngine()
   const { toast } = useToast()
 
-  /**
-   * Virtual Proximity Sensor Simulation
-   * Screen turns off (black) if the phone is tilted towards the ear (Vertical)
-   */
   useEffect(() => {
     if (status !== 'connected' || callData?.type === 'video') return;
 
     const handleOrientation = (event: DeviceOrientationEvent) => {
-      const beta = event.beta; // In front-back tilt
+      const beta = event.beta;
       if (beta !== null && beta > 70 && beta < 110) {
-        setProximityActive(true); // Tilt detected (near ear)
+        setProximityActive(true);
       } else {
         setProximityActive(false);
       }
@@ -121,6 +119,13 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         if (data.status === 'ended') {
           handleEndCall();
         }
+      }, async (err) => {
+        if (err.code === 'permission-denied') {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: sessionRef.path,
+            operation: 'get'
+          }));
+        }
       });
 
       if (callData.isIncoming) {
@@ -183,8 +188,15 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         setRemoteStream(remote);
       });
       
-      await updateDoc(doc(db, 'webrtc_sessions', callData.sessionId), {
-        status: 'connected'
+      const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
+      updateDoc(sessionRef, { status: 'connected' }).catch(async (err) => {
+        if (err.code === 'permission-denied') {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: sessionRef.path,
+            operation: 'update',
+            requestResourceData: { status: 'connected' }
+          }));
+        }
       });
       
       setStatus('connected');
@@ -198,21 +210,32 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const handleEndCall = async () => {
     stopRingtone();
     if (callData) {
-      try {
-        await updateDoc(doc(db, 'webrtc_sessions', callData.sessionId), { status: 'ended' });
-        setTimeout(() => {
-          try { deleteDoc(doc(db, 'webrtc_sessions', callData.sessionId)); } catch (e) {}
-        }, 1000);
-      } catch (e) {}
+      const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
+      updateDoc(sessionRef, { status: 'ended' }).catch(async (err) => {
+        if (err.code === 'permission-denied') {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: sessionRef.path,
+            operation: 'update',
+            requestResourceData: { status: 'ended' }
+          }));
+        }
+      });
+      setTimeout(() => {
+        deleteDoc(sessionRef).catch(async (err) => {
+          if (err.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: sessionRef.path,
+              operation: 'delete'
+            }));
+          }
+        });
+      }, 1000);
     }
     cleanupStreams();
     setStatus('ended');
     onClose();
   }
 
-  /**
-   * Switch between Front and Back Camera
-   */
   const handleSwitchCamera = async () => {
     if (!localStream || !webrtcRef.current || callData?.type !== 'video' || isSwitchingCamera) return;
     
@@ -220,22 +243,17 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
     
     try {
-      // 1. Stop existing video track
       const videoTrack = localStream.getVideoTracks()[0];
       if (videoTrack) videoTrack.stop();
 
-      // 2. Get new track with requested lens
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: newFacingMode },
-        audio: false // Keep same audio track
+        audio: false
       });
       
       const newVideoTrack = newStream.getVideoTracks()[0];
-
-      // 3. Update WebRTC Sender
       await webrtcRef.current.replaceVideoTrack(newVideoTrack);
 
-      // 4. Update Local State
       const updatedStream = new MediaStream([newVideoTrack, ...localStream.getAudioTracks()]);
       setLocalStream(updatedStream);
       setFacingMode(newFacingMode);
@@ -281,7 +299,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         </DialogHeader>
         
         <div className="relative w-full h-full bg-slate-950 flex items-center justify-center group overflow-hidden">
-          {/* Proximity Shield Overlay (Sensor Simulation) */}
           {proximityActive && (
             <div className="absolute inset-0 bg-black z-[100] flex items-center justify-center">
                <div className="text-center opacity-10 flex flex-col items-center gap-4">
@@ -291,7 +308,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             </div>
           )}
 
-          {/* Incoming Call UI */}
           {status === 'ringing' && callData.isIncoming && (
             <div className="flex flex-col items-center gap-8 z-50 animate-in fade-in zoom-in-95 duration-500 w-full px-6">
                <div className="relative">
@@ -328,7 +344,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             </div>
           )}
 
-          {/* Connected Display Area */}
           <div className={`w-full h-full relative ${status === 'connected' ? 'block' : 'hidden'}`}>
              <video 
                 ref={remoteVideoRef} 
@@ -359,7 +374,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
              )}
           </div>
 
-          {/* Outgoing State */}
           {status === 'ringing' && !callData.isIncoming && (
              <div className="flex flex-col items-center gap-6 z-10 w-full px-6">
                 <div className="relative">
@@ -378,7 +392,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
              </div>
           )}
 
-          {/* Local PIP */}
           <div className={`absolute bottom-32 right-4 md:top-6 md:right-6 w-32 md:w-48 aspect-[3/4] md:aspect-video bg-black rounded-2xl border border-white/20 shadow-2xl overflow-hidden z-20 ${status === 'connected' && callData.type === 'video' ? 'block' : 'hidden'}`}>
              <video 
               ref={localVideoRef} 
@@ -390,7 +403,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
              <Badge className="absolute top-2 left-2 bg-black/40 text-[7px] uppercase">You</Badge>
           </div>
 
-          {/* HUD Indicators */}
           <div className="absolute top-6 left-6 flex flex-col gap-2 z-30">
             <Badge variant="outline" className="border-accent/40 text-accent bg-black/60 backdrop-blur-md text-[8px] uppercase tracking-widest gap-2">
               <Activity size={10} className="animate-pulse" /> M2M_SOVEREIGN_V2.0
@@ -402,7 +414,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             )}
           </div>
 
-          {/* Enhanced Controls */}
           {(status === 'connected' || (status === 'ringing' && !callData.isIncoming)) && (
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-wrap items-center gap-4 md:gap-8 z-40 bg-black/40 backdrop-blur-3xl p-4 px-6 md:px-12 rounded-[2.5rem] border border-white/10 shadow-2xl transition-all w-[95%] md:w-auto justify-center">
               <div className="flex flex-col items-center gap-2">
@@ -476,7 +487,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             </div>
           )}
 
-          {/* CRT Effect */}
           <div className="absolute inset-0 pointer-events-none opacity-5 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] z-20" />
         </div>
       </DialogContent>

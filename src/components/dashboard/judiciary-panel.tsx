@@ -10,12 +10,13 @@ import { db } from '@/lib/firebase'
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { errorEmitter } from '@/firebase/error-emitter'
+import { FirestorePermissionError } from '@/firebase/errors'
 
 export function JudiciaryPanel() {
   const [sentences, setSentences] = useState<any[]>([])
   const [search, setSearch] = useState('')
 
-  // Imperial Evidence from Sovereign Input - Updated with Counter-Strike status
   const imperialEvidence = [
     {
       id: 'case_001',
@@ -38,9 +39,9 @@ export function JudiciaryPanel() {
   ]
 
   useEffect(() => {
-    // Proactive Fix: Move filtering for 'blacklisted' status to client-side to avoid index requirement
+    const suspectsRef = collection(db, "suspect_profiles");
     const q = query(
-      collection(db, "suspect_profiles"), 
+      suspectsRef, 
       orderBy("timestamp", "desc"),
       limit(100)
     );
@@ -49,6 +50,13 @@ export function JudiciaryPanel() {
       const allProfiles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       const blacklisted = allProfiles.filter((p: any) => p.status === 'blacklisted').slice(0, 20);
       setSentences(blacklisted);
+    }, async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/suspect_profiles',
+          operation: 'list'
+        }));
+      }
     });
 
     return () => unsubscribe();

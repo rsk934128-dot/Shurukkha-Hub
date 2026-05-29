@@ -17,6 +17,8 @@ import { CommunicationConsole } from './communication-console'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MediaControls } from './media-controls'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
+import { errorEmitter } from '@/firebase/error-emitter'
+import { FirestorePermissionError } from '@/firebase/errors'
 
 const MOCK_RESPONDERS = [
   { id: 'r1', name: "সদর থানা টিম এ", type: "Police", location: "সিরাজগঞ্জ বাজার", status: "available" },
@@ -43,7 +45,8 @@ export function DispatcherConsole() {
   const { playAlertSound } = useAudioEngine()
 
   useEffect(() => {
-    const q = query(collection(db, "sos_alerts"), orderBy("timestamp", "desc"));
+    const alertsRef = collection(db, "sos_alerts");
+    const q = query(alertsRef, orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const activeAlerts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
@@ -60,6 +63,13 @@ export function DispatcherConsole() {
       if (selectedAlert) {
         const updated = activeAlerts.find(a => a.id === selectedAlert.id);
         if (updated) setSelectedAlert(updated);
+      }
+    }, async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/sos_alerts',
+          operation: 'list'
+        }));
       }
     });
     return () => {
@@ -135,23 +145,31 @@ export function DispatcherConsole() {
   const updateAlertStatus = async (status: string, note: string, responderId?: string) => {
     if (!selectedAlert) return;
     
-    try {
-      const alertRef = doc(db, "sos_alerts", selectedAlert.id);
-      const updateData: any = {
-        status: status,
-        timeline: arrayUnion({
-          status,
-          note,
-          timestamp: new Date().toISOString(),
-          executionTime: '0.004ms',
-          purity: 'VERIFIED_IMPERIAL'
-        })
-      };
-      
-      if (responderId) updateData.assignedResponder = responderId;
-      await updateDoc(alertRef, updateData);
+    const alertRef = doc(db, "sos_alerts", selectedAlert.id);
+    const updateData: any = {
+      status: status,
+      timeline: arrayUnion({
+        status,
+        note,
+        timestamp: new Date().toISOString(),
+        executionTime: '0.004ms',
+        purity: 'VERIFIED_IMPERIAL'
+      })
+    };
+    
+    if (responderId) updateData.assignedResponder = responderId;
+
+    updateDoc(alertRef, updateData).then(() => {
       toast({ title: `Command Executed: ${status.toUpperCase()}` });
-    } catch (error) { console.error(error); }
+    }).catch(async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: alertRef.path,
+          operation: 'update',
+          requestResourceData: updateData
+        }));
+      }
+    });
   }
 
   return (
@@ -208,7 +226,6 @@ export function DispatcherConsole() {
             <TabsContent value="map" className="flex-1 mt-0 relative min-h-0 rounded-2xl overflow-hidden border border-white/5">
                <ResourceMap />
                
-               {/* Call Interface Overlay */}
                {isCalling && (
                  <div className="absolute inset-0 z-[60] bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-500">
                     <div className="absolute top-4 right-4 w-48 md:w-80 aspect-video bg-black rounded-2xl md:rounded-3xl border-2 border-accent shadow-2xl overflow-hidden animate-in zoom-in-95 group/remote">
@@ -222,7 +239,6 @@ export function DispatcherConsole() {
                        )}
                        <Badge className="absolute top-2 left-2 bg-red-600 animate-pulse text-[6px] md:text-[7px] border-none px-2 h-4 uppercase">CITIZEN_RECON</Badge>
                        
-                       {/* Local PIP in Dispatcher HUD */}
                        <div className="absolute bottom-2 right-2 w-16 md:w-24 aspect-video bg-black border border-white/20 rounded-lg overflow-hidden z-20">
                           <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
                           <Badge className="absolute top-0.5 left-0.5 bg-black/40 text-[5px] uppercase px-1 h-2.5">Local</Badge>

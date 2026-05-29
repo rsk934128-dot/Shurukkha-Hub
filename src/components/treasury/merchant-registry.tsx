@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -15,6 +14,8 @@ import { useToast } from '@/hooks/use-toast'
 import { IntegrationBridge } from '@/lib/integration-bridge'
 import { AppLogo } from '@/components/ui/app-logo'
 import { PaymentHandler } from '@/lib/payment-handler'
+import { errorEmitter } from '@/firebase/error-emitter'
+import { FirestorePermissionError } from '@/firebase/errors'
 
 const SECTOR_TEMPLATES = [
   { label: 'Textile (Handloom)', value: 'Textile', desc: 'সিরাজগঞ্জ হ্যান্ডলুম প্রোডাকশন হাউস' },
@@ -41,9 +42,17 @@ export function MerchantRegistry() {
   })
 
   useEffect(() => {
-    const q = query(collection(db, "merchants"), orderBy("onboardedAt", "desc"));
+    const merchantsRef = collection(db, "merchants");
+    const q = query(merchantsRef, orderBy("onboardedAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setMerchants(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/merchants',
+          operation: 'list'
+        }));
+      }
     });
     return () => unsubscribe();
   }, [])
@@ -51,40 +60,57 @@ export function MerchantRegistry() {
   const handleOnboard = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    try {
-      const merchantId = `SMID-${Math.floor(1000 + Math.random() * 9000)}`;
-      const apiKey = `sk_sov_${Math.random().toString(36).substring(2, 24)}`;
-      
-      const merchantData = {
-        ...form,
-        merchantId,
-        apiKey,
-        status: 'active',
-        totalRevenue: 0,
-        taxCollected: 0,
-        onboardedAt: new Date().toISOString(),
-        purity: 'VERIFIED_IMPERIAL'
-      };
+    
+    const merchantId = `SMID-${Math.floor(1000 + Math.random() * 9000)}`;
+    const apiKey = `sk_sov_${Math.random().toString(36).substring(2, 24)}`;
+    
+    const merchantData = {
+      ...form,
+      merchantId,
+      apiKey,
+      status: 'active',
+      totalRevenue: 0,
+      taxCollected: 0,
+      onboardedAt: new Date().toISOString(),
+      purity: 'VERIFIED_IMPERIAL'
+    };
 
-      const docRef = await addDoc(collection(db, "merchants"), merchantData);
+    const merchantsRef = collection(db, "merchants");
+    addDoc(merchantsRef, merchantData).then(async (docRef) => {
       setLastOnboarded({ ...merchantData, id: docRef.id });
 
-      await addDoc(collection(db, "audit_trails"), {
+      const auditData = {
         action: 'MERCHANT_ONBOARDED',
         details: { businessName: form.businessName, merchantId },
         signature: IntegrationBridge.generateSignature({ merchantId }),
         timestamp: serverTimestamp(),
         performedBy: 'Imperial_Treasury_Admin'
+      };
+
+      addDoc(collection(db, "audit_trails"), auditData).catch(async (err) => {
+        if (err.code === 'permission-denied') {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: '/audit_trails',
+            operation: 'create',
+            requestResourceData: auditData
+          }));
+        }
       });
 
       toast({ title: "সফল অনবোর্ডিং", description: `${form.businessName} এখন আপনার গ্রিডে সক্রিয়।` });
       setIsAdding(false);
       setForm({ businessName: '', ownerName: '', category: 'Textile' });
-    } catch (e) {
-      toast({ title: "ব্যর্থ!", variant: "destructive" });
-    } finally {
-      setLoading(false)
-    }
+      setLoading(false);
+    }).catch(async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/merchants',
+          operation: 'create',
+          requestResourceData: merchantData
+        }));
+      }
+      setLoading(false);
+    });
   }
 
   const handleIssueInvoice = async (merchant: any) => {
@@ -102,16 +128,21 @@ export function MerchantRegistry() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("আপনি কি এই মার্চেন্টকে গ্রিড থেকে সরাতে চান?")) return;
-    try {
-      await deleteDoc(doc(db, "merchants", id));
+    const merchantRef = doc(db, "merchants", id);
+    deleteDoc(merchantRef).then(() => {
       toast({ title: "মার্চেন্ট অপসারিত" });
-    } catch (e) { toast({ title: "ত্রুটি", variant: "destructive" }); }
+    }).catch(async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: merchantRef.path,
+          operation: 'delete'
+        }));
+      }
+    });
   }
 
   const handleDownloadKit = () => {
     if (!lastOnboarded) return;
-    
-    // 1. Download Text Kit
     const kitContent = `
 =========================================
 SHURUKKHA HUB | সিরাজগঞ্জ সুরক্ষা 🛡️
@@ -145,7 +176,6 @@ Any unauthorized use will trigger system lockdown.
       description: "মার্চেন্ট ক্রেডেনশিয়াল এবং সার্টিফিকেট প্রস্তুত।",
     });
 
-    // 2. Trigger Print for Certificate
     setTimeout(() => {
       window.print();
     }, 500);
@@ -167,7 +197,6 @@ Any unauthorized use will trigger system lockdown.
 
   return (
     <div className="space-y-6">
-      {/* Printable Certificate - Hidden in UI, Visible in Print */}
       {lastOnboarded && (
         <div className="print-certificate hidden">
            <div className="w-[800px] h-[1000px] bg-slate-950 border-[12px] border-primary/20 relative p-12 overflow-hidden flex flex-col items-center text-center">

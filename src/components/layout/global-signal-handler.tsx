@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -10,11 +9,9 @@ import { CallOverlay } from '@/components/dashboard/call-overlay'
 import { Toaster } from '@/components/ui/toaster'
 import { AlertCenter } from '@/components/dashboard/alert-center'
 import { usePathname } from 'next/navigation'
+import { errorEmitter } from '@/firebase/error-emitter'
+import { FirestorePermissionError } from '@/firebase/errors'
 
-/**
- * @fileOverview Global Signal Handler.
- * Intercepts calls and messages across the entire application (Landing Page + Dashboard).
- */
 export function GlobalSignalHandler() {
   const { user } = useUser()
   const firestore = useFirestore()
@@ -26,9 +23,9 @@ export function GlobalSignalHandler() {
   useEffect(() => {
     if (!user || !firestore) return;
 
-    // 1. Universal Message Listener
+    const messagesRef = collection(db, "messages");
     const msgQuery = query(
-      collection(db, "messages"),
+      messagesRef,
       where("recipientId", "==", user.uid),
       limit(1)
     );
@@ -47,11 +44,18 @@ export function GlobalSignalHandler() {
           }
         }
       });
+    }, async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/messages',
+          operation: 'list'
+        }));
+      }
     });
 
-    // 2. Universal Incoming Call Listener
+    const sessionsRef = collection(db, 'webrtc_sessions');
     const callsQ = query(
-      collection(db, 'webrtc_sessions'),
+      sessionsRef,
       where('recipientId', '==', user.uid),
       where('status', '==', 'ringing')
     );
@@ -80,6 +84,13 @@ export function GlobalSignalHandler() {
           lastProcessedCallId.current = change.doc.id;
         }
       });
+    }, async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/webrtc_sessions',
+          operation: 'list'
+        }));
+      }
     });
 
     return () => {
@@ -88,12 +99,9 @@ export function GlobalSignalHandler() {
     };
   }, [user, firestore, activeCall]);
 
-  // Handle call acceptance from notification (simulated via postMessage from SW)
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.action === 'ACCEPT_CALL_FROM_NOTIFICATION') {
-        // The CallOverlay is already rendering due to the Firestore listener
-        // This just ensures the UI is prominent
         console.log("[Signal] Call accepted from background notification.");
       }
     };

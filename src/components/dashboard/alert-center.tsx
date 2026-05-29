@@ -8,14 +8,17 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { db } from '@/lib/firebase'
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore'
+import { errorEmitter } from '@/firebase/error-emitter'
+import { FirestorePermissionError } from '@/firebase/errors'
 
 export function AlertCenter() {
   const [alerts, setAlerts] = useState<any[]>([])
   const [isOpen, setIsOpen] = useState(false)
 
   useEffect(() => {
+    const alertsRef = collection(db, "suspect_profiles");
     const q = query(
-      collection(db, "suspect_profiles"), 
+      alertsRef, 
       orderBy("timestamp", "desc"), 
       limit(5)
     );
@@ -27,8 +30,12 @@ export function AlertCenter() {
         isNew: true 
       }));
       setAlerts(newAlerts);
-      if (newAlerts.length > 0 && !isOpen) {
-        // Simple notification sound or visual indicator logic could go here
+    }, async (err) => {
+      if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/suspect_profiles',
+          operation: 'list'
+        }));
       }
     });
 
@@ -69,7 +76,7 @@ export function AlertCenter() {
                         {alert.threatLevel} THREAT
                       </Badge>
                       <span className="text-[8px] text-muted-foreground font-mono">
-                        {new Date(alert.lastIncident).toLocaleTimeString()}
+                        {alert.timestamp?.toDate?.()?.toLocaleTimeString() || '00:00'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
