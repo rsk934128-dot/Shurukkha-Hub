@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -100,16 +101,28 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
       url: window.location.origin
     };
 
+    const fallbackCopy = async () => {
+      try {
+        await navigator.clipboard.writeText(`${shareData.text} \nলিঙ্ক: ${shareData.url}`);
+        toast({ title: "লিঙ্ক কপি করা হয়েছে", description: "শেয়ার করার জন্য তথ্য ক্লিপবোর্ডে সংরক্ষিত হয়েছে।" });
+      } catch (err) {
+        toast({ title: "শেয়ার ব্যর্থ", description: "লিঙ্ক কপি করা সম্ভব হয়নি।", variant: "destructive" });
+      }
+    };
+
     try {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        await navigator.clipboard.writeText(`${shareData.text} \nলিঙ্ক: ${shareData.url}`);
-        toast({ title: "লিঙ্ক কপি করা হয়েছে", description: "আপনি এখন এটি সবার সাথে শেয়ার করতে পারেন।" });
+        await fallbackCopy();
       }
+    } catch (err: any) {
+      // Fallback if sharing is denied or errors out
+      if (err.name !== 'AbortError') {
+        await fallbackCopy();
+      }
+    } finally {
       setOpenMobile(false);
-    } catch (err) {
-      console.error('Error sharing:', err);
     }
   }
 

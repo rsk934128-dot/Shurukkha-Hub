@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect, useState } from 'react'
@@ -60,18 +61,28 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
       url: window.location.origin
     };
 
+    const fallbackCopy = async () => {
+      try {
+        await navigator.clipboard.writeText(`${shareData.text} \nলিঙ্ক: ${shareData.url}`);
+        toast({
+          title: "লিঙ্ক কপি করা হয়েছে",
+          description: "শেয়ার করার জন্য তথ্য ক্লিপবোর্ডে সংরক্ষিত হয়েছে।",
+        });
+      } catch (err) {
+        toast({ title: "শেয়ার ব্যর্থ", description: "তথ্য কপি করা সম্ভব হয়নি।", variant: "destructive" });
+      }
+    };
+
     try {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        await navigator.clipboard.writeText(`${shareData.text} \nলিঙ্ক: ${shareData.url}`);
-        toast({
-          title: "লিঙ্ক কপি করা হয়েছে",
-          description: "আপনার ক্লিপবোর্ডে শেয়ার করার জন্য তথ্য সংরক্ষিত হয়েছে।",
-        });
+        await fallbackCopy();
       }
-    } catch (err) {
-      console.error('Error sharing:', err);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        await fallbackCopy();
+      }
     }
   };
 

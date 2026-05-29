@@ -53,6 +53,15 @@ export function IncidentReviewBoard() {
     const text = `ইমার্জেন্সি রিপোর্ট: ${getTypeLabel(incident.type)} \nবর্ণনা: ${incident.description} \nলোকেশন: ${incident.coordinates ? `${incident.coordinates.lat}, ${incident.coordinates.lng}` : 'N/A'}`;
     const url = window.location.origin;
 
+    const fallbackCopy = async () => {
+      try {
+        await navigator.clipboard.writeText(text + `\nলিঙ্ক: ${url}`);
+        toast({ title: "রিপোর্ট কপি করা হয়েছে", description: "শেয়ার করার জন্য তথ্য ক্লিপবোর্ডে সংরক্ষিত হয়েছে।" });
+      } catch (err) {
+        toast({ title: "শেয়ার ব্যর্থ", description: "তথ্য কপি করা সম্ভব হয়নি।", variant: "destructive" });
+      }
+    };
+
     try {
       if (navigator.share) {
         await navigator.share({
@@ -61,11 +70,12 @@ export function IncidentReviewBoard() {
           url: url
         });
       } else {
-        await navigator.clipboard.writeText(text + `\nলিঙ্ক: ${url}`);
-        toast({ title: "রিপোর্ট কপি করা হয়েছে", description: "এখন এটি সংশ্লিষ্ট কর্মকর্তাদের পাঠাতে পারেন।" });
+        await fallbackCopy();
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        await fallbackCopy();
+      }
     }
   }
 
