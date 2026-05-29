@@ -15,7 +15,8 @@ export type SecurityEvent =
   | '2FA_FAILED' 
   | 'LOCKDOWN_TRIGGERED' 
   | 'SENSITIVE_DATA_ACCESS' 
-  | 'TREASURY_WITHDRAWAL';
+  | 'TREASURY_WITHDRAWAL'
+  | 'OTP_DISPATCHED';
 
 export const AuditLogger = {
   /**

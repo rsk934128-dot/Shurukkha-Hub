@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Smartphone, ShieldCheck, Loader2, MessageSquare, ArrowRight, X, Phone, Volume2, Mic } from 'lucide-react'
+import { Smartphone, ShieldCheck, Loader2, MessageSquare, ArrowRight, X, Phone, Volume2, Mic, Send } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,7 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
   const [step, setStep] = useState<'phone' | 'otp'>('phone')
   const [loading, setLoading] = useState(false)
   const [isCalling, setIsCalling] = useState(false)
+  const [isSocialDispatching, setIsSocialDispatching] = useState<'whatsapp' | 'telegram' | null>(null)
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null)
   const [voiceOtp, setVoiceOtp] = useState<string | null>(null)
   
@@ -40,6 +41,7 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
       setConfirmationResult(null);
       setVoiceOtp(null);
       setIsCalling(false);
+      setIsSocialDispatching(null);
       if (recaptchaVerifierRef.current) {
         try {
           recaptchaVerifierRef.current.clear();
@@ -132,16 +134,42 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
     }
   }
 
+  const handleSocialOtp = async (platform: 'whatsapp' | 'telegram') => {
+    if (!phoneNumber || phoneNumber.length < 11) return;
+    
+    setIsSocialDispatching(platform);
+    try {
+      const response = await fetch('/api/v1/auth/dispatch-social-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber, platform })
+      });
+      const data = await response.json();
+      
+      if (data.status === 'SUCCESS') {
+        setVoiceOtp(data.otp); // Shared state for simulation
+        setStep('otp');
+        toast({ 
+          title: platform === 'whatsapp' ? "WhatsApp OTP" : "Telegram OTP", 
+          description: `আপনার ${platform === 'whatsapp' ? 'হোয়াটসঅ্যাপ' : 'টেলিগ্রাম'} নম্বরে কোড পাঠানো হয়েছে।` 
+        });
+      }
+    } catch (error) {
+      toast({ title: "Dispatch Failed", variant: "destructive" });
+    } finally {
+      setIsSocialDispatching(null);
+    }
+  }
+
   const handleVerifyOtp = async () => {
     if (!otp || otp.length !== 6) return;
 
     setLoading(true);
     try {
       if (voiceOtp && otp === voiceOtp) {
-        // Voice OTP simulation - in real app would link to custom token
-        toast({ title: "পরিচয় নিশ্চিত", description: "ভয়েস অথেন্টিকেশন সফল হয়েছে।" });
-        // Simulating idToken for handshake
-        onSuccess('est_voice_verified_' + btoa(phoneNumber));
+        // Shared logic for Voice/Social OTP simulation
+        toast({ title: "পরিচয় নিশ্চিত", description: "অথেন্টিকেশন সফল হয়েছে।" });
+        onSuccess('est_social_verified_' + btoa(phoneNumber));
       } else if (confirmationResult) {
         const userCredential = await confirmationResult.confirm(otp);
         const idToken = await userCredential.user.getIdToken();
@@ -168,38 +196,80 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
           <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto border border-primary/20 mb-4">
             {isCalling ? (
               <Phone className="text-accent animate-bounce" size={32} />
+            ) : isSocialDispatching ? (
+              <Send className="text-accent animate-pulse" size={32} />
             ) : (
               <Smartphone className="text-primary" size={32} />
             )}
           </div>
           <DialogTitle className="font-headline font-bold uppercase tracking-tight">
-            {isCalling ? "Imperial Voice Call" : "Sovereign Identity"}
+            {isCalling ? "Imperial Voice Call" : isSocialDispatching ? "Social Dispatch" : "Sovereign Identity"}
           </DialogTitle>
           <DialogDescription className="text-xs">
             {step === 'phone' 
               ? "সাম্রাজ্যে প্রবেশের জন্য আপনার মোবাইল নম্বরটি দিন।" 
-              : isCalling ? "সেনটিনেল এআই-এর কণ্ঠস্বর থেকে কোডটি সংগ্রহ করুন।" : "আপনার মোবাইলে পাঠানো কোডটি লিখুন।"}
+              : isCalling ? "সেনটিনেল এআই-এর কণ্ঠস্বর থেকে কোডটি সংগ্রহ করুন।" : "আপনার ডিভাইসে পাঠানো কোডটি লিখুন।"}
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-6 space-y-4">
           {step === 'phone' ? (
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">মোবাইল নম্বর</label>
-              <Input 
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="+88017XXXXXXXX"
-                disabled={loading || isCalling}
-                className="bg-background/50 border-primary/20 h-12 text-center text-lg font-mono"
-              />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">মোবাইল নম্বর</label>
+                <Input 
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="+88017XXXXXXXX"
+                  disabled={loading || isCalling || !!isSocialDispatching}
+                  className="bg-background/50 border-primary/20 h-12 text-center text-lg font-mono"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  disabled={loading || isCalling || !!isSocialDispatching}
+                  onClick={handleSendOtp}
+                  className="bg-primary text-background font-bold h-11 gap-2 text-[10px] uppercase"
+                >
+                  {loading ? <Loader2 className="animate-spin" size={14} /> : <MessageSquare size={14} />}
+                  SMS
+                </Button>
+                <Button 
+                  disabled={loading || isCalling || !!isSocialDispatching}
+                  onClick={handleVoiceCall}
+                  variant="outline"
+                  className="border-accent/20 text-accent hover:bg-accent/10 font-bold h-11 gap-2 text-[10px] uppercase"
+                >
+                  {isCalling ? <Loader2 className="animate-spin" size={14} /> : <Phone size={14} />}
+                  Voice Call
+                </Button>
+                <Button 
+                  disabled={loading || isCalling || !!isSocialDispatching}
+                  onClick={() => handleSocialOtp('whatsapp')}
+                  variant="outline"
+                  className="border-green-500/20 text-green-500 hover:bg-green-500/10 font-bold h-11 gap-2 text-[10px] uppercase"
+                >
+                   {isSocialDispatching === 'whatsapp' ? <Loader2 className="animate-spin" size={14} /> : <MessageSquare size={14} />}
+                   WhatsApp
+                </Button>
+                <Button 
+                  disabled={loading || isCalling || !!isSocialDispatching}
+                  onClick={() => handleSocialOtp('telegram')}
+                  variant="outline"
+                  className="border-sky-500/20 text-sky-500 hover:bg-sky-500/10 font-bold h-11 gap-2 text-[10px] uppercase"
+                >
+                   {isSocialDispatching === 'telegram' ? <Loader2 className="animate-spin" size={14} /> : <Send size={14} />}
+                   Telegram
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-2">
               <div className="flex justify-between items-center mb-1">
                 <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">গোপন কোড (OTP)</label>
                 {voiceOtp && (
-                  <Badge variant="outline" className="text-[7px] border-accent/40 text-accent animate-pulse">VOICE_SESSION_ACTIVE</Badge>
+                  <Badge variant="outline" className="text-[7px] border-accent/40 text-accent animate-pulse">SESSION_ACTIVE</Badge>
                 )}
               </div>
               <Input 
@@ -214,27 +284,7 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
         </div>
 
         <DialogFooter className="flex flex-col gap-2">
-          {step === 'phone' ? (
-            <>
-              <Button 
-                disabled={loading || isCalling}
-                onClick={handleSendOtp}
-                className="w-full bg-primary text-background font-bold h-12 gap-2"
-              >
-                {loading ? <Loader2 className="animate-spin" size={18} /> : <MessageSquare size={18} />}
-                {loading ? "প্রসেসিং..." : "এসএমএস পাঠান"}
-              </Button>
-              <Button 
-                disabled={loading || isCalling}
-                onClick={handleVoiceCall}
-                variant="outline"
-                className="w-full border-accent/20 text-accent hover:bg-accent/10 font-bold h-12 gap-2"
-              >
-                {isCalling ? <Loader2 className="animate-spin" size={18} /> : <Phone size={18} />}
-                {isCalling ? "কল করা হচ্ছে..." : "কল দিয়ে কোড বলুন"}
-              </Button>
-            </>
-          ) : (
+          {step === 'otp' && (
             <Button 
               disabled={loading}
               onClick={handleVerifyOtp}
