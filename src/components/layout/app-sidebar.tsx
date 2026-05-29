@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -26,7 +25,8 @@ import {
   Power,
   Wifi,
   ScanLine,
-  Signal
+  Signal,
+  Handshake
 } from "lucide-react"
 
 import {
@@ -241,6 +241,18 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                     <SearchCode size={18} className={activeTab === 'intelligence' ? "text-accent" : "text-muted-foreground"} />
                     <span className="font-medium">ইন্টেলিজেন্স বোর্ড</span>
                     <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent">RECON</Badge>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    isActive={activeTab === 'partnerships'} 
+                    onClick={() => handleNav('partnerships')}
+                    className="px-4 h-10 gap-3"
+                  >
+                    <Handshake size={18} className={activeTab === 'partnerships' ? "text-primary" : "text-muted-foreground"} />
+                    <span className="font-medium">অংশীদারিত্ব আবেদন</span>
+                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-primary/20 text-primary">NEW</Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 

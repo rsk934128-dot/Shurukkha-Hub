@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode, MessageSquare } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode, MessageSquare, Handshake } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { RiverTelemetry } from '@/components/dashboard/river-telemetry'
@@ -28,6 +27,7 @@ import { CommunicationConsole } from '@/components/dashboard/communication-conso
 import { SovereignLens } from '@/components/dashboard/sovereign-lens'
 import { CallOverlay } from '@/components/dashboard/call-overlay'
 import { SovereignAssistantChat } from '@/components/intelligence/sovereign-assistant-chat'
+import { PartnershipReviewBoard } from '@/components/dashboard/partnership-review-board'
 import { Toaster } from '@/components/ui/toaster'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -241,7 +241,7 @@ export default function ShurukkhaDashboard() {
   const handleSidebarNavigate = (view: string) => {
     if (view === 'lens') { setIsLensOpen(true); return; }
     setActiveView(view);
-    if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile', 'messages'].includes(view)) {
+    if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile', 'messages', 'partnerships'].includes(view)) {
       setActiveSubTab(view);
     }
   }
@@ -311,6 +311,7 @@ export default function ShurukkhaDashboard() {
                   <SovereignDomainManager />
                 </TabsContent>
                 <TabsContent value="treasury"><BankDirectory /></TabsContent>
+                <TabsContent value="partnerships"><PartnershipReviewBoard /></TabsContent>
               </Tabs>
             )}
           </main>
