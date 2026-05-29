@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Package, Truck, ClipboardList, Plus, Search, TrendingUp, ArrowDownWide, ShieldCheck, Landmark, Droplets, HeartPulse, Luggage, UserCheck, Activity, Loader2, MapPin, History, Trash2 } from 'lucide-react'
+import { Package, Truck, ClipboardList, Plus, Search, TrendingUp, ArrowDownWide, ShieldCheck, Landmark, Droplets, HeartPulse, Luggage, UserCheck, Activity, Loader2, MapPin, History, Trash2, Box } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -65,7 +64,6 @@ export function ReliefManagement() {
 
   const handleAddStock = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Mocking an addition logic for demo
     const form = e.target as HTMLFormElement
     const data = new FormData(form)
     
@@ -124,45 +122,45 @@ export function ReliefManagement() {
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
       {/* Strategic Overview Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-card/40 border-primary/20 p-5 space-y-2 relative overflow-hidden group">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="bg-card/40 border-primary/20 p-4 md:p-5 space-y-2 relative overflow-hidden group">
            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
               <Package size={60} className="text-primary" />
            </div>
-           <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Total SKU items</p>
-           <h3 className="text-2xl font-headline font-bold text-primary">{inventory.length}</h3>
+           <p className="text-[8px] md:text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Total SKU items</p>
+           <h3 className="text-xl md:text-2xl font-headline font-bold text-primary">{inventory.length}</h3>
            <p className="text-[8px] text-muted-foreground italic">রাজকীয় ভল্টে সংরক্ষিত ত্রাণ সামগ্রী</p>
         </Card>
-        <Card className="bg-card/40 border-accent/20 p-5 space-y-2 relative overflow-hidden group">
+        <Card className="bg-card/40 border-accent/20 p-4 md:p-5 space-y-2 relative overflow-hidden group">
            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
               <Truck size={60} className="text-accent" />
            </div>
-           <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Dispatched Missions</p>
-           <h3 className="text-2xl font-headline font-bold text-accent">{distributions.length}</h3>
+           <p className="text-[8px] md:text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Dispatched Missions</p>
+           <h3 className="text-xl md:text-2xl font-headline font-bold text-accent">{distributions.length}</h3>
            <p className="text-[8px] text-muted-foreground italic">মাঠপর্যায়ে পাঠানো ত্রাণের বহর</p>
         </Card>
-        <Card className="bg-card/40 border-primary/20 p-5 space-y-2 relative overflow-hidden group">
+        <Card className="bg-card/40 border-primary/20 p-4 md:p-5 space-y-2 relative overflow-hidden group">
            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
               <UserCheck size={60} className="text-primary" />
            </div>
-           <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Beneficiaries</p>
-           <h3 className="text-2xl font-headline font-bold text-foreground">12.4K</h3>
+           <p className="text-[8px] md:text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Beneficiaries</p>
+           <h3 className="text-xl md:text-2xl font-headline font-bold text-foreground">12.4K</h3>
            <p className="text-[8px] text-muted-foreground italic">মোট সাহায্যপ্রাপ্ত নাগরিকের সংখ্যা</p>
         </Card>
-        <Card className="bg-card/40 border-accent/20 p-5 space-y-2 relative overflow-hidden group">
+        <Card className="bg-card/40 border-accent/20 p-4 md:p-5 space-y-2 relative overflow-hidden group">
            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
               <Activity size={60} className="text-accent" />
            </div>
-           <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Efficiency</p>
-           <h3 className="text-2xl font-headline font-bold text-accent">98.2%</h3>
-           <p className="text-[8px] text-muted-foreground italic">ত্রাণ বিতরণে লজিস্টিক নির্ভুলতা</p>
+           <p className="text-[8px] md:text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Logistics Hubs</p>
+           <h3 className="text-xl md:text-2xl font-headline font-bold text-accent">9/9</h3>
+           <p className="text-[8px] text-muted-foreground italic">উপজেলা ভিত্তিক কমান্ড সেন্টার</p>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Main Content Area */}
         <div className="lg:col-span-8 space-y-6">
-          <Card className="bg-card/60 backdrop-blur-xl border-white/10 overflow-hidden shadow-2xl">
+          <Card className="bg-card/60 backdrop-blur-xl border-white/10 overflow-hidden shadow-2xl rounded-[2rem]">
             <CardHeader className="bg-primary/5 border-b border-white/5 py-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -201,7 +199,7 @@ export function ReliefManagement() {
                </button>
             </div>
 
-            <ScrollArea className="h-[500px]">
+            <ScrollArea className="h-[450px] md:h-[500px]">
               <div className="p-4 space-y-3">
                 {activeTab === 'inventory' ? (
                   filteredInventory.length === 0 ? (

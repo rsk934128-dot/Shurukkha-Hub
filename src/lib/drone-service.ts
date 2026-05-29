@@ -14,12 +14,14 @@ export interface DroneNode {
   battery: number;
   currentLocation: string;
   isFeedActive: boolean;
+  detectedAnomalies?: number; // e.g., houses damaged
 }
 
 export const DroneService = {
   drones: [
     { id: 'DRONE_ALPHA_01', status: 'IDLE', battery: 98, currentLocation: 'Sadar Base', isFeedActive: false },
-    { id: 'DRONE_BRAVO_02', status: 'IDLE', battery: 100, currentLocation: 'Enayetpur Base', isFeedActive: false }
+    { id: 'DRONE_BRAVO_02', status: 'IDLE', battery: 100, currentLocation: 'Enayetpur Base', isFeedActive: false },
+    { id: 'DRONE_CHARLIE_03', status: 'IDLE', battery: 85, currentLocation: 'Belkuchi Base', isFeedActive: false }
   ] as DroneNode[],
 
   /**
@@ -37,11 +39,17 @@ export const DroneService = {
     setTimeout(() => {
       drone.status = 'VERIFYING';
       drone.isFeedActive = true;
-      console.log(`[AERIAL COMMAND] ${drone.id} reached destination. Feed ACTIVE.`);
+      drone.detectedAnomalies = Math.floor(Math.random() * 50) + 10;
+      console.log(`[AERIAL COMMAND] ${drone.id} reached destination. Feed ACTIVE. Anomalies detected.`);
       
       IntegrationBridge.broadcastEvent({
         type: 'ORCHESTRATION_EVENT',
-        payload: { action: 'DRONE_VERIFICATION_STARTED', droneId: drone.id, target: location },
+        payload: { 
+          action: 'DRONE_VERIFICATION_COMPLETE', 
+          droneId: drone.id, 
+          target: location,
+          damageAssessment: `${drone.detectedAnomalies} households affected`
+        },
         timestamp: new Date().toISOString()
       });
     }, 5000);

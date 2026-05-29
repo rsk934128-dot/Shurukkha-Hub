@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Map as MapIcon, Info, Navigation, Search, Layers, Waves, ShieldCheck, Plane, Signal, Radio, ArrowUpRight, Crosshair, Zap, Activity, Loader2 } from 'lucide-react'
+import { Map as MapIcon, Info, Navigation, Search, Layers, Waves, ShieldCheck, Plane, Signal, Radio, ArrowUpRight, Crosshair, Zap, Activity, Loader2, MapPinned } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,10 +43,8 @@ export function ResourceMap() {
         purity: 'SOVEREIGN_V31'
       }
 
-      // 1. Trigger the SOS Alert
       await addDoc(collection(db, "sos_alerts"), warningData);
 
-      // 2. Log in Audit Trail
       await addDoc(collection(db, "audit_trails"), {
         action: 'GLOBAL_EVACUATION_TRIGGERED_MANUALLY',
         details: { riskLevel: 'EXTREME', source: 'SOVEREIGN_GIS_COMMAND' },
@@ -152,8 +150,8 @@ export function ResourceMap() {
                    key={drone.id} 
                    className="absolute transition-all duration-[3000ms] ease-in-out"
                    style={{ 
-                     top: drone.status === 'DEPLOYED' ? '30%' : '15%', 
-                     left: drone.status === 'DEPLOYED' ? '60%' : '10%',
+                     top: drone.status === 'DEPLOYED' ? '30%' : (i === 0 ? '15%' : '45%'), 
+                     left: drone.status === 'DEPLOYED' ? '60%' : (i === 0 ? '10%' : '80%'),
                      transform: `rotate(${mapRotation}deg)`
                    }}
                  >
@@ -199,14 +197,18 @@ export function ResourceMap() {
                           <p className="text-[9px] font-mono text-accent uppercase tracking-[0.4em] neon-text-accent">LIVE_RECON_FEED: {drone.id}</p>
                        </div>
 
-                       <Badge className="absolute top-2 left-2 bg-red-600/80 text-[7px] animate-pulse rounded-sm">REC 00:04:12</Badge>
+                       <Badge className="absolute top-2 left-2 bg-red-600/80 text-[7px] animate-pulse rounded-sm uppercase">AI_RECON_ACTIVE</Badge>
                        
                        <div className="absolute bottom-2 right-2 flex flex-col gap-1 items-end">
                           <div className="flex gap-1">
                              <Badge variant="outline" className="text-[7px] border-white/20 text-white bg-black/60">24.3636° N</Badge>
                              <Badge variant="outline" className="text-[7px] border-white/20 text-white bg-black/60">89.6732° E</Badge>
                           </div>
-                          <p className="text-[6px] font-mono text-accent/60">SIG_STRENGTH: 98%</p>
+                          {drone.detectedAnomalies && (
+                            <Badge className="bg-accent text-background text-[8px] font-bold">
+                              ANOMALIES: {drone.detectedAnomalies}
+                            </Badge>
+                          )}
                        </div>
 
                        <div className="absolute inset-0 bg-accent/5 opacity-0 group-hover/feed:opacity-100 transition-opacity flex items-center justify-center">
@@ -217,6 +219,12 @@ export function ResourceMap() {
                     </div>
                  </Card>
                ))}
+               {drones.filter(d => d.isFeedActive).length === 0 && (
+                 <div className="col-span-full p-10 text-center opacity-30">
+                    <Plane size={48} className="mx-auto mb-4" />
+                    <p className="text-xs uppercase font-bold tracking-widest">No Active Recon Feeds</p>
+                 </div>
+               )}
             </div>
           ) : viewMode === 'flood_overlay' ? (
             <div className="max-w-xl p-5 bg-destructive/10 backdrop-blur-2xl border border-destructive/40 rounded-3xl space-y-4 animate-in zoom-in-95 duration-500 neon-glow-destructive">

@@ -1,7 +1,7 @@
 /**
  * @fileOverview Autonomous Orchestrator for Shurukkha Hub.
  * Coordinates between SOS triggers, AI flows, and the Dispatcher console.
- * UPDATED Phase 31.0: Added Drone Deployment and Impact Analysis.
+ * UPDATED Phase 32.0: Added Drone Deployment and Impact Analysis integration.
  */
 
 import { db } from './firebase';
@@ -72,11 +72,11 @@ export class AutonomousOrchestrator {
         if (advice.automaticAlertTriggered) {
           await this.broadcastGlobalEvacuation(advice);
           
-          // Phase 31.0: Deploy Drones for Ground Verification
+          // Phase 32.0: Deploy Drones for Ground Verification
           const area = advice.predictiveAnalytics?.hotspots[0] || "Various Locations";
           await DroneService.deployToLocation(area);
 
-          // Phase 31.0: Run Financial Impact Simulation
+          // Phase 32.0: Run Financial Impact Simulation
           const impact = await ImpactAnalyzer.analyzeImpact(advice.riskLevel, area);
           await this.recordImpactAudit(impact);
         }
