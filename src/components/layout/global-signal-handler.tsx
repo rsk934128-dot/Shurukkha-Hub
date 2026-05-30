@@ -1,8 +1,9 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useFirestore, useUser } from '@/firebase'
-import { collection, query, where, onSnapshot, limit } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, limit, or } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { NotificationManager } from '@/lib/notification-manager'
 import { CallOverlay } from '@/components/dashboard/call-overlay'
@@ -23,6 +24,7 @@ export function GlobalSignalHandler() {
   useEffect(() => {
     if (!user || !firestore) return;
 
+    // 1. Message Listener
     const messagesRef = collection(db, "messages");
     const msgQuery = query(
       messagesRef,
@@ -53,10 +55,12 @@ export function GlobalSignalHandler() {
       }
     });
 
+    // 2. Call Listener (Enhanced to handle both Caller and Recipient)
     const sessionsRef = collection(db, 'webrtc_sessions');
+    
+    // We listen for any active ringing session where the user is a participant
     const callsQ = query(
       sessionsRef,
-      where('recipientId', '==', user.uid),
       where('status', '==', 'ringing')
     );
 
@@ -64,22 +68,31 @@ export function GlobalSignalHandler() {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added' && !activeCall) {
           const data = change.doc.data();
+          
+          // Only proceed if current user is part of this call
+          const isRecipient = data.recipientId === user.uid;
+          const isCaller = data.callerId === user.uid;
+          
+          if (!isRecipient && !isCaller) return;
           if (lastProcessedCallId.current === change.doc.id) return;
 
           setActiveCall({
             sessionId: change.doc.id,
             callerId: data.callerId,
-            callerName: data.callerName,
-            callerAvatar: data.callerAvatar,
+            callerName: isRecipient ? data.callerName : data.recipientName,
+            callerAvatar: isRecipient ? data.callerAvatar : data.recipientAvatar,
             type: data.type,
-            isIncoming: true
+            isIncoming: isRecipient
           });
           
-          NotificationManager.sendCallNotification(
-            data.callerName || "অজ্ঞাত নাগরিক",
-            data.type === 'video' ? "ভিডিও কল দিচ্ছেন..." : "অডিও কল দিচ্ছেন...",
-            change.doc.id
-          );
+          // Only send push notification if user is receiving the call
+          if (isRecipient) {
+            NotificationManager.sendCallNotification(
+              data.callerName || "অজ্ঞাত নাগরিক",
+              data.type === 'video' ? "ভিডিও কল দিচ্ছেন..." : "অডিও কল দিচ্ছেন...",
+              change.doc.id
+            );
+          }
           
           lastProcessedCallId.current = change.doc.id;
         }
