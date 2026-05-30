@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Landmark, Users, Clock, TrendingUp, DollarSign, ShieldCheck, PieChart, Activity, UserCheck, Briefcase, Calculator, ArrowUpRight, Zap, Target, Gavel, Scale, Trophy, Rocket, Sparkles, Star, Terminal, Loader2, Code2, CheckCircle2, Database } from 'lucide-react'
+import { Landmark, Users, Clock, TrendingUp, DollarSign, ShieldCheck, PieChart, Activity, UserCheck, Briefcase, Calculator, ArrowUpRight, Zap, Target, Gavel, Scale, Trophy, Rocket, Sparkles, Star, Terminal, Loader2, Code2, CheckCircle2, Database, Globe } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -213,7 +212,7 @@ export function ImperialManagement() {
           <Card className="bg-card/40 border-primary/20 rounded-[2.5rem] overflow-hidden">
              <CardHeader className="bg-primary/5 border-b border-white/5 py-6">
                 <CardTitle className="text-xs font-headline uppercase tracking-[0.2em] flex items-center gap-2">
-                   <Calculator size={18} className="text-primary" /> Payroll & Settlement Ledger
+                   <Calculator size={18} /> Payroll & Settlement Ledger
                 </CardTitle>
              </CardHeader>
              <CardContent className="p-6 space-y-6">
