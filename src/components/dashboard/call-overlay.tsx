@@ -1,13 +1,14 @@
+
 "use client"
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, ShieldCheck, Loader2, User, Volume2, VolumeX, Activity, Zap, X, Maximize2, Smartphone, Speaker, RefreshCw } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { WebRTCManager } from '@/lib/webrtc-signaling'
 import { db } from '@/lib/firebase'
-import { doc, updateDoc, onSnapshot, deleteDoc } from 'firebase/firestore'
+import { doc, updateDoc, onSnapshot, deleteDoc, getDoc } from 'firebase/firestore'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
@@ -27,7 +28,7 @@ interface CallOverlayProps {
 }
 
 export function CallOverlay({ callData, onClose }: CallOverlayProps) {
-  const [status, setStatus] = useState<'ringing' | 'connected' | 'ended'>('ringing')
+  const [status, setStatus] = useState<'ringing' | 'connected' | 'ended' | 'idle'>('ringing')
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
   const [isMuted, setIsMicMuted] = useState(false)
@@ -44,8 +45,130 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const timerRef = useRef<any>(null)
   const ringtoneIntervalRef = useRef<any>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const isTerminatingRef = useRef(false)
+  
   const { playAlertSound } = useAudioEngine()
   const { toast } = useToast()
+
+  const stopRingtone = useCallback(() => {
+    if (ringtoneIntervalRef.current) {
+      clearInterval(ringtoneIntervalRef.current)
+      ringtoneIntervalRef.current = null
+    }
+  }, [])
+
+  const startRingtone = useCallback(() => {
+    stopRingtone()
+    playAlertSound()
+    ringtoneIntervalRef.current = setInterval(playAlertSound, 3000)
+  }, [playAlertSound, stopRingtone])
+
+  const cleanupStreams = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (localStream) {
+      localStream.getTracks().forEach(t => t.stop());
+      setLocalStream(null);
+    }
+    if (remoteStream) {
+      remoteStream.getTracks().forEach(t => t.stop());
+      setRemoteStream(null);
+    }
+    
+    webrtcRef.current?.dispose();
+    webrtcRef.current = null;
+    
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    stopRingtone();
+  }, [localStream, remoteStream, stopRingtone])
+
+  const handleEndCall = useCallback(async (shouldUpdateServer = true) => {
+    if (isTerminatingRef.current) return;
+    isTerminatingRef.current = true;
+    
+    stopRingtone();
+    setStatus('ended');
+
+    if (callData && shouldUpdateServer) {
+      const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
+      try {
+        const snap = await getDoc(sessionRef);
+        if (snap.exists() && snap.data().status !== 'ended') {
+          await updateDoc(sessionRef, { status: 'ended' });
+        }
+        // Imperial Grace Period: Wait before deleting to ensure both nodes sync
+        setTimeout(async () => {
+          try {
+            await deleteDoc(sessionRef);
+          } catch (e) {}
+        }, 5000);
+      } catch (err: any) {
+        if (err.code === 'permission-denied') {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: sessionRef.path,
+            operation: 'write'
+          }));
+        }
+      }
+    }
+
+    setTimeout(() => {
+      cleanupStreams();
+      onClose();
+      isTerminatingRef.current = false;
+    }, 1000);
+  }, [callData, cleanupStreams, onClose, stopRingtone])
+
+  const initiateOutgoingCall = useCallback(async () => {
+    if (!callData) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: callData.type === 'video' ? { facingMode: 'user' } : false, 
+        audio: WebRTCManager.getAudioConstraints() 
+      });
+      streamRef.current = stream;
+      setLocalStream(stream);
+      webrtcRef.current = new WebRTCManager(callData.sessionId);
+      await webrtcRef.current.createCall(stream, (remote) => {
+        setRemoteStream(remote);
+      });
+    } catch (e) {
+      console.error("Call initiation failed", e);
+      handleEndCall(true);
+    }
+  }, [callData, handleEndCall])
+
+  const handleAccept = async () => {
+    if (!callData) return;
+    stopRingtone(); 
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: callData.type === 'video' ? { facingMode: 'user' } : false, 
+        audio: WebRTCManager.getAudioConstraints()
+      });
+      streamRef.current = stream;
+      setLocalStream(stream);
+      webrtcRef.current = new WebRTCManager(callData.sessionId);
+      await webrtcRef.current.answerCall(stream, (remote) => {
+        setRemoteStream(remote);
+      });
+      
+      const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
+      await updateDoc(sessionRef, { status: 'connected' });
+      
+      setStatus('connected');
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => setTimer(prev => prev + 1), 1000);
+    } catch (e: any) {
+      console.error("Call acceptance failed", e);
+      handleEndCall(true);
+    }
+  }
 
   useEffect(() => {
     if (status !== 'connected' || callData?.type === 'video') return;
@@ -65,59 +188,31 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     return () => window.removeEventListener('deviceorientation', handleOrientation);
   }, [status, callData?.type]);
 
-  const stopRingtone = () => {
-    if (ringtoneIntervalRef.current) {
-      clearInterval(ringtoneIntervalRef.current)
-      ringtoneIntervalRef.current = null
-    }
-  }
-
-  const startRingtone = () => {
-    stopRingtone()
-    playAlertSound()
-    ringtoneIntervalRef.current = setInterval(playAlertSound, 3000)
-  }
-
-  const cleanupStreams = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    if (localStream) {
-      localStream.getTracks().forEach(t => t.stop());
-      setLocalStream(null);
-    }
-    if (remoteStream) {
-      remoteStream.getTracks().forEach(t => t.stop());
-      setRemoteStream(null);
-    }
-    
-    webrtcRef.current?.dispose();
-    stopTimer();
-    stopRingtone();
-  }
-
   useEffect(() => {
     if (callData) {
       setStatus('ringing');
       setTimer(0);
       setRemoteStream(null);
+      isTerminatingRef.current = false;
       
       const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
       
       const unsubscribe = onSnapshot(sessionRef, (snap) => {
         if (!snap.exists()) {
-          handleEndCall();
+          if (status !== 'idle' && status !== 'ended') {
+            handleEndCall(false);
+          }
           return;
         }
         const data = snap.data();
         if (data.status === 'connected' && status === 'ringing') {
           setStatus('connected');
           stopRingtone();
-          startTimer();
+          if (timerRef.current) clearInterval(timerRef.current);
+          timerRef.current = setInterval(() => setTimer(prev => prev + 1), 1000);
         }
-        if (data.status === 'ended') {
-          handleEndCall();
+        if (data.status === 'ended' && status !== 'ended') {
+          handleEndCall(false);
         }
       }, async (err) => {
         if (err.code === 'permission-denied') {
@@ -139,7 +234,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         cleanupStreams();
       };
     }
-  }, [callData?.sessionId]);
+  }, [callData?.sessionId, startRingtone, initiateOutgoingCall, handleEndCall, cleanupStreams, stopRingtone, status]);
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
@@ -153,88 +248,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       remoteVideoRef.current.play().catch(e => console.warn("[WebRTC] Autoplay prevented", e));
     }
   }, [remoteStream, status]);
-
-  const initiateOutgoingCall = async () => {
-    if (!callData) return;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: callData.type === 'video' ? { facingMode: 'user' } : false, 
-        audio: WebRTCManager.getAudioConstraints() 
-      });
-      streamRef.current = stream;
-      setLocalStream(stream);
-      webrtcRef.current = new WebRTCManager(callData.sessionId);
-      await webrtcRef.current.createCall(stream, (remote) => {
-        setRemoteStream(remote);
-      });
-    } catch (e) {
-      console.error("Call initiation failed", e);
-      handleEndCall();
-    }
-  }
-
-  const handleAccept = async () => {
-    if (!callData) return;
-    stopRingtone(); 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: callData.type === 'video' ? { facingMode: 'user' } : false, 
-        audio: WebRTCManager.getAudioConstraints()
-      });
-      streamRef.current = stream;
-      setLocalStream(stream);
-      webrtcRef.current = new WebRTCManager(callData.sessionId);
-      await webrtcRef.current.answerCall(stream, (remote) => {
-        setRemoteStream(remote);
-      });
-      
-      const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
-      updateDoc(sessionRef, { status: 'connected' }).catch(async (err) => {
-        if (err.code === 'permission-denied') {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: sessionRef.path,
-            operation: 'update',
-            requestResourceData: { status: 'connected' }
-          }));
-        }
-      });
-      
-      setStatus('connected');
-      startTimer();
-    } catch (e) {
-      console.error("Call acceptance failed", e);
-      handleEndCall();
-    }
-  }
-
-  const handleEndCall = async () => {
-    stopRingtone();
-    if (callData) {
-      const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
-      updateDoc(sessionRef, { status: 'ended' }).catch(async (err) => {
-        if (err.code === 'permission-denied') {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: sessionRef.path,
-            operation: 'update',
-            requestResourceData: { status: 'ended' }
-          }));
-        }
-      });
-      setTimeout(() => {
-        deleteDoc(sessionRef).catch(async (err) => {
-          if (err.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: sessionRef.path,
-              operation: 'delete'
-            }));
-          }
-        });
-      }, 1000);
-    }
-    cleanupStreams();
-    setStatus('ended');
-    onClose();
-  }
 
   const handleSwitchCamera = async () => {
     if (!localStream || !webrtcRef.current || callData?.type !== 'video' || isSwitchingCamera) return;
@@ -270,18 +283,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     }
   };
 
-  const startTimer = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => setTimer(prev => prev + 1), 1000);
-  }
-
-  const stopTimer = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }
-
   const formatTime = (s: number) => {
     const mins = Math.floor(s / 60);
     const secs = s % 60;
@@ -291,7 +292,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   if (!callData) return null;
 
   return (
-    <Dialog open={!!callData} onOpenChange={(open) => !open && handleEndCall()}>
+    <Dialog open={!!callData} onOpenChange={(open) => !open && handleEndCall(true)}>
       <DialogContent className="max-w-[100vw] h-[100dvh] md:max-w-4xl md:h-auto md:aspect-video bg-[#05070a] border-none md:border md:border-primary/20 p-0 overflow-hidden md:rounded-[2.5rem] shadow-2xl z-[100]">
         <DialogHeader className="sr-only">
           <DialogTitle>Sovereign Communication Hub</DialogTitle>
@@ -335,7 +336,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                     <span className="text-[10px] font-bold uppercase tracking-widest text-green-500">Accept</span>
                   </div>
                   <div className="flex flex-col items-center gap-3">
-                    <Button onClick={handleEndCall} className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-[0_0_40px_rgba(239,68,68,0.4)] border-4 border-background">
+                    <Button onClick={() => handleEndCall(true)} className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-[0_0_40px_rgba(239,68,68,0.4)] border-4 border-background">
                       <PhoneOff size={32} />
                     </Button>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-destructive">Decline</span>
@@ -389,6 +390,9 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                   <h2 className="text-2xl md:text-3xl font-headline font-bold tracking-tight">{callData.callerName}</h2>
                   <p className="text-xs font-mono text-primary uppercase tracking-[0.4em] animate-pulse">Calling Node...</p>
                 </div>
+                <Button onClick={() => handleEndCall(true)} variant="destructive" className="h-16 w-16 rounded-full mt-4">
+                  <PhoneOff size={24} />
+                </Button>
              </div>
           )}
 
@@ -414,7 +418,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             )}
           </div>
 
-          {(status === 'connected' || (status === 'ringing' && !callData.isIncoming)) && (
+          {(status === 'connected') && (
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-wrap items-center gap-4 md:gap-8 z-40 bg-black/40 backdrop-blur-3xl p-4 px-6 md:px-12 rounded-[2.5rem] border border-white/10 shadow-2xl transition-all w-[95%] md:w-auto justify-center">
               <div className="flex flex-col items-center gap-2">
                 <Button 
@@ -481,7 +485,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                 </div>
               )}
 
-              <Button onClick={handleEndCall} className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-transform active:scale-90 border-4 border-background">
+              <Button onClick={() => handleEndCall(true)} className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-transform active:scale-90 border-4 border-background">
                 <PhoneOff size={32} className="md:w-8 md:h-8" />
               </Button>
             </div>
