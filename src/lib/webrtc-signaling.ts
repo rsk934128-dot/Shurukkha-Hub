@@ -3,7 +3,7 @@
 
 /**
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
- * Optimized Phase 32.2: Locked-Identity Stream Protocol and robust track management.
+ * Optimized Phase 32.2: Locked-Identity Stream Protocol and Studio-Grade AV Sync.
  */
 
 import { db } from './firebase';
@@ -16,6 +16,8 @@ import {
   updateDoc, 
   getDoc,
 } from 'firebase/firestore';
+import { AVController } from './av-controller';
+import { AudioProcessor } from './audio-processor';
 
 export class WebRTCManager {
   private sessionId: string;
@@ -24,6 +26,7 @@ export class WebRTCManager {
   private isProcessingRemoteDescription = false;
   private remoteStream: MediaStream = new MediaStream();
   private isDisposed = false;
+  private audioProcessor: AudioProcessor = new AudioProcessor();
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
@@ -50,45 +53,13 @@ export class WebRTCManager {
     };
   }
 
-  async replaceVideoTrack(newTrack: MediaStreamTrack) {
-    if (!this.peerConnection || this.isDisposed) return;
-    const senders = this.peerConnection.getSenders();
-    const videoSender = senders.find(s => s.track?.kind === 'video');
-    if (videoSender) {
-      console.log("[WebRTC] Swapping lenses...");
-      await videoSender.replaceTrack(newTrack);
-    }
-  }
-
-  private async addCandidate(candidate: RTCIceCandidateInit) {
-    if (!this.peerConnection || this.isDisposed) return;
-
-    if (this.peerConnection.remoteDescription && !this.isProcessingRemoteDescription) {
-      try {
-        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (e) {
-        console.warn("[WebRTC] Delayed candidate integration.");
-      }
-    } else {
-      this.candidateQueue.push(candidate);
-    }
-  }
-
-  private async flushCandidates() {
-    if (!this.peerConnection || !this.peerConnection.remoteDescription || this.isDisposed) return;
-    console.log(`[WebRTC] Releasing ${this.candidateQueue.length} queued candidates...`);
-    while (this.candidateQueue.length > 0) {
-      const candidate = this.candidateQueue.shift();
-      if (candidate) {
-        try {
-          await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (e) {}
-      }
-    }
-  }
-
   async createCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
     if (this.isDisposed) return;
+
+    // Phase 31.5: Optimize local stream before sending
+    const optimizedStream = await AVController.optimizeStream(localStream);
+    const isolatedStream = await this.audioProcessor.isolateVoice(optimizedStream);
+
     this.peerConnection = new RTCPeerConnection(this.rtcConfig);
     
     this.peerConnection.ontrack = (event) => {
@@ -102,8 +73,8 @@ export class WebRTCManager {
       onRemoteStream(this.remoteStream);
     };
 
-    localStream.getTracks().forEach(track => {
-      this.peerConnection?.addTrack(track, localStream);
+    isolatedStream.getTracks().forEach(track => {
+      this.peerConnection?.addTrack(track, isolatedStream);
     });
 
     const sessionRef = doc(db, 'webrtc_sessions', this.sessionId);
@@ -115,7 +86,11 @@ export class WebRTCManager {
       }
     };
 
-    const offerDescription = await this.peerConnection.createOffer();
+    const offerDescription = await this.peerConnection.createOffer({
+      offerToReceiveAudio: true,
+      offerToReceiveVideo: true
+    });
+    
     await this.peerConnection.setLocalDescription(offerDescription);
 
     const offer = { sdp: offerDescription.sdp, type: offerDescription.type };
@@ -158,6 +133,11 @@ export class WebRTCManager {
 
   async answerCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
     if (this.isDisposed) return;
+
+    // Phase 31.5: Optimize local stream
+    const optimizedStream = await AVController.optimizeStream(localStream);
+    const isolatedStream = await this.audioProcessor.isolateVoice(optimizedStream);
+
     this.peerConnection = new RTCPeerConnection(this.rtcConfig);
 
     this.peerConnection.ontrack = (event) => {
@@ -171,8 +151,8 @@ export class WebRTCManager {
       onRemoteStream(this.remoteStream);
     };
 
-    localStream.getTracks().forEach(track => {
-      this.peerConnection?.addTrack(track, localStream);
+    isolatedStream.getTracks().forEach(track => {
+      this.peerConnection?.addTrack(track, isolatedStream);
     });
 
     const sessionRef = doc(db, 'webrtc_sessions', this.sessionId);
@@ -217,8 +197,32 @@ export class WebRTCManager {
     return () => unsubCandidates();
   }
 
+  private async addCandidate(candidate: RTCIceCandidateInit) {
+    if (!this.peerConnection || this.isDisposed) return;
+    if (this.peerConnection.remoteDescription && !this.isProcessingRemoteDescription) {
+      try {
+        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (e) {}
+    } else {
+      this.candidateQueue.push(candidate);
+    }
+  }
+
+  private async flushCandidates() {
+    if (!this.peerConnection || !this.peerConnection.remoteDescription || this.isDisposed) return;
+    while (this.candidateQueue.length > 0) {
+      const candidate = this.candidateQueue.shift();
+      if (candidate) {
+        try {
+          await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {}
+      }
+    }
+  }
+
   dispose() {
     this.isDisposed = true;
+    this.audioProcessor.dispose();
     if (this.peerConnection) {
       this.peerConnection.onicecandidate = null;
       this.peerConnection.ontrack = null;

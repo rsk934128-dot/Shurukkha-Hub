@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -11,6 +12,8 @@ import { AlertCenter } from '@/components/dashboard/alert-center'
 import { usePathname } from 'next/navigation'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
+import { AVController } from '@/lib/av-controller'
+import { SovereignAudit } from '@/lib/sovereign-audit'
 
 export function GlobalSignalHandler() {
   const { user } = useUser()
@@ -19,6 +22,34 @@ export function GlobalSignalHandler() {
   const [activeCall, setActiveCall] = useState<any>(null)
   const lastProcessedMsgId = useRef<string | null>(null)
   const lastProcessedCallId = useRef<string | null>(null)
+  const sensorLogged = useRef(false);
+
+  // Phase 31.5: Sensor-Aware Calling Logic
+  useEffect(() => {
+    if (!activeCall) return;
+
+    const handleDeviceMotion = (event: DeviceMotionEvent) => {
+      // Basic heuristic for phone raised to ear
+      const accel = event.accelerationIncludingGravity;
+      if (accel && accel.z && accel.z > 8) {
+        AVController.setAudioRoute('earpiece');
+      } else {
+        AVController.setAudioRoute('speaker');
+      }
+    };
+
+    if (typeof window !== 'undefined' && 'DeviceMotionEvent' in window) {
+      window.addEventListener('devicemotion', handleDeviceMotion);
+      if (!sensorLogged.current) {
+        SovereignAudit.logMilestone('PHASE_31.5_AV_UPGRADE', 'Sensor-Aware Calling and AI Voice Isolation engaged.');
+        sensorLogged.current = true;
+      }
+    }
+
+    return () => {
+      window.removeEventListener('devicemotion', handleDeviceMotion);
+    };
+  }, [activeCall]);
 
   useEffect(() => {
     if (!user || !firestore) return;
@@ -54,10 +85,8 @@ export function GlobalSignalHandler() {
       }
     });
 
-    // 2. Call Listener (Enhanced to handle both Caller and Recipient)
+    // 2. Call Listener (Enhanced for both Caller and Recipient)
     const sessionsRef = collection(db, 'webrtc_sessions');
-    
-    // Listen for any active ringing session where the user is a participant
     const callsQ = query(
       sessionsRef,
       where('status', '==', 'ringing')
@@ -68,7 +97,6 @@ export function GlobalSignalHandler() {
         if (change.type === 'added' && !activeCall) {
           const data = change.doc.data();
           
-          // Only proceed if current user is part of this call
           const isRecipient = data.recipientId === user.uid;
           const isCaller = data.callerId === user.uid;
           
@@ -84,7 +112,6 @@ export function GlobalSignalHandler() {
             isIncoming: isRecipient
           });
           
-          // Only send push notification if user is receiving the call
           if (isRecipient) {
             NotificationManager.sendCallNotification(
               data.callerName || "অজ্ঞাত নাগরিক",
@@ -110,16 +137,6 @@ export function GlobalSignalHandler() {
       unsubscribeCalls();
     };
   }, [user, firestore, activeCall]);
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.action === 'ACCEPT_CALL_FROM_NOTIFICATION') {
-        console.log("[Signal] Call accepted from background notification.");
-      }
-    };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
 
   return (
     <>

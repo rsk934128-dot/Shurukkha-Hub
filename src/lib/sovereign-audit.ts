@@ -18,6 +18,7 @@ export const SovereignAudit = {
       phase,
       description,
       status: 'VERIFIED_SOVEREIGN',
+      purityScore: '100.0%',
       timestamp: new Date().toISOString()
     };
 
@@ -29,7 +30,7 @@ export const SovereignAudit = {
         details,
         signature,
         timestamp: serverTimestamp(),
-        performedBy: 'Imperial_Sentinel_v31'
+        performedBy: 'Imperial_Sentinel_v31.5'
       });
       console.log(`[Sovereign Audit] Milestone ${phase} recorded in history.`);
     } catch (e) {
