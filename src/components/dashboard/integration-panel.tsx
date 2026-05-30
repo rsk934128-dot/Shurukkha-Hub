@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Globe, Key, Cpu, Zap, Database, Code2, ShieldAlert, Activity, RefreshCw, Trophy, BrainCircuit, Network, HardDrive, Server, TerminalSquare, Code, Webhook, Box, ArrowRightLeft, ShieldCheck, Landmark } from 'lucide-react'
+import { Globe, Key, Cpu, Zap, Database, Code2, ShieldAlert, Activity, RefreshCw, Trophy, BrainCircuit, Network, HardDrive, Server, TerminalSquare, Code, Webhook, Box, ArrowRightLeft, ShieldCheck, Landmark, LayoutGrid, LayoutTemplate, ShieldCheckIcon } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +19,7 @@ import { ThreatMap } from './threat-map'
 import { PredictiveForecasting } from './predictive-forecasting'
 import { JudiciaryPanel } from './judiciary-panel'
 import { ImperialVictoryPanel } from './imperial-victory-panel'
+import { VisualPluginBuilder } from './visual-plugin-builder'
 import { Progress } from '@/components/ui/progress'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
@@ -61,7 +62,7 @@ export function IntegrationPanel() {
   const handleIssueKey = async () => {
     setLoading(true);
     try {
-      const key = await IntegrationBridge.issueDeveloperKey('Global_Developer_Beta');
+      const key = await IntegrationBridge.generateEphemeralToken();
       setDevKey(key);
       toast({ title: "PROJECT 43 ACTIVE", description: "Global API Gateway access granted." });
     } catch (e) {
@@ -81,7 +82,7 @@ export function IntegrationPanel() {
               SOVEREIGN API COMMAND
             </CardTitle>
             <CardDescription className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.3em] font-bold text-primary/60">
-              API Interceptor • Unified Aggregator • v33.5
+              API Interceptor • Unified Aggregator • v34.0
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -92,9 +93,10 @@ export function IntegrationPanel() {
         </div>
       </CardHeader>
       
-      <Tabs defaultValue="war-room" className="flex-1 flex flex-col">
+      <Tabs defaultValue="visual-builder" className="flex-1 flex flex-col">
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
+            <TabsTrigger value="visual-builder" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap"><LayoutGrid size={12}/> ভিজ্যুয়াল বিল্ডার</TabsTrigger>
             <TabsTrigger value="war-room" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap">ওয়ার-রুম</TabsTrigger>
             <TabsTrigger value="global-api" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap">Global API</TabsTrigger>
             <TabsTrigger value="webhooks" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><Webhook size={12}/> ওয়েবহুকস</TabsTrigger>
@@ -103,6 +105,10 @@ export function IntegrationPanel() {
             <TabsTrigger value="apps" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap">প্লাগিনস</TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="visual-builder" className="flex-1 p-4 md:p-6 m-0">
+          <VisualPluginBuilder />
+        </TabsContent>
 
         <TabsContent value="war-room" className="flex-1 p-4 md:p-6 m-0 space-y-6">
           <ThreatMap />

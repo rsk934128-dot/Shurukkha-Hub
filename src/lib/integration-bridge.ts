@@ -1,7 +1,7 @@
 /**
  * @fileOverview Universal Bridge for Shurukkha Hub Partnership.
  * Implements RSA v2 Bridge, SHA256withRSA signing, and Unified API Layer.
- * UPDATED Phase 33.5: Added Plugin Architecture and Webhook Dispatcher.
+ * UPDATED Phase 34.0: Added Auto-Audit and Global Purity Verification.
  */
 
 import { db } from './firebase';
@@ -23,7 +23,7 @@ export const IntegrationBridge = {
   // API Version Control
   apiVersions: {
     paddle: '2024-03-25',
-    sovereign: 'v33.5'
+    sovereign: 'v34.0'
   },
 
   // Gateway Trusted List
@@ -112,7 +112,7 @@ export const IntegrationBridge = {
         details: event.payload,
         signature: signature,
         timestamp: serverTimestamp(),
-        performedBy: 'Sovereign_Bridge_v33.5'
+        performedBy: 'Sovereign_Bridge_v34.0'
       });
     } catch (e) {
       console.error("Partnership broadcast failed", e);
