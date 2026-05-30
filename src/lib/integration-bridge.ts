@@ -4,13 +4,14 @@
  * Implements RSA v2 Bridge, SHA256withRSA signing, and Webhook Engine.
  * UPDATED Phase 31.0: Forensic Snapshotting & External API Header Management (Paddle Sync).
  * Phase 31.2: Fixed UTF-8 Base64 encoding for Unicode support (Bengali).
+ * Phase 32.1: Global Gateway API (Project 43) support.
  */
 
 import { db } from './firebase';
 import { collection, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
 
 export interface IntegrationEvent {
-  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT' | 'SOVEREIGN_HANDSHAKE' | 'NETWORK_HEARTBEAT' | 'LOCAL_PAYMENT_INITIATED' | 'SETTLEMENT_COMPLETED' | 'IDENTITY_RECOGNITION' | 'VERIFICATION_LOOP' | 'ENDPOINT_DISCOVERED' | 'FAILOVER_TRIGGERED' | 'OUTBOUND_SIGNAL_SENT' | 'DNS_PROPAGATION_SUCCESS' | 'SOVEREIGN_TOKEN_GENERATED' | 'PRE_FLIGHT_CHECK_PASSED' | 'CROSS_CURRENCY_EXCHANGE' | 'GLOBAL_FRAUD_ALERT' | 'EXTERNAL_VAULT_SYNC';
+  type: 'SOS_TRIGGERED' | 'STATUS_UPDATED' | 'FLOOD_ALERT' | 'ORCHESTRATION_EVENT' | 'SYSTEM_LOCKDOWN' | 'FORENSIC_SNAPSHOT' | 'SOVEREIGN_HANDSHAKE' | 'NETWORK_HEARTBEAT' | 'LOCAL_PAYMENT_INITIATED' | 'SETTLEMENT_COMPLETED' | 'IDENTITY_RECOGNITION' | 'VERIFICATION_LOOP' | 'ENDPOINT_DISCOVERED' | 'FAILOVER_TRIGGERED' | 'OUTBOUND_SIGNAL_SENT' | 'DNS_PROPAGATION_SUCCESS' | 'SOVEREIGN_TOKEN_GENERATED' | 'PRE_FLIGHT_CHECK_PASSED' | 'CROSS_CURRENCY_EXCHANGE' | 'GLOBAL_FRAUD_ALERT' | 'EXTERNAL_VAULT_SYNC' | 'GLOBAL_API_ACCESS_GRANTED';
   payload: any;
   timestamp: string;
 }
@@ -25,11 +26,11 @@ export const IntegrationBridge = {
   // API Version Control
   apiVersions: {
     paddle: '2024-03-25',
-    sovereign: 'v31.0'
+    sovereign: 'v32.1'
   },
 
   // Gateway Trusted List
-  trustedGateways: ['gw-bkash', 'gw-nagad', 'gw-stripe', 'gw-noorai', 'gw-paypal-global', 'gw-wise-sovereign', 'gw-paddle-sandbox'],
+  trustedGateways: ['gw-bkash', 'gw-nagad', 'gw-stripe', 'gw-noorai', 'gw-paypal-global', 'gw-wise-sovereign', 'gw-paddle-sandbox', 'gw-global-gateway'],
 
   setLockdown: (locked: boolean) => {
     IntegrationBridge.isLocked = locked;
@@ -65,7 +66,7 @@ export const IntegrationBridge = {
       return { status: 'DENIED', reason: 'UNTRUSTED_GATEWAY' };
     }
 
-    if (!token || (!token.startsWith('est_') && !token.startsWith('pdl_'))) {
+    if (!token || (!token.startsWith('est_') && !token.startsWith('pdl_') && !token.startsWith('gkey_'))) {
       return { status: 'DENIED', reason: 'INVALID_HANDSHAKE_TOKEN' };
     }
 
@@ -93,12 +94,29 @@ export const IntegrationBridge = {
     return appData;
   },
 
+  /**
+   * Issues a Global Developer Key for Project 43.
+   */
+  async issueDeveloperKey(developerName: string) {
+    const key = 'gkey_' + Math.random().toString(36).substring(2, 20);
+    const signature = IntegrationBridge.generateSignature({ dev: developerName, key });
+    
+    await addDoc(collection(db, "audit_trails"), {
+      action: 'GLOBAL_API_ACCESS_GRANTED',
+      details: { developerName, key, permissions: ['READ_VAULT', 'SYNC_CORE'] },
+      signature,
+      timestamp: serverTimestamp(),
+      performedBy: 'Imperial_Gatekeeper'
+    });
+
+    return key;
+  },
+
   generateEphemeralToken: () => {
     const salt = Math.random().toString(36).substring(2, 15);
     const ts = Date.now().toString();
     const rawData = `${salt}.${ts}.${IntegrationBridge.currentKeyId}`;
     
-    // Cross-platform Base64 with UTF-8 support
     const encoded = typeof window !== 'undefined' 
       ? btoa(unescape(encodeURIComponent(rawData)))
       : btoa(rawData);
@@ -119,7 +137,6 @@ export const IntegrationBridge = {
     const salt = IntegrationBridge.currentKeyId;
     const combined = dataString + salt;
     
-    // Cross-platform Base64 with UTF-8 support (Important for Bengali chars)
     const base64 = typeof window !== 'undefined' 
       ? btoa(unescape(encodeURIComponent(combined)))
       : btoa(combined);
@@ -131,9 +148,6 @@ export const IntegrationBridge = {
     return signature.startsWith('sig_sha256_rsa_v2_sovereign_');
   },
 
-  /**
-   * Creates a Forensic Snapshot of the current state.
-   */
   createSnapshot: async (logs: any[]) => {
     const snapshotHash = IntegrationBridge.generateSignature({ logCount: logs.length, lastLogId: logs[0]?.id });
     
