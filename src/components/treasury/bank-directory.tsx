@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -7,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { StripeBankSync, BankNode } from '@/lib/stripe-bank-sync'
 import { PaymentHandler } from '@/lib/payment-handler'
 import { FraudRecovery } from '@/lib/fraud-recovery-protocol'
@@ -21,6 +19,7 @@ import { AppLogo } from '@/components/ui/app-logo'
 import { MerchantRegistry } from './merchant-registry'
 import { ComplianceVault } from './compliance-vault'
 import { LoanManagement } from './loan-management'
+import { PortfolioViewer } from './portfolio-viewer'
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { errorEmitter } from '@/firebase/error-emitter'
@@ -167,6 +166,7 @@ export function BankDirectory() {
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
             <TabsTrigger value="loans" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Landmark size={12}/> লোন ম্যানেজমেন্ট</TabsTrigger>
+            <TabsTrigger value="portfolio" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><Wallet size={12}/> পোর্টফোলিও</TabsTrigger>
             <TabsTrigger value="revenue" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><TrendingUp size={12}/> রেভিনিউ</TabsTrigger>
             <TabsTrigger value="compliance" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><ShieldCheck size={12}/> কমপ্লায়েন্স</TabsTrigger>
             <TabsTrigger value="ledger" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><ListOrdered size={12}/> লাইভ লেজার</TabsTrigger>
@@ -178,6 +178,10 @@ export function BankDirectory() {
 
         <TabsContent value="loans" className="flex-1 p-4 md:p-6 m-0">
           <LoanManagement />
+        </TabsContent>
+
+        <TabsContent value="portfolio" className="flex-1 p-4 md:p-6 m-0">
+          <PortfolioViewer />
         </TabsContent>
 
         <TabsContent value="compliance" className="flex-1 p-4 md:p-6 m-0">

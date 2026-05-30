@@ -1,7 +1,6 @@
-
 /**
  * @fileOverview Sovereign Payment Handler for Local & Global Settlements.
- * Updated Phase 32.5: Integrated Loan Disbursement and Sovereign Credit Management.
+ * Updated Phase 33.0: Integrated Smart Escrow and Investment Fees.
  */
 
 import { IntegrationBridge } from './integration-bridge';
@@ -16,10 +15,11 @@ import { MerchantCreditEngine } from './merchant-credit-engine';
 export interface PaymentIntent {
   amount: number;
   currency: string;
-  source: 'CARD' | 'BANK' | 'VIRTUAL_ACCOUNT';
-  target: 'BKASH' | 'LOCAL_BANK' | 'TREASURY' | 'GLOBAL_PAYPAL' | 'WISE_SOVEREIGN';
+  source: 'CARD' | 'BANK' | 'VIRTUAL_ACCOUNT' | 'INVESTMENT_VAULT';
+  target: 'BKASH' | 'LOCAL_BANK' | 'TREASURY' | 'GLOBAL_PAYPAL' | 'WISE_SOVEREIGN' | 'SMART_ESCROW';
   merchantId: string;
   description?: string;
+  isEscrow?: boolean;
 }
 
 export interface AtomicReceipt {
@@ -36,6 +36,7 @@ export interface AtomicReceipt {
 
 export class PaymentHandler {
   private static IMPERIAL_FEE_RATE = 0.015;
+  private static INVESTMENT_FEE_RATE = 0.005; // 0.5% for Sheikh Code Exchange members
 
   static predictRisk(intent: PaymentIntent) {
     console.log(`[AI Fraud Engine] Analyzing risk for ${intent.amount} ${intent.currency}...`);
@@ -44,14 +45,15 @@ export class PaymentHandler {
     return 'LOW';
   }
 
-  static calculateSettlement(amount: number) {
-    const fee = amount * this.IMPERIAL_FEE_RATE;
+  static calculateSettlement(amount: number, isInvestment = false) {
+    const rate = isInvestment ? this.INVESTMENT_FEE_RATE : this.IMPERIAL_FEE_RATE;
+    const fee = amount * rate;
     const netAmount = amount - fee;
     return { fee, netAmount };
   }
 
   static generateReceipt(intent: PaymentIntent, txnId: string): AtomicReceipt {
-    const { fee, netAmount } = this.calculateSettlement(intent.amount);
+    const { fee, netAmount } = this.calculateSettlement(intent.amount, intent.source === 'INVESTMENT_VAULT');
     const receiptData = {
       txnId,
       amount: intent.amount,
@@ -66,6 +68,33 @@ export class PaymentHandler {
       ...receiptData,
       signature: IntegrationBridge.generateSignature(receiptData)
     };
+  }
+
+  /**
+   * Initializes a Smart Escrow transaction for high-value exchanges.
+   */
+  static async initiateEscrow(intent: PaymentIntent) {
+    console.warn(`[Smart Escrow] Locking funds: $${intent.amount} for ${intent.merchantId}...`);
+    const escrowId = `ESC-${Math.floor(100000 + Math.random() * 900000)}`;
+    
+    const escrowData = {
+      escrowId,
+      status: 'LOCKED',
+      amount: intent.amount,
+      purity: 'VERIFIED_IMPERIAL',
+      releaseCondition: 'DELIVERY_CONFIRMED',
+      timestamp: serverTimestamp()
+    };
+
+    await addDoc(collection(db, "audit_trails"), {
+      action: 'SMART_ESCROW_LOCKED',
+      details: escrowData,
+      signature: IntegrationBridge.generateSignature(escrowData),
+      timestamp: serverTimestamp(),
+      performedBy: 'Autonomous_AI_Workforce'
+    });
+
+    return escrowId;
   }
 
   /**
@@ -88,14 +117,12 @@ export class PaymentHandler {
         purity: 'VERIFIED_IMPERIAL'
       };
 
-      // 1. Update Merchant Document
       const merchantRef = doc(db, "merchants", merchant.id);
       await updateDoc(merchantRef, {
         activeLoanAmount: increment(amount),
         loanStatus: 'active'
       });
 
-      // 2. Log to Audit Trail
       await addDoc(collection(db, "audit_trails"), {
         action: 'LOAN_DISBURSED',
         details: loanData,
@@ -166,12 +193,10 @@ export class PaymentHandler {
       
       onLog(`[MERCHANT]: Selected ${merchant.businessName} (${merchant.merchantId})`);
       
-      // Credit Analysis Step
       onLog("[CREDIT]: Running Sovereign Credit Analysis...");
       const credit = MerchantCreditEngine.analyzeSovereignCredit(merchant.totalRevenue || 0, merchant.taxCollected || 0, 8);
       onLog(`[SUCCESS]: Credit Score: ${credit.score}/1000. Eligibility: ${credit.eligibility}`);
 
-      // Disbursement Simulation
       if (credit.eligibility !== 'NONE') {
         const loanAmount = 50000;
         onLog(`[LOAN]: Initiating Imperial Loan Disbursement of ৳${loanAmount}...`);
