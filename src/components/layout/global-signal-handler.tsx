@@ -1,9 +1,8 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useFirestore, useUser } from '@/firebase'
-import { collection, query, where, onSnapshot, limit, or } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, limit } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { NotificationManager } from '@/lib/notification-manager'
 import { CallOverlay } from '@/components/dashboard/call-overlay'
@@ -58,7 +57,7 @@ export function GlobalSignalHandler() {
     // 2. Call Listener (Enhanced to handle both Caller and Recipient)
     const sessionsRef = collection(db, 'webrtc_sessions');
     
-    // We listen for any active ringing session where the user is a participant
+    // Listen for any active ringing session where the user is a participant
     const callsQ = query(
       sessionsRef,
       where('status', '==', 'ringing')
