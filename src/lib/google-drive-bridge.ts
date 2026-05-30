@@ -15,7 +15,7 @@ export interface VaultStats {
   lastBackup: string;
   growthRate: string; 
   offloadEfficiency: number; 
-  exchangeVolume: string; // New metric for Sheikh Code Exchange
+  exchangeVolume: string; 
 }
 
 export const GoogleDriveBridge = {
@@ -23,12 +23,9 @@ export const GoogleDriveBridge = {
 
   /**
    * Simulates uploading a heavy forensic file or code snippet to the external vault.
-   * This offloads weight from the primary Firestore instance.
    */
   async archiveFile(fileName: string, data: any): Promise<string> {
     console.warn(`[Vault Bridge] Offloading ${fileName} to Sovereign Code Vault...`);
-    
-    // Simulate API Latency for high-volume handling
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     const fileId = 'drv_' + Math.random().toString(36).substring(2, 12);
@@ -50,8 +47,27 @@ export const GoogleDriveBridge = {
   },
 
   /**
-   * Returns simulated stats for the Imperial Drive Vault, emphasizing growth support.
+   * Simulates a heavy Code Exchange Sync across the grid.
    */
+  async simulateCodeExchange(onLog: (msg: string) => void): Promise<boolean> {
+    const logs = [
+      "[INIT]: Requesting Code Handshake for Project_42...",
+      "[AUTH]: Validating Sheikh Identity via RSA v2...",
+      "[SYNC]: 42 Distributed Nodes recognized. Establishing Anycast Tunnel...",
+      "[TRANSFER]: Pushing Source_Code_v31.8 to Global_Vault...",
+      "[ENCRYPT]: Applying AES-256 and Purity_Check...",
+      "[CLOUD]: Offloading payload to Imperial_Google_Drive...",
+      "[LEDGER]: Logging Code Exchange Hash to Immutable Ledger...",
+      "[SUCCESS]: Project 42 (Sheikh Code Exchange) is now Grid-Stable."
+    ];
+
+    for (const log of logs) {
+      onLog(log);
+      await new Promise(r => setTimeout(r, 600));
+    }
+    return true;
+  },
+
   getVaultStats: (): VaultStats => {
     return {
       usedSpace: '142.8 GB',
@@ -61,7 +77,7 @@ export const GoogleDriveBridge = {
       lastBackup: new Date().toISOString(),
       growthRate: '+12.4% / Month',
       offloadEfficiency: 92,
-      exchangeVolume: '1.2 PB' // Imperial Code Exchange scale
+      exchangeVolume: '1.2 PB'
     };
   }
 };

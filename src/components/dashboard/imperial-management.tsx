@@ -2,14 +2,15 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Landmark, Users, Clock, TrendingUp, DollarSign, ShieldCheck, PieChart, Activity, UserCheck, Briefcase, Calculator, ArrowUpRight, Zap, Target, Gavel, Scale, Trophy, Rocket, Sparkles, Star } from 'lucide-react'
+import { Landmark, Users, Clock, TrendingUp, DollarSign, ShieldCheck, PieChart, Activity, UserCheck, Briefcase, Calculator, ArrowUpRight, Zap, Target, Gavel, Scale, Trophy, Rocket, Sparkles, Star, Terminal, Loader2, Code2, CheckCircle2, Database } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { SovereignAudit } from '@/lib/sovereign-audit'
+import { GoogleDriveBridge } from '@/lib/google-drive-bridge'
+import { useToast } from '@/hooks/use-toast'
 
 export function ImperialManagement() {
   const [budget, setBudget] = useState({
@@ -19,20 +20,18 @@ export function ImperialManagement() {
     revenue: 186750
   })
 
-  const [projectProgress, setProjectProgress] = useState(42) // Current project number
+  const [projectProgress, setProjectProgress] = useState(42)
   const targetProjects = 400
+  const [isSimulating, setIsSimulating] = useState(false)
+  const [syncLogs, setSyncLogs] = useState<string[]>([])
+  
+  const { toast } = useToast()
 
   const milestones = [
     { id: 1, title: 'Sheikh Code Exchange (42nd)', status: 'COMPLETED', impact: 'High' },
     { id: 2, title: 'Sovereign ID Protocol', status: 'ACTIVE', impact: 'Critical' },
     { id: 3, title: 'Global Treasury Integration', status: 'ACTIVE', impact: 'Economic' },
     { id: 4, title: 'Mission-Critical SOS Grid', status: 'STABLE', impact: 'Social' },
-  ]
-
-  const shifts = [
-    { name: 'Shift Alpha (Sadar)', status: 'Active', lead: 'Farid Sheikh', staff: 12 },
-    { name: 'Shift Beta (Belkuchi)', status: 'On-Call', lead: 'Admin Node 02', staff: 8 },
-    { name: 'Shift Gamma (Recon)', status: 'Standby', lead: 'Drone AI', staff: 4 },
   ]
 
   const budgetAllocation = [
@@ -42,8 +41,20 @@ export function ImperialManagement() {
     { sector: 'AI & Security', amount: 2000000, color: 'bg-purple-500' },
   ]
 
-  const handleLevelUp = () => {
-    SovereignAudit.logMilestone('PHASE_31.8_GROWTH', 'Emperor triggered a manual Growth Acceleration Protocol.');
+  const handleEngageSimulation = async () => {
+    setIsSimulating(true);
+    setSyncLogs([]);
+    try {
+      await GoogleDriveBridge.simulateCodeExchange((msg) => {
+        setSyncLogs(prev => [msg, ...prev]);
+      });
+      await SovereignAudit.logEvolution(42, 'Sheikh Code Exchange Sync Success');
+      toast({ title: "SIMULATION SUCCESSFUL", description: "Project 42 data offloaded to vault." });
+    } catch (e) {
+      toast({ title: "SIMULATION FAILED", variant: "destructive" });
+    } finally {
+      setIsSimulating(false);
+    }
   }
 
   return (
@@ -80,34 +91,72 @@ export function ImperialManagement() {
          </div>
       </div>
 
-      {/* Financial Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-primary/5 border-primary/20 p-5 space-y-2 relative overflow-hidden">
-           <Landmark className="absolute -right-4 -bottom-4 opacity-5" size={100} />
-           <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Imperial Budget</p>
-           <h3 className="text-2xl font-headline font-bold text-foreground">৳{(budget.total / 10000000).toFixed(2)} Cr</h3>
-           <Badge variant="outline" className="text-[7px] border-primary/40 text-primary">FY 2026-27</Badge>
-        </Card>
-        <Card className="bg-accent/5 border-accent/20 p-5 space-y-2">
-           <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Total Revenue (1.5%)</p>
-           <h3 className="text-2xl font-headline font-bold text-accent">৳{budget.revenue.toLocaleString()}</h3>
-           <p className="text-[8px] text-accent animate-pulse">FLOWING FROM GRID</p>
-        </Card>
-        <Card className="bg-green-500/5 border-green-500/20 p-5 space-y-2">
-           <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Operational Staff</p>
-           <h3 className="text-2xl font-headline font-bold text-green-500">42 Nodes</h3>
-           <p className="text-[8px] text-muted-foreground">ACTIVE ON GRID</p>
-        </Card>
-        <Card className="bg-purple-500/5 border-purple-500/20 p-5 space-y-2">
-           <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Justice & Efficiency</p>
-           <h3 className="text-2xl font-headline font-bold text-purple-500">100%</h3>
-           <p className="text-[8px] text-muted-foreground">IMMUTABLE ACCOUNTING</p>
-        </Card>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Milestones & Evolution */}
         <div className="lg:col-span-7 space-y-6">
+          {/* Sheikh Code Exchange Simulation Card */}
+          <Card className="bg-card/40 border-accent/20 overflow-hidden rounded-[2.5rem] neon-glow-accent">
+             <CardHeader className="bg-accent/10 border-b border-white/5 py-4">
+                <div className="flex items-center justify-between">
+                   <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center text-accent">
+                         <Code2 size={20} className={isSimulating ? 'animate-pulse' : ''} />
+                      </div>
+                      <div>
+                         <CardTitle className="text-sm font-headline uppercase tracking-widest text-accent">Sheikh Code Exchange (Project 42)</CardTitle>
+                         <CardDescription className="text-[8px] font-bold uppercase">Live Grid Synchronization HUD</CardDescription>
+                      </div>
+                   </div>
+                   <Button onClick={handleEngageSimulation} disabled={isSimulating} size="sm" className="h-9 bg-accent text-background font-bold text-[9px] gap-2 rounded-xl">
+                      {isSimulating ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} fill="currentColor" />}
+                      ENGAGE SYNC
+                   </Button>
+                </div>
+             </CardHeader>
+             <CardContent className="p-6 space-y-4">
+                <div className="aspect-[21/9] bg-black/60 rounded-3xl border border-white/10 overflow-hidden relative font-mono text-[10px] p-4 group">
+                   <div className="absolute top-2 right-4 flex gap-2">
+                      <div className="w-2 h-2 rounded-full bg-red-500/40" />
+                      <div className="w-2 h-2 rounded-full bg-yellow-500/40" />
+                      <div className="w-2 h-2 rounded-full bg-green-500/40" />
+                   </div>
+                   <ScrollArea className="h-full">
+                      {syncLogs.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground/30 opacity-40">
+                           <Terminal size={40} className="mb-2" />
+                           <p className="uppercase tracking-[0.3em]">Awaiting Imperial Command...</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                           {syncLogs.map((log, i) => (
+                             <p key={i} className={`animate-in slide-in-from-left-2 duration-300 ${log.includes('SUCCESS') ? 'text-accent' : 'text-primary/70'}`}>
+                                <span className="text-muted-foreground mr-2">&gt;</span> {log}
+                             </p>
+                           ))}
+                        </div>
+                      )}
+                   </ScrollArea>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                   <div className="p-3 bg-muted/20 border border-white/5 rounded-2xl flex flex-col items-center gap-1">
+                      <CheckCircle2 className="text-accent" size={14} />
+                      <p className="text-[7px] uppercase font-bold text-muted-foreground">Encryption</p>
+                      <p className="text-[10px] font-bold">RSA_V2_ACTIVE</p>
+                   </div>
+                   <div className="p-3 bg-muted/20 border border-white/5 rounded-2xl flex flex-col items-center gap-1">
+                      <Database className="text-primary" size={14} />
+                      <p className="text-[7px] uppercase font-bold text-muted-foreground">Grid Nodes</p>
+                      <p className="text-[10px] font-bold">42_SYNCED</p>
+                   </div>
+                   <div className="p-3 bg-muted/20 border border-white/5 rounded-2xl flex flex-col items-center gap-1">
+                      <Globe className="text-accent" size={14} />
+                      <p className="text-[7px] uppercase font-bold text-muted-foreground">Latency</p>
+                      <p className="text-[10px] font-bold">0.004ms</p>
+                   </div>
+                </div>
+             </CardContent>
+          </Card>
+
           <Card className="bg-card/40 border-white/10 overflow-hidden rounded-[2.5rem]">
             <CardHeader className="bg-primary/5 border-b border-white/5">
               <CardTitle className="text-sm font-headline uppercase tracking-widest flex items-center gap-2">
@@ -137,41 +186,30 @@ export function ImperialManagement() {
                   ))}
                </div>
                <div className="p-4 bg-muted/10 border-t border-white/5">
-                  <Button onClick={handleLevelUp} variant="outline" className="w-full h-10 border-accent/20 text-accent text-[10px] uppercase font-bold gap-2 rounded-xl">
+                  <Button variant="outline" className="w-full h-10 border-accent/20 text-accent text-[10px] uppercase font-bold gap-2 rounded-xl">
                     <Sparkles size={14} /> ত্বরান্বিত করুন (Accelerate Fate)
                   </Button>
                </div>
             </CardContent>
           </Card>
-
-          <Card className="bg-card/40 border-accent/20 rounded-[2.5rem] overflow-hidden">
-             <CardHeader className="bg-accent/5 border-b border-white/5">
-                <CardTitle className="text-sm font-headline uppercase tracking-widest flex items-center gap-2 text-accent">
-                   <TrendingUp size={18} /> Prosperity Analysis (AI)
-                </CardTitle>
-             </CardHeader>
-             <CardContent className="p-6 space-y-6">
-                <div className="p-5 bg-black/40 rounded-3xl border border-white/5 relative group">
-                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:rotate-12 transition-transform"><PieChart size={80} className="text-accent" /></div>
-                   <h5 className="text-[10px] font-bold text-accent uppercase mb-4">Budget Utilization: 17%</h5>
-                   <div className="space-y-4">
-                      {budgetAllocation.map((item, i) => (
-                        <div key={i} className="space-y-1.5">
-                           <div className="flex justify-between text-[9px] font-bold uppercase">
-                              <span className="text-muted-foreground">{item.sector}</span>
-                              <span className="text-foreground">৳{(item.amount / 10000000).toFixed(1)} Cr</span>
-                           </div>
-                           <Progress value={(item.amount / budget.total) * 100} className={`h-1.5 bg-white/5 [&>div]:${item.color}`} />
-                        </div>
-                      ))}
-                   </div>
-                </div>
-             </CardContent>
-          </Card>
         </div>
 
-        {/* Right: Payroll & Personnel */}
+        {/* Right: Financial & Payroll */}
         <div className="lg:col-span-5 space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <Card className="bg-primary/5 border-primary/20 p-5 space-y-2 relative overflow-hidden">
+               <Landmark className="absolute -right-4 -bottom-4 opacity-5" size={100} />
+               <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Imperial Budget</p>
+               <h3 className="text-2xl font-headline font-bold text-foreground">৳{(budget.total / 10000000).toFixed(2)} Cr</h3>
+               <Badge variant="outline" className="text-[7px] border-primary/40 text-primary">FY 2026-27</Badge>
+            </Card>
+            <Card className="bg-accent/5 border-accent/20 p-5 space-y-2">
+               <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Total Revenue</p>
+               <h3 className="text-2xl font-headline font-bold text-accent">৳{budget.revenue.toLocaleString()}</h3>
+               <p className="text-[8px] text-accent animate-pulse">FLOWING FROM GRID</p>
+            </Card>
+          </div>
+
           <Card className="bg-card/40 border-primary/20 rounded-[2.5rem] overflow-hidden">
              <CardHeader className="bg-primary/5 border-b border-white/5 py-6">
                 <CardTitle className="text-xs font-headline uppercase tracking-[0.2em] flex items-center gap-2">
@@ -220,30 +258,6 @@ export function ImperialManagement() {
                       <Button className="w-full h-11 bg-primary text-background font-bold rounded-xl gap-2 shadow-lg shadow-primary/20">
                          <Zap size={16} fill="currentColor" /> রিলিজ মাসব্যাপী বেতন
                       </Button>
-                   </div>
-                </div>
-             </CardContent>
-          </Card>
-
-          <Card className="bg-destructive/5 border-destructive/20 rounded-[2.5rem] overflow-hidden">
-             <CardHeader className="py-4 border-b border-destructive/10">
-                <CardTitle className="text-[10px] uppercase font-bold flex items-center gap-2 text-destructive">
-                   <Scale size={16} /> Accountability Matrix
-                </CardTitle>
-             </CardHeader>
-             <CardContent className="p-6">
-                <div className="space-y-4">
-                   <div className="flex items-start gap-4">
-                      <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive shrink-0">
-                         <Gavel size={16} />
-                      </div>
-                      <p className="text-[10px] text-muted-foreground leading-relaxed">
-                        প্রকল্পের কোনো ফান্ড বা সম্পদের অপব্যবহার শনাক্ত হলে তা স্বয়ংক্রিয়ভাবে অডিট ট্রেইলে লাল সংকেত (Red Flag) হিসেবে চিহ্নিত হবে এবং সংশ্লিষ্ট কর্মকর্তার প্রবেশাধিকার স্থগিত করা হবে।
-                      </p>
-                   </div>
-                   <div className="pt-4 flex items-center justify-between border-t border-white/5">
-                      <span className="text-[8px] font-mono text-destructive uppercase font-bold">Strict_Compliance_Active</span>
-                      <Badge variant="outline" className="border-destructive/30 text-destructive text-[7px]">RSA_V2_AUDIT</Badge>
                    </div>
                 </div>
              </CardContent>
