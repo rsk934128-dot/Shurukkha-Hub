@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { ShieldCheck, Zap, Activity, Globe, TrendingUp, Skull, Cpu, Star } from 'lucide-react'
+import { ShieldCheck, Zap, Activity, Globe, TrendingUp, Star, Package, CreditCard, Layers } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { SelfMaintenanceDaemon } from '@/lib/self-maintenance-daemon'
@@ -12,7 +12,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore'
 export function ImperialOverview() {
   const [stats, setStats] = useState(SelfMaintenanceDaemon.getStats());
   const [treasuryBalance, setTreasuryBalance] = useState(12450000);
-  const guardStats = SovereignGuard.getStats();
+  const [projectCount, setProjectCount] = useState(42);
 
   useEffect(() => {
     // Start the daemon if not running
@@ -49,32 +49,32 @@ export function ImperialOverview() {
       desc: 'সিস্টেমের সামগ্রিক বিশুদ্ধতা (Immutable)' 
     },
     { 
-      label: 'Active Nodes', 
-      val: '42/42', 
-      icon: Globe, 
+      label: 'Active Projects', 
+      val: `${projectCount}/400`, 
+      icon: Package, 
       color: 'text-accent', 
-      desc: 'Sovereign Grid v31.0 অনলাইন' 
+      desc: 'Phase 35.0 বিবর্তন সক্রিয়' 
     },
     { 
-      label: 'Threat Level', 
+      label: 'Network Health', 
       val: 'OPTIMAL', 
-      icon: ShieldCheck, 
+      icon: Activity, 
       color: 'text-green-500', 
-      desc: 'প্যাকেট ফিল্টারিং ও অডিট সক্রিয়' 
+      desc: '৪২টি নোড Anycast সিঙ্কড' 
     },
     { 
-      label: 'Imperial Treasury', 
-      val: `৳${treasuryBalance.toLocaleString()}`, 
-      icon: TrendingUp, 
+      label: 'Global Treasury', 
+      val: `$${(treasuryBalance / 120).toLocaleString(undefined, { maximumFractionDigits: 0 })}`, 
+      icon: CreditCard, 
       color: 'text-primary', 
-      desc: 'রাজস্ব প্রবাহ রিয়েল-টাইমে আপডেট হচ্ছে' 
+      desc: 'বৈশ্বিক রাজস্ব প্রবাহ (USD)' 
     }
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-in fade-in duration-1000">
       {metrics.map((item, idx) => (
-        <Card key={idx} className="bg-card/40 border-white/5 relative overflow-hidden group hover:border-primary/20 transition-all">
+        <Card key={idx} className="bg-card/40 border-white/5 relative overflow-hidden group hover:border-primary/20 transition-all rounded-[2rem] shadow-xl">
           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
             <item.icon size={60} className={item.color} />
           </div>

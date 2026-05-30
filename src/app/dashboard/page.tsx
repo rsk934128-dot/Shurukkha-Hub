@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode, MessageSquare, Handshake, Box, Scale, Settings } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode, MessageSquare, Handshake, Box, Scale, Settings, Search, BookOpen, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { AIAdviceTool } from '@/components/intelligence/ai-advice-tool'
@@ -27,6 +26,8 @@ import { ReliefManagement } from '@/components/dashboard/relief-management'
 import { ImperialManifesto } from '@/components/dashboard/imperial-manifesto'
 import { NotificationHub } from '@/components/dashboard/notification-hub'
 import { ImperialManagement } from '@/components/dashboard/imperial-management'
+import { IntegrationPanel } from '@/components/dashboard/integration-panel'
+import { LiveShield } from '@/components/security/live-shield'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFirestore, useUser, useAuth } from '@/firebase'
@@ -41,7 +42,10 @@ import { AppSidebar } from '@/components/layout/app-sidebar'
 import { AppLogo } from '@/components/ui/app-logo'
 import { CommunicationOrchestrator } from '@/lib/communication-orchestrator'
 import { NotificationManager } from '@/lib/notification-manager'
+import { KnowledgeStore } from '@/lib/knowledge-store'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 const ADMIN_EMAILS = ['rubels1k994@gmail.com', 'rsk755734@gmail.com'];
 
@@ -53,6 +57,7 @@ export default function ShurukkhaDashboard() {
   const [survivalMode, setSurvivalMode] = useState(false)
   const [isCheckingSession, setIsCheckingCheckingSession] = useState(true)
   const [isLensOpen, setIsLensOpen] = useState(false)
+  const [knowledgeSearch, setKnowledgeSearch] = useState('')
   
   const firestore = useFirestore()
   const auth = useAuth()
@@ -148,8 +153,9 @@ export default function ShurukkhaDashboard() {
 
   const handleSidebarNavigate = (view: string) => {
     if (view === 'lens') { setIsLensOpen(true); return; }
+    if (view === 'exchange') { window.open('/exchange', '_blank'); return; }
     setActiveView(view);
-    if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile', 'messages', 'partnerships', 'relief', 'manifesto', 'signals', 'management'].includes(view)) {
+    if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile', 'messages', 'partnerships', 'relief', 'manifesto', 'signals', 'management', 'security', 'knowledge'].includes(view)) {
       setActiveSubTab(view);
     }
   }
@@ -163,6 +169,8 @@ export default function ShurukkhaDashboard() {
     )
   }
 
+  const solutions = KnowledgeStore.searchSolutions(knowledgeSearch);
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full text-foreground bg-[#05070a]">
@@ -175,7 +183,7 @@ export default function ShurukkhaDashboard() {
               <AppLogo className="w-6 h-6 md:w-8 md:h-8" />
               <div className="hidden xs:block">
                 <h1 className="text-xs md:text-sm font-headline font-bold uppercase leading-none">SHURUKKHA</h1>
-                <span className="text-[6px] md:text-[8px] text-muted-foreground uppercase tracking-widest">v31.0</span>
+                <span className="text-[6px] md:text-[8px] text-muted-foreground uppercase tracking-widest">v35.0</span>
               </div>
             </div>
             
@@ -217,6 +225,32 @@ export default function ShurukkhaDashboard() {
               <Tabs value={activeSubTab} onValueChange={handleSidebarNavigate} className="w-full">
                 <TabsContent value="ops" className="h-[calc(100vh-220px)] md:h-[calc(100vh-250px)]"><DispatcherConsole /></TabsContent>
                 <TabsContent value="management"><ImperialManagement /></TabsContent>
+                <TabsContent value="security"><LiveShield /></TabsContent>
+                <TabsContent value="knowledge" className="space-y-6">
+                   <div className="relative max-w-lg mx-auto">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
+                      <Input 
+                        placeholder="Search Solution Knowledge..." 
+                        value={knowledgeSearch}
+                        onChange={e => setKnowledgeSearch(e.target.value)}
+                        className="pl-10 h-12 bg-background/50 border-primary/20 rounded-xl"
+                      />
+                   </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {solutions.map(sol => (
+                        <Card key={sol.id} className="bg-card/40 border-white/5 p-6 space-y-4 hover:border-primary/40 transition-all rounded-[2rem]">
+                           <div className="flex justify-between items-start">
+                              <Badge variant="outline" className="text-[7px] border-primary/20 text-primary">PROJ_42_{sol.projectIndex}</Badge>
+                              <div className="flex gap-1">
+                                 {sol.tags.map(t => <Badge key={t} className="text-[6px] bg-accent/10 text-accent border-none">{t}</Badge>)}
+                              </div>
+                           </div>
+                           <h4 className="text-sm font-headline font-bold text-foreground">{sol.problem}</h4>
+                           <p className="text-xs text-muted-foreground leading-relaxed italic border-l-2 border-primary/20 pl-3">"{sol.solution}"</p>
+                        </Card>
+                      ))}
+                   </div>
+                </TabsContent>
                 <TabsContent value="signals"><NotificationHub /></TabsContent>
                 <TabsContent value="intelligence"><IncidentReviewBoard /></TabsContent>
                 <TabsContent value="relief"><ReliefManagement /></TabsContent>

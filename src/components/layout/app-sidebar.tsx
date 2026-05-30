@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -32,7 +31,10 @@ import {
   Scale,
   Settings,
   Trophy,
-  History
+  History,
+  ShieldAlert,
+  BookOpen,
+  LayoutGrid
 } from "lucide-react"
 
 import {
@@ -137,7 +139,7 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
           <AppLogo size={32} />
           <div>
             <h2 className="text-sm font-headline font-bold tracking-tight uppercase">SHURUKKHA HUB</h2>
-            <p className="text-[8px] text-primary/60 uppercase font-bold tracking-[0.2em]">Sovereign Grid v31.8</p>
+            <p className="text-[8px] text-primary/60 uppercase font-bold tracking-[0.2em]">Sovereign Grid v35.0</p>
           </div>
         </div>
       </SidebarHeader>
@@ -228,6 +230,16 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   <span className="font-medium">সুরক্ষা ড্যাশবোর্ড</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  onClick={() => handleNav('exchange')}
+                  className="px-4 h-10 gap-3 text-accent hover:bg-accent/10"
+                >
+                  <LayoutGrid size={18} />
+                  <span className="font-bold">Public Exchange</span>
+                  <Badge className="ml-auto bg-accent text-background text-[7px] h-4">NEW</Badge>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -245,7 +257,29 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   >
                     <Radio size={18} className="text-destructive animate-pulse" />
                     <span className="font-medium">জরুরি ডিসপ্যাচ</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    isActive={activeTab === 'security'} 
+                    onClick={() => handleNav('security')}
+                    className="px-4 h-10 gap-3"
+                  >
+                    <ShieldAlert size={18} className="text-destructive" />
+                    <span className="font-medium">Security Shield</span>
                     <Badge variant="destructive" className="ml-auto text-[8px] h-4">LIVE</Badge>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    isActive={activeTab === 'knowledge'} 
+                    onClick={() => handleNav('knowledge')}
+                    className="px-4 h-10 gap-3"
+                  >
+                    <BookOpen size={18} className="text-primary" />
+                    <span className="font-medium">Knowledge Base</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
@@ -257,7 +291,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   >
                     <Settings size={18} className="text-primary" />
                     <span className="font-medium">প্রশাসনিক কমান্ড</span>
-                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-primary/20 text-primary">MGMT</Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
@@ -269,7 +302,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   >
                     <Signal size={18} className="text-accent animate-pulse" />
                     <span className="font-medium">সিগন্যাল হাব</span>
-                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent">NEW</Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
@@ -281,7 +313,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   >
                     <SearchCode size={18} className={activeTab === 'intelligence' ? "text-accent" : "text-muted-foreground"} />
                     <span className="font-medium">ইন্টেলিজেন্স বোর্ড</span>
-                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent">RECON</Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
@@ -293,7 +324,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   >
                     <Box size={18} className="text-amber-500" />
                     <span className="font-medium">ত্রাণ ও সম্পদ</span>
-                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-amber-500/20 text-amber-500">VAULT</Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
@@ -305,7 +335,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   >
                     <Scale size={18} className="text-accent" />
                     <span className="font-medium">ভিশন ও ম্যানিফেস্টো</span>
-                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent">GOV</Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
@@ -317,7 +346,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   >
                     <Handshake size={18} className="text-primary" />
                     <span className="font-medium">অংশীদারিত্ব আবেদন</span>
-                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-primary/20 text-primary">NEW</Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
