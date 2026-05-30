@@ -36,7 +36,11 @@
         "status": { "type": "string", "enum": ["active", "pending", "suspended"] },
         "totalRevenue": { "type": "number", "default": 0 },
         "taxCollected": { "type": "number", "default": 0 },
-        "onboardedAt": { "type": "string", "format": "date-time" }
+        "onboardedAt": { "type": "string", "format": "date-time" },
+        "creditScore": { "type": "number", "default": 0 },
+        "loanLimit": { "type": "number", "default": 0 },
+        "activeLoanAmount": { "type": "number", "default": 0 },
+        "loanStatus": { "type": "string", "enum": ["none", "eligible", "active", "delinquent"] }
       },
       "required": ["businessName", "merchantId", "status"]
     },

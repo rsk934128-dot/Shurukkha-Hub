@@ -20,6 +20,7 @@ import { MerchantGrowthChart } from '@/components/dashboard/merchant-growth-char
 import { AppLogo } from '@/components/ui/app-logo'
 import { MerchantRegistry } from './merchant-registry'
 import { ComplianceVault } from './compliance-vault'
+import { LoanManagement } from './loan-management'
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { errorEmitter } from '@/firebase/error-emitter'
@@ -55,7 +56,7 @@ export function BankDirectory() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const allLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       const filtered = allLogs.filter((log: any) => 
-        ["SETTLEMENT_COMPLETED", "INVOICE_GENERATED"].includes(log.action)
+        ["SETTLEMENT_COMPLETED", "INVOICE_GENERATED", "LOAN_DISBURSED"].includes(log.action)
       ).slice(0, 50);
       setLedgerLogs(filtered);
       
@@ -102,9 +103,9 @@ export function BankDirectory() {
       await PaymentHandler.simulateFinancialCycle((msg) => {
         setTerminalLogs(prev => [...prev, msg])
         if (msg.includes('[MERCHANT]')) setActiveStep(1)
-        if (msg.includes('[INVOICE]')) setActiveStep(2)
-        if (msg.includes('[SECURITY]')) setActiveStep(3)
-        if (msg.includes('[REVENUE]')) setActiveStep(4)
+        if (msg.includes('[CREDIT]')) setActiveStep(2)
+        if (msg.includes('[LOAN]')) setActiveStep(3)
+        if (msg.includes('[INVOICE]')) setActiveStep(4)
         if (msg.includes('[COMPLETED]')) setActiveStep(5)
       })
       toast({ title: "STRESS TEST COMPLETED", description: "Ledger updated with atomic settlement." });
@@ -122,9 +123,9 @@ export function BankDirectory() {
 
   const steps = [
     { id: 1, label: 'Merchant', icon: UserCheck },
-    { id: 2, label: 'Invoice', icon: FileText },
-    { id: 3, label: 'Security', icon: ShieldCheck },
-    { id: 4, label: 'Revenue', icon: DollarSign },
+    { id: 2, label: 'Credit', icon: Activity },
+    { id: 3, label: 'Loan', icon: Landmark },
+    { id: 4, label: 'Settlement', icon: DollarSign },
     { id: 5, label: 'Ledger', icon: ListOrdered },
   ]
 
@@ -145,7 +146,7 @@ export function BankDirectory() {
                 Sovereign Treasury
               </CardTitle>
               <CardDescription className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] font-bold text-primary/60">
-                Phase 31.0 • Imperial Prosperity Protocol
+                Phase 32.5 • Imperial Prosperity & SME Loans
               </CardDescription>
             </div>
           </div>
@@ -162,18 +163,22 @@ export function BankDirectory() {
         </div>
       </CardHeader>
       
-      <Tabs defaultValue="revenue" className="flex-1 flex flex-col relative z-10">
+      <Tabs defaultValue="loans" className="flex-1 flex flex-col relative z-10">
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
+            <TabsTrigger value="loans" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Landmark size={12}/> লোন ম্যানেজমেন্ট</TabsTrigger>
             <TabsTrigger value="revenue" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><TrendingUp size={12}/> রেভিনিউ</TabsTrigger>
-            <TabsTrigger value="compliance" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><ShieldCheck size={12}/> কমপ্লায়েন্স (L1)</TabsTrigger>
+            <TabsTrigger value="compliance" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><ShieldCheck size={12}/> কমপ্লায়েন্স</TabsTrigger>
             <TabsTrigger value="ledger" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><ListOrdered size={12}/> লাইভ লেজার</TabsTrigger>
             <TabsTrigger value="merchants" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Store size={12}/> মার্চেন্ট</TabsTrigger>
             <TabsTrigger value="fraud" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold uppercase tracking-widest"><ShieldX size={12}/> ফ্রড</TabsTrigger>
             <TabsTrigger value="global" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Globe size={12}/> গ্লোবাল</TabsTrigger>
-            <TabsTrigger value="local" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><Smartphone size={12}/> লোকাল</TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="loans" className="flex-1 p-4 md:p-6 m-0">
+          <LoanManagement />
+        </TabsContent>
 
         <TabsContent value="compliance" className="flex-1 p-4 md:p-6 m-0">
           <ComplianceVault />
@@ -248,11 +253,11 @@ export function BankDirectory() {
                 </div>
               ) : (
                 ledgerLogs.map((log) => (
-                  <div key={log.id} className={`p-4 rounded-2xl border transition-all hover:border-primary/40 ${log.action === 'SETTLEMENT_COMPLETED' ? 'bg-accent/5 border-accent/20 shadow-[0_0_15px_rgba(34,211,238,0.1)]' : 'bg-primary/5 border-primary/20'}`}>
+                  <div key={log.id} className={`p-4 rounded-2xl border transition-all hover:border-primary/40 ${log.action === 'SETTLEMENT_COMPLETED' || log.action === 'LOAN_DISBURSED' ? 'bg-accent/5 border-accent/20 shadow-[0_0_15px_rgba(34,211,238,0.1)]' : 'bg-primary/5 border-primary/20'}`}>
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${log.action === 'SETTLEMENT_COMPLETED' ? 'bg-accent/20 text-accent' : 'bg-primary/20 text-primary'}`}>
-                          {log.action === 'SETTLEMENT_COMPLETED' ? <CheckCircle2 size={16} /> : <FileText size={16} />}
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${log.action === 'SETTLEMENT_COMPLETED' || log.action === 'LOAN_DISBURSED' ? 'bg-accent/20 text-accent' : 'bg-primary/20 text-primary'}`}>
+                          {log.action === 'LOAN_DISBURSED' ? <Landmark size={16} /> : log.action === 'SETTLEMENT_COMPLETED' ? <CheckCircle2 size={16} /> : <FileText size={16} />}
                         </div>
                         <div>
                           <p className="text-[10px] font-bold uppercase tracking-widest text-foreground">{log.action.replace(/_/g, ' ')}</p>
@@ -270,8 +275,8 @@ export function BankDirectory() {
                           <p className="text-sm font-bold text-foreground">৳{log.details?.amount?.toLocaleString()}</p>
                        </div>
                        <div className="space-y-0.5">
-                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Imperial Fee (1.5%)</p>
-                          <p className="text-sm font-bold text-accent">৳{log.details?.feeCollected || log.details?.serviceFee || 0}</p>
+                          <p className="text-[7px] uppercase font-bold text-muted-foreground">{log.action === 'LOAN_DISBURSED' ? 'Interest' : 'Imperial Fee (1.5%)'}</p>
+                          <p className="text-sm font-bold text-accent">{log.action === 'LOAN_DISBURSED' ? log.details?.interestRate : `৳${log.details?.feeCollected || log.details?.serviceFee || 0}`}</p>
                        </div>
                        <div className="space-y-0.5 col-span-2">
                           <p className="text-[7px] uppercase font-bold text-muted-foreground">Target Merchant</p>
