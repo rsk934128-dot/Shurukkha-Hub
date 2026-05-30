@@ -3,7 +3,7 @@
 
 /**
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
- * Optimized Phase 32.1: Robust ICE candidate queueing and graceful connection tracking.
+ * Optimized Phase 32.2: Locked-Identity Stream Protocol and robust track management.
  */
 
 import { db } from './firebase';
@@ -40,9 +40,6 @@ export class WebRTCManager {
     iceCandidatePoolSize: 10,
   };
 
-  /**
-   * Optimized Mobile Constraints for Beautiful Voice
-   */
   static getAudioConstraints() {
     return {
       echoCancellation: true,
@@ -50,20 +47,15 @@ export class WebRTCManager {
       autoGainControl: true,
       channelCount: 1,
       sampleRate: 48000,
-      sampleSize: 16
     };
   }
 
-  /**
-   * Replaces the current video track with a new one without dropping the connection.
-   * Crucial for Camera Switching (Front/Back).
-   */
   async replaceVideoTrack(newTrack: MediaStreamTrack) {
     if (!this.peerConnection || this.isDisposed) return;
     const senders = this.peerConnection.getSenders();
     const videoSender = senders.find(s => s.track?.kind === 'video');
     if (videoSender) {
-      console.log("[WebRTC] Replacing video track with new lens source...");
+      console.log("[WebRTC] Swapping lenses...");
       await videoSender.replaceTrack(newTrack);
     }
   }
@@ -75,7 +67,7 @@ export class WebRTCManager {
       try {
         await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (e) {
-        console.warn("[WebRTC] Error adding candidate", e);
+        console.warn("[WebRTC] Delayed candidate integration.");
       }
     } else {
       this.candidateQueue.push(candidate);
@@ -84,15 +76,13 @@ export class WebRTCManager {
 
   private async flushCandidates() {
     if (!this.peerConnection || !this.peerConnection.remoteDescription || this.isDisposed) return;
-    console.log(`[WebRTC] Flushing ${this.candidateQueue.length} queued candidates...`);
+    console.log(`[WebRTC] Releasing ${this.candidateQueue.length} queued candidates...`);
     while (this.candidateQueue.length > 0) {
       const candidate = this.candidateQueue.shift();
       if (candidate) {
         try {
           await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (e) {
-          console.warn("[WebRTC] Error flushing candidate", e);
-        }
+        } catch (e) {}
       }
     }
   }
@@ -103,9 +93,11 @@ export class WebRTCManager {
     
     this.peerConnection.ontrack = (event) => {
       if (this.isDisposed) return;
-      console.log("[WebRTC] Track received on Caller side");
+      console.log("[WebRTC] Remote signal locked.");
       event.streams[0].getTracks().forEach((track) => {
-        this.remoteStream.addTrack(track);
+        if (!this.remoteStream.getTracks().find(t => t.id === track.id)) {
+          this.remoteStream.addTrack(track);
+        }
       });
       onRemoteStream(this.remoteStream);
     };
@@ -126,11 +118,7 @@ export class WebRTCManager {
     const offerDescription = await this.peerConnection.createOffer();
     await this.peerConnection.setLocalDescription(offerDescription);
 
-    const offer = {
-      sdp: offerDescription.sdp,
-      type: offerDescription.type,
-    };
-
+    const offer = { sdp: offerDescription.sdp, type: offerDescription.type };
     await setDoc(sessionRef, { offer }, { merge: true });
 
     const unsubSession = onSnapshot(sessionRef, async (snapshot) => {
@@ -140,11 +128,10 @@ export class WebRTCManager {
       if (data?.answer && this.peerConnection.signalingState === 'have-local-offer') {
         this.isProcessingRemoteDescription = true;
         try {
-          const answerDescription = new RTCSessionDescription(data.answer);
-          await this.peerConnection.setRemoteDescription(answerDescription);
+          await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
           await this.flushCandidates();
         } catch (e) {
-          console.error("[WebRTC] Failed to set remote answer", e);
+          console.error("[WebRTC] Answer processing fault.");
         } finally {
           this.isProcessingRemoteDescription = false;
         }
@@ -175,9 +162,11 @@ export class WebRTCManager {
 
     this.peerConnection.ontrack = (event) => {
       if (this.isDisposed) return;
-      console.log("[WebRTC] Track received on Recipient side");
+      console.log("[WebRTC] Inbound stream recognized.");
       event.streams[0].getTracks().forEach((track) => {
-        this.remoteStream.addTrack(track);
+        if (!this.remoteStream.getTracks().find(t => t.id === track.id)) {
+          this.remoteStream.addTrack(track);
+        }
       });
       onRemoteStream(this.remoteStream);
     };
@@ -205,16 +194,10 @@ export class WebRTCManager {
         const answerDescription = await this.peerConnection.createAnswer();
         await this.peerConnection.setLocalDescription(answerDescription);
 
-        const answer = {
-          type: answerDescription.type,
-          sdp: answerDescription.sdp,
-        };
-
-        await updateDoc(sessionRef, { answer });
+        await updateDoc(sessionRef, { answer: { type: answerDescription.type, sdp: answerDescription.sdp } });
         this.isProcessingRemoteDescription = false;
         await this.flushCandidates();
       } catch (e) {
-        console.error("[WebRTC] Failed to set offer or create answer", e);
         this.isProcessingRemoteDescription = false;
       }
     }
@@ -239,13 +222,10 @@ export class WebRTCManager {
     if (this.peerConnection) {
       this.peerConnection.onicecandidate = null;
       this.peerConnection.ontrack = null;
-      this.peerConnection.oniceconnectionstatechange = null;
       this.peerConnection.close();
       this.peerConnection = null;
     }
     this.candidateQueue = [];
-    this.isProcessingRemoteDescription = false;
     this.remoteStream = new MediaStream();
-    console.log("[WebRTC] Signaling Disposed.");
   }
 }

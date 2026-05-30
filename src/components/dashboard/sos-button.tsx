@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react'
@@ -5,7 +6,7 @@ import { ShieldAlert, Loader2, Video, VideoOff, PhoneOff, CheckCircle2, User } f
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { db } from '@/lib/firebase'
-import { collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, doc, setDoc, onSnapshot, deleteDoc } from 'firebase/firestore'
 import { DisasterStorage } from '@/lib/disaster-storage'
 import { WebRTCManager } from '@/lib/webrtc-signaling'
 import { Badge } from '@/components/ui/badge'
@@ -14,75 +15,66 @@ export function SOSButton() {
   const [isActivating, setIsActivating] = useState(false)
   const [activeSosId, setActiveSosId] = useState<string | null>(null)
   const [isCalling, setIsCalling] = useState(false)
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null)
-  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
   
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
   const webrtcRef = useRef<WebRTCManager | null>(null)
+  const localStreamRef = useRef<MediaStream | null>(null)
   
   const { toast } = useToast()
 
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
+  const cleanupStreams = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
     }
-  }, [localStream])
+    if (localVideoRef.current) localVideoRef.current.srcObject = null;
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    webrtcRef.current?.dispose();
+    webrtcRef.current = null;
+    setIsCalling(false);
+  }
 
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
+    if (activeSosId) {
+      const sessionRef = doc(db, 'webrtc_sessions', activeSosId);
+      const unsubscribe = onSnapshot(sessionRef, (snap) => {
+        if (!snap.exists() || snap.data()?.status === 'ended') {
+          cleanupStreams();
+        }
+      });
+      return () => {
+        unsubscribe();
+        cleanupStreams();
+      };
     }
-  }, [remoteStream])
-
-  useEffect(() => {
-    return () => {
-      endCall();
-    }
-  }, [])
+  }, [activeSosId]);
 
   const handleSOS = async () => {
     setIsActivating(true)
-    
     let userLocation = null;
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
       });
-      userLocation = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-        accuracy: position.coords.accuracy
-      };
-    } catch (e) {
-      console.warn("Could not get precise location for SOS.");
-    }
+      userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+    } catch (e) {}
 
     const sosData = {
       timestamp: serverTimestamp(),
       location: userLocation ? `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}` : "অজ্ঞাত স্থান",
-      coordinates: userLocation,
       status: 'pending',
-      type: 'জরুরি উদ্ধার প্রয়োজন (Emergency SOS)',
-      reporterId: 'citizen_node_' + Math.random().toString(36).substring(7)
+      type: 'Emergency SOS',
+      reporterId: 'citizen_' + Math.random().toString(36).substring(7)
     }
 
     try {
       const docRef = await addDoc(collection(db, "sos_alerts"), sosData);
       setActiveSosId(docRef.id);
-      
-      toast({
-        title: "জরুরি সংকেত পাঠানো হয়েছে",
-        description: "সাহায্য আসছে। এখন আপনি সরাসরি ভিডিও কল শুরু করতে পারেন।",
-        variant: "destructive",
-      })
+      toast({ title: "জরুরি সংকেত পাঠানো হয়েছে", variant: "destructive" });
     } catch (error) {
-      console.error("SOS Sync Error:", error);
       DisasterStorage.setSOS(true);
-      toast({
-        title: "অফলাইন মোডে সংরক্ষিত",
-        variant: "destructive",
-      })
+      toast({ title: "অফলাইন মোডে সংরক্ষিত", variant: "destructive" });
     } finally {
       setIsActivating(false)
     }
@@ -92,99 +84,79 @@ export function SOSButton() {
     if (!activeSosId) return;
     setIsCalling(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      setLocalStream(stream);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: WebRTCManager.getAudioConstraints() 
+      });
+      localStreamRef.current = stream;
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       
       webrtcRef.current = new WebRTCManager(activeSosId);
       await webrtcRef.current.createCall(stream, (remote) => {
-        console.log("[SOS Call] Remote stream received");
-        setRemoteStream(remote);
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remote;
       });
-
-      toast({ title: "লাইভ ভিডিও ফিড শুরু হয়েছে" });
+      toast({ title: "লাইভ ভিডিও HUD সক্রিয়" });
     } catch (e) {
       setIsCalling(false);
-      toast({ title: "ক্যামেরা এক্সেস করা সম্ভব হয়নি", variant: "destructive" });
+      toast({ title: "ক্যামেরা ত্রুটি", variant: "destructive" });
     }
   }
 
-  const endCall = () => {
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
-      setLocalStream(null);
+  const endCall = async () => {
+    if (activeSosId) {
+      const sessionRef = doc(db, 'webrtc_sessions', activeSosId);
+      await updateDoc(sessionRef, { status: 'ended' });
     }
-    setRemoteStream(null);
-    webrtcRef.current?.dispose();
-    setIsCalling(false);
+    cleanupStreams();
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 bg-card rounded-2xl border border-destructive/20 relative overflow-hidden group">
-      <div className="absolute inset-0 bg-destructive/5 group-hover:bg-destructive/10 transition-colors" />
-      
+    <div className="flex flex-col items-center justify-center p-6 bg-card border border-destructive/20 rounded-2xl relative overflow-hidden">
       <div className="relative z-10 flex flex-col items-center gap-4 w-full">
         {!activeSosId ? (
-          <div className="relative">
-            <div className="absolute inset-0 bg-destructive rounded-full blur-2xl opacity-20 animate-sos-pulse" />
-            <Button 
-              onClick={handleSOS} 
-              disabled={isActivating}
-              className={`w-32 h-32 rounded-full border-8 border-background bg-destructive hover:bg-destructive/90 transition-all flex flex-col gap-1 items-center justify-center shadow-2xl ${isActivating ? 'scale-95 opacity-80' : 'animate-sos-pulse'}`}
-            >
-              {isActivating ? <Loader2 size={48} className="text-white animate-spin" /> : <ShieldAlert size={48} className="text-white" />}
-              <span className="font-headline font-bold text-xl tracking-tighter text-white">SOS</span>
-            </Button>
-          </div>
+          <Button 
+            onClick={handleSOS} 
+            disabled={isActivating}
+            className={`w-32 h-32 rounded-full border-8 border-background bg-destructive hover:bg-destructive/90 transition-all shadow-2xl ${isActivating ? 'scale-95' : 'animate-sos-pulse'}`}
+          >
+            {isActivating ? <Loader2 size={48} className="animate-spin" /> : <ShieldAlert size={48} />}
+            <span className="font-headline font-bold text-xl text-white">SOS</span>
+          </Button>
         ) : (
           <div className="space-y-4 w-full">
             <div className="flex items-center justify-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-500">
               <CheckCircle2 size={20} />
-              <span className="text-xs font-bold uppercase">সংকেত পাঠানো হয়েছে</span>
+              <span className="text-xs font-bold uppercase">Signal Dispatched</span>
             </div>
 
             {isCalling ? (
               <div className="space-y-4">
-                <div className="aspect-video bg-black rounded-2xl border-2 border-accent overflow-hidden relative group/video">
-                   {/* Main Remote View */}
-                   {remoteStream ? (
-                     <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                   ) : (
-                     <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 gap-3">
-                        <Loader2 className="animate-spin text-accent" size={32} />
-                        <p className="text-[10px] font-mono text-accent uppercase tracking-widest animate-pulse">Waiting for Responder...</p>
-                     </div>
-                   )}
-                   
-                   {/* Local PIP View */}
-                   <div className="absolute bottom-3 right-3 w-24 md:w-32 aspect-video bg-black rounded-lg border border-white/20 shadow-2xl overflow-hidden z-20">
+                <div className="aspect-video bg-black rounded-2xl border-2 border-accent overflow-hidden relative">
+                   <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                   <div className="absolute bottom-3 right-3 w-24 aspect-video bg-black rounded-lg border border-white/20 overflow-hidden">
                       <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-                      <Badge className="absolute top-1 left-1 bg-black/40 text-[6px] uppercase px-1 h-3">You</Badge>
                    </div>
-
-                   <Badge className="absolute top-2 left-2 bg-red-600 animate-pulse text-[8px] px-2 h-4 flex items-center gap-1 uppercase font-bold">
-                     <div className="w-1.5 h-1.5 bg-white rounded-full" /> LIVE_HUD
-                   </Badge>
+                   <Badge className="absolute top-2 left-2 bg-red-600 animate-pulse text-[8px] h-4 uppercase">Live Recon</Badge>
                 </div>
-                <Button onClick={endCall} variant="destructive" className="w-full h-12 gap-2 rounded-xl font-bold shadow-lg shadow-destructive/20">
+                <Button onClick={endCall} variant="destructive" className="w-full h-12 gap-2 rounded-xl font-bold shadow-lg">
                   <PhoneOff size={18} /> কল শেষ করুন
                 </Button>
               </div>
             ) : (
-              <Button onClick={startLiveCall} className="w-full h-16 bg-accent text-background hover:bg-accent/90 gap-3 rounded-2xl shadow-lg shadow-accent/20 font-bold text-lg animate-pulse">
-                <Video size={24} /> লাইভ ভিডিও স্ট্রিমিং শুরু করুন
+              <Button onClick={startLiveCall} className="w-full h-16 bg-accent text-background hover:bg-accent/90 gap-3 rounded-2xl shadow-lg font-bold text-lg animate-pulse">
+                <Video size={24} /> ভিডিও রিকন শুরু করুন
               </Button>
             )}
             
-            <Button variant="ghost" onClick={() => { endCall(); setActiveSosId(null); }} className="w-full text-[10px] uppercase font-bold text-muted-foreground hover:text-primary">
+            <Button variant="ghost" onClick={() => { cleanupStreams(); setActiveSosId(null); }} className="w-full text-[10px] uppercase font-bold text-muted-foreground">
               নতুন সংকেত পাঠান
             </Button>
           </div>
         )}
-        
         {!activeSosId && (
           <div className="text-center">
-            <h3 className="text-xl font-headline font-bold text-destructive">জরুরি সহায়তা</h3>
-            <p className="text-sm text-muted-foreground font-body leading-none mt-1">সাহায্যের জন্য এখানে টিপুন</p>
+            <h3 className="text-xl font-headline font-bold text-destructive uppercase tracking-tighter">Emergency Assist</h3>
+            <p className="text-xs text-muted-foreground mt-1 italic">এক ক্লিকে সাহায্য পৌঁছাবে আপনার কাছে</p>
           </div>
         )}
       </div>
