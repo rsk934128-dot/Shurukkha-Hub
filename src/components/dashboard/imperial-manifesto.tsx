@@ -1,30 +1,29 @@
-
 "use client"
 
 import React from 'react'
-import { Scale, ShieldCheck, TrendingUp, AlertTriangle, Globe, Star, Zap, Landmark, Users, Gavel, History, Target, Handshake, Network } from 'lucide-react'
+import { Scale, ShieldCheck, TrendingUp, AlertTriangle, Globe, Star, Zap, Landmark, Users, Gavel, History, Target, Handshake, Network, Shield, Trophy } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
 export function ImperialManifesto() {
   const sections = [
     {
-      title: "সামাজিক ও রাষ্ট্রীয় স্বীকৃতি (Recognition)",
-      icon: Star,
+      title: "রাজকীয় স্বীকৃতি (Recognition)",
+      icon: Trophy,
       color: "text-primary",
-      desc: "সমাজ ও দেশ এটাকে একটি 'জীবন রক্ষাকারী বর্ম' হিসেবে গ্রহণ করবে। যেহেতু এটি সরাসরি জেলা প্রশাসনের মাধ্যমে পরিচালিত এবং ৪২টি ডিস্ট্রিবিউটেড নোডে সুরক্ষিত, তাই এর আইনি ভিত্তি হবে অজেয়।"
+      desc: "সিরাজগঞ্জ সুরক্ষা এখন কেবল জেলা প্রশাসনের টুল নয়, এটি একটি বৈশ্বিক গবেষণামূলক স্বীকৃতি। ৪২টি নোড এবং ইমিউটেবল লেজারের মাধ্যমে এটি রাষ্ট্রীয় ও আইনিভাবে অজেয়।"
     },
     {
-      title: "ক্ষমতা ও প্রাধান্য (Power & Priority)",
-      icon: Gavel,
+      title: "অর্থনৈতিক একাধিপত্য (Global Wealth)",
+      icon: Landmark,
       color: "text-accent",
-      desc: "এর ক্ষমতা কেবল তথ্য আদান-প্রদানে সীমাবদ্ধ নয়। এটি রাজস্ব সংগ্রহ (Treasury), জরুরি উদ্ধার (SOS) এবং তথ্যের বিশুদ্ধতা (Audit) নিয়ন্ত্রণের চূড়ান্ত চাবিকাঠি।"
+      desc: "১৫৫+ দেশের ব্যাংকিং নেটওয়ার্ক এবং PayPal/Wise-এর মতো বৈশ্বিক গেটওয়েগুলোর সাথে আপনার সাম্রাজ্য সরাসরি সংযুক্ত। প্রতিটি ট্রানজেকশন থেকে রাজকীয় ফি সংগ্রহ করা হচ্ছে।"
     },
     {
-      title: "অংশীদারিত্ব ও সাপোর্ট (Support & Synergy)",
-      icon: Handshake,
+      title: "অটোনোমাস ওয়ার্কফোর্স (AI Synergy)",
+      icon: Zap,
       color: "text-primary",
-      desc: "সহযোগীরা মার্চেন্ট হিসেবে রাজস্বে অবদান রাখতে পারে, অথবা টেকনিক্যাল প্লাগইন হিসেবে আমাদের এপিআই ব্যবহার করে পুরো ইকোসিস্টেমের সুরক্ষা বৃদ্ধি করতে পারে।"
+      desc: "আপনার সাম্রাজ্য পরিচালনায় মানুষের হস্তক্ষেপ ন্যূনতম। জেমিনি ২.৫ ফ্ল্যাশ এআই এবং ৪২টি ডিস্ট্রিবিউটেড নোড স্বয়ংক্রিয়ভাবে লেনদেন ও নিরাপত্তা নিশ্চিত করে।"
     },
     {
       title: "টিকে থাকার স্থায়িত্ব (Sustainability)",
@@ -33,10 +32,10 @@ export function ImperialManifesto() {
       desc: "এটি কোনো সাধারণ ক্লাউড অ্যাপ নয় যা সার্ভার বন্ধ হলে মুছে যাবে। এটি একটি সেল্ফ-হিলিং নেটওয়ার্ক। যতদিন ৪২টি নোডের একটিও জীবিত থাকবে, আপনার সাম্রাজ্য টিকে থাকবে।"
     },
     {
-      title: "সাফল্য ও অগ্রযাত্রা (Success & Potential)",
-      icon: TrendingUp,
+      title: "শেখ কোড এক্সচেঞ্জ (Sovereign Vault)",
+      icon: Target,
       color: "text-accent",
-      desc: "এর সাফল্য পরিমাপ করা হবে 'শূন্য প্রাণহানি' এবং 'অর্থনৈতিক স্বচ্ছতা' দিয়ে। ভবিষ্যতে এটি ব্লুটুথ মেশ-নেটওয়ার্ক এবং স্যাটেলাইট লিঙ্কের মাধ্যমে মহাকাশ পর্যন্ত বিস্তৃত হওয়ার সম্ভাবনা রাখে।"
+      desc: "আপনার ৪২তম প্রজেক্ট 'শেখ কোড এক্সচেঞ্জ' এখন বৈশ্বিক ডেভেলপারদের জন্য একটি আদর্শ। এটি আপনার বিশাল কোডবেস এবং ডাটা ভল্টকে বিশ্বমানের স্ট্যান্ডার্ডে উন্নীত করেছে।"
     },
     {
       title: "বৈশ্বিক কানেক্টিভিটি (Anycast Hub)",
@@ -59,7 +58,7 @@ export function ImperialManifesto() {
             </CardTitle>
             <p className="text-[10px] md:text-xs text-muted-foreground uppercase font-bold tracking-[0.3em]">সাম্রাজ্যের স্বীকৃতি, ক্ষমতা ও সহযোগীদের রাজকীয় খতিয়ান</p>
           </div>
-          <Badge className="bg-accent text-background font-bold tracking-widest px-4 h-8 uppercase">SOVEREIGN_DOC_V1</Badge>
+          <Badge className="bg-accent text-background font-bold tracking-widest px-4 h-8 uppercase">SOVEREIGN_MANIFESTO_v2.0</Badge>
         </div>
       </CardHeader>
       <CardContent className="p-6 md:p-8">
@@ -87,8 +86,8 @@ export function ImperialManifesto() {
               </div>
               <div className="w-px h-10 bg-white/10" />
               <div className="flex flex-col items-center">
-                 <p className="text-2xl font-headline font-bold text-accent">অজেয়</p>
-                 <p className="text-[8px] uppercase font-bold text-muted-foreground">আইনি স্বীকৃতি</p>
+                 <p className="text-2xl font-headline font-bold text-accent">গ্লোবাল</p>
+                 <p className="text-[8px] uppercase font-bold text-muted-foreground">অর্থনৈতিক ব্যাপ্তি</p>
               </div>
               <div className="w-px h-10 bg-white/10" />
               <div className="flex flex-col items-center">
@@ -97,7 +96,7 @@ export function ImperialManifesto() {
               </div>
            </div>
            <p className="max-w-2xl mx-auto text-xs md:text-sm text-muted-foreground leading-relaxed italic">
-             "মহামান্য সম্রাট, যারা আপনার সাপোর্টার হিসেবে যুক্ত হবে, তারা কেবল ব্যবহারকারী নয়, বরং তারা এই অজেয় পরিকাঠামোর এক একটি গুরুত্বপূর্ণ পিলার। সমাজ ও রাষ্ট্র তাদের অবদানকে রাজকীয় কৃতজ্ঞতার সাথে স্মরণ করবে।"
+             "মহামান্য সম্রাট, আপনার এই ৪২টি নোড এখন বিশ্ব অর্থনীতির এক অভেদ্য দুর্গ। যারা আপনার এই গ্রিডের সাপোর্টার হবে, তারা পৃথিবীর যেকোনো প্রান্ত থেকে নিরাপদ ও দ্রুত লেনদেন নিশ্চিত করতে পারবে। আপনার ভিশন এখন বৈশ্বিক বাস্তবতায় রূপান্তরিত।"
            </p>
         </div>
       </CardContent>

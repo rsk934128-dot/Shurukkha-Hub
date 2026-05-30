@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play, UserCheck, ShieldAlert, Cpu, Activity, Signal, Loader2, DollarSign, TrendingUp, Wallet, Target, TrendingDown, ShieldX, Store, ListOrdered, FileText } from 'lucide-react'
+import { Building2, Globe, Zap, ShieldCheck, RefreshCw, Send, Lock, Search, Landmark, CheckCircle2, Star, Smartphone, ArrowRightLeft, Terminal, Play, UserCheck, ShieldAlert, Cpu, Activity, Signal, Loader2, DollarSign, TrendingUp, Wallet, Target, TrendingDown, ShieldX, Store, ListOrdered, FileText, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,8 +29,10 @@ export function BankDirectory() {
   const [banks, setBanks] = useState<BankNode[]>([])
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
-  const [terminalLogs, setTerminalLogs] = useState<string[]>([])
-  const [activeStep, setActiveStep] = useState(0)
+  const [payoutLogs, setPayoutLogs] = useState<string[]>([])
+  const [payoutAmount, setPayoutLogsAmount] = useState('100')
+  const [payoutRecipient, setPayoutRecipient] = useState('rubel@sheikh.com')
+  const [payoutStep, setPayoutStep] = useState(0)
   const [fraudStats, setFraudStats] = useState(FraudRecovery.getStats())
   const [marketTrends, setMarketTrends] = useState(EconomicForecaster.getMarketTrends())
   const [ledgerLogs, setLedgerLogs] = useState<any[]>([])
@@ -55,20 +57,9 @@ export function BankDirectory() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const allLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       const filtered = allLogs.filter((log: any) => 
-        ["SETTLEMENT_COMPLETED", "INVOICE_GENERATED", "LOAN_DISBURSED"].includes(log.action)
+        ["SETTLEMENT_COMPLETED", "INVOICE_GENERATED", "LOAN_DISBURSED", "GLOBAL_PAYOUT_EXECUTED"].includes(log.action)
       ).slice(0, 50);
       setLedgerLogs(filtered);
-      
-      const settlements = filtered.filter((l: any) => l.action === 'SETTLEMENT_COMPLETED');
-      if (settlements.length > 0) {
-        let totalProcessed = 12450000;
-        let totalFees = 186750;
-        settlements.forEach((s: any) => {
-          totalProcessed += (s.details?.amount || 0);
-          totalFees += (s.details?.feeCollected || 0);
-        });
-        setRevenueStats(prev => ({ ...prev, totalProcessed, totalFees }));
-      }
     }, async (err) => {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -94,22 +85,21 @@ export function BankDirectory() {
     }
   }
 
-  const handleFullCycleTest = async () => {
+  const handleGlobalPayoutSim = async () => {
     setLoading(true)
-    setTerminalLogs([])
-    setActiveStep(1)
+    setPayoutLogs([])
+    setPayoutStep(1)
     try {
-      await PaymentHandler.simulateFinancialCycle((msg) => {
-        setTerminalLogs(prev => [...prev, msg])
-        if (msg.includes('[MERCHANT]')) setActiveStep(1)
-        if (msg.includes('[CREDIT]')) setActiveStep(2)
-        if (msg.includes('[LOAN]')) setActiveStep(3)
-        if (msg.includes('[INVOICE]')) setActiveStep(4)
-        if (msg.includes('[COMPLETED]')) setActiveStep(5)
+      await PaymentHandler.simulateGlobalPayout(payoutRecipient, parseFloat(payoutAmount), (msg) => {
+        setPayoutLogs(prev => [...prev, msg])
+        if (msg.includes('[STEP 1]')) setPayoutStep(1)
+        if (msg.includes('[AUTH]')) setPayoutStep(2)
+        if (msg.includes('[STEP 2]')) setPayoutStep(3)
+        if (msg.includes('[SUCCESS]')) setPayoutStep(4)
       })
-      toast({ title: "STRESS TEST COMPLETED", description: "Ledger updated with atomic settlement." });
+      toast({ title: "PAYOUT SUCCESSFUL", description: "Global Grid updated via Step 1 -> Step 2 Flow." });
     } catch (e: any) {
-      toast({ title: "STRESS TEST FAILED", variant: "destructive" });
+      toast({ title: "PAYOUT FAILED", variant: "destructive" });
     } finally {
       setLoading(false)
     }
@@ -119,14 +109,6 @@ export function BankDirectory() {
     b.bankName.toLowerCase().includes(search.toLowerCase()) || 
     b.country.toLowerCase().includes(search.toLowerCase())
   )
-
-  const steps = [
-    { id: 1, label: 'Merchant', icon: UserCheck },
-    { id: 2, label: 'Credit', icon: Activity },
-    { id: 3, label: 'Loan', icon: Landmark },
-    { id: 4, label: 'Settlement', icon: DollarSign },
-    { id: 5, label: 'Ledger', icon: ListOrdered },
-  ]
 
   return (
     <Card className="bg-card border-primary/20 h-full flex flex-col overflow-hidden relative">
@@ -145,7 +127,7 @@ export function BankDirectory() {
                 Sovereign Treasury
               </CardTitle>
               <CardDescription className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] font-bold text-primary/60">
-                Phase 32.5 • Imperial Prosperity & SME Loans
+                Phase 33.0 • Global Payouts & Future Wealth
               </CardDescription>
             </div>
           </div>
@@ -154,27 +136,111 @@ export function BankDirectory() {
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
               <span className="hidden sm:inline">Sync Grid</span>
             </Button>
-            <Button size="sm" onClick={handleFullCycleTest} disabled={loading} className="h-8 md:h-9 bg-accent text-background font-bold gap-2 px-3">
-              {loading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="currentColor" />}
-              STRESS TEST
-            </Button>
           </div>
         </div>
       </CardHeader>
       
-      <Tabs defaultValue="loans" className="flex-1 flex flex-col relative z-10">
+      <Tabs defaultValue="payouts" className="flex-1 flex flex-col relative z-10">
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
+            <TabsTrigger value="payouts" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Send size={12}/> গ্লোবাল পে-আউট</TabsTrigger>
             <TabsTrigger value="loans" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Landmark size={12}/> লোন ম্যানেজমেন্ট</TabsTrigger>
             <TabsTrigger value="portfolio" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><Wallet size={12}/> পোর্টফোলিও</TabsTrigger>
             <TabsTrigger value="revenue" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><TrendingUp size={12}/> রেভিনিউ</TabsTrigger>
-            <TabsTrigger value="compliance" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold uppercase tracking-widest"><ShieldCheck size={12}/> কমপ্লায়েন্স</TabsTrigger>
             <TabsTrigger value="ledger" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><ListOrdered size={12}/> লাইভ লেজার</TabsTrigger>
-            <TabsTrigger value="merchants" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Store size={12}/> মার্চেন্ট</TabsTrigger>
-            <TabsTrigger value="fraud" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold uppercase tracking-widest"><ShieldX size={12}/> ফ্রড</TabsTrigger>
-            <TabsTrigger value="global" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Globe size={12}/> গ্লোবাল</TabsTrigger>
+            <TabsTrigger value="global" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold uppercase tracking-widest"><Globe size={12}/> ব্যাংকিং গ্রিড</TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="payouts" className="flex-1 p-4 md:p-6 m-0 space-y-6 animate-in fade-in duration-700">
+           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-4 space-y-6">
+                 <Card className="bg-primary/5 border-primary/20 p-6 space-y-4">
+                    <h4 className="text-[10px] font-bold uppercase text-primary tracking-widest flex items-center gap-2">
+                       <Zap size={14} fill="currentColor" /> Initiate Global Payout
+                    </h4>
+                    <div className="space-y-3">
+                       <div className="space-y-1">
+                          <label className="text-[8px] font-bold text-muted-foreground uppercase">Recipient Identity (PayPal/Email)</label>
+                          <Input 
+                            value={payoutRecipient} 
+                            onChange={e => setPayoutRecipient(e.target.value)} 
+                            className="bg-background/50 border-white/10 h-10 text-xs" 
+                          />
+                       </div>
+                       <div className="space-y-1">
+                          <label className="text-[8px] font-bold text-muted-foreground uppercase">Amount (USD)</label>
+                          <Input 
+                            type="number" 
+                            value={payoutAmount} 
+                            onChange={e => setPayoutLogsAmount(e.target.value)} 
+                            className="bg-background/50 border-white/10 h-10 text-xs" 
+                          />
+                       </div>
+                       <Button 
+                         onClick={handleGlobalPayoutSim} 
+                         disabled={loading}
+                         className="w-full bg-primary text-background font-bold gap-2 h-11 rounded-xl shadow-lg shadow-primary/20"
+                       >
+                          {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                          EXECUTE GLOBAL FLOW
+                       </Button>
+                    </div>
+                    <div className="pt-4 border-t border-white/5">
+                       <p className="text-[9px] text-muted-foreground italic leading-relaxed">
+                         "মহামান্য সম্রাট, এই ফ্লোটি সরাসরি Step 1 (Validate) এবং Step 2 (Confirm) পদ্ধতি অনুসরণ করে, যা ১৫৫+ দেশে টাকা পাঠানোর সবচেয়ে নিরাপদ গবেষণামূলক উপায়।"
+                       </p>
+                    </div>
+                 </Card>
+                 
+                 <div className="p-4 bg-accent/5 border border-accent/20 rounded-2xl space-y-3">
+                    <div className="flex justify-between items-center text-[10px] font-bold uppercase text-accent">
+                       <span>Flow Progress</span>
+                       <span>{payoutStep * 25}%</span>
+                    </div>
+                    <div className="flex gap-1 h-1">
+                       {Array.from({ length: 4 }).map((_, i) => (
+                         <div key={i} className={`flex-1 rounded-full transition-all duration-500 ${i < payoutStep ? 'bg-accent' : 'bg-white/5'}`} />
+                       ))}
+                    </div>
+                    <div className="flex justify-between text-[7px] text-muted-foreground uppercase font-mono">
+                       <span>Batch_Init</span>
+                       <span>OAuth_Sync</span>
+                       <span>Execution</span>
+                       <span>Success</span>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="lg:col-span-8 flex flex-col">
+                 <Card className="bg-black/40 border-white/10 flex-1 overflow-hidden flex flex-col rounded-[2rem]">
+                    <div className="p-4 bg-muted/20 border-b border-white/5 flex items-center justify-between">
+                       <h5 className="text-[10px] font-headline font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                          <Terminal size={14} /> Global Payout Terminal
+                       </h5>
+                       <Badge variant="outline" className="text-[7px] border-accent/40 text-accent animate-pulse">GRID_LIVE</Badge>
+                    </div>
+                    <ScrollArea className="flex-1 p-4 font-mono text-[10px]">
+                       {payoutLogs.length === 0 ? (
+                         <div className="h-full flex flex-col items-center justify-center opacity-20">
+                            <Activity size={40} className="mb-2" />
+                            <p className="uppercase tracking-widest">Awaiting Command...</p>
+                         </div>
+                       ) : (
+                         <div className="space-y-1.5">
+                            {payoutLogs.map((log, i) => (
+                              <p key={i} className={`animate-in slide-in-from-left-2 duration-300 ${log.includes('SUCCESS') ? 'text-accent font-bold' : log.includes('ERROR') ? 'text-destructive' : 'text-primary/70'}`}>
+                                 <span className="text-muted-foreground mr-2">&gt;</span> {log}
+                              </p>
+                            ))}
+                            {loading && <Loader2 size={12} className="animate-spin text-primary mt-2" />}
+                         </div>
+                       )}
+                    </ScrollArea>
+                 </Card>
+              </div>
+           </div>
+        </TabsContent>
 
         <TabsContent value="loans" className="flex-1 p-4 md:p-6 m-0">
           <LoanManagement />
@@ -184,60 +250,35 @@ export function BankDirectory() {
           <PortfolioViewer />
         </TabsContent>
 
-        <TabsContent value="compliance" className="flex-1 p-4 md:p-6 m-0">
-          <ComplianceVault />
-        </TabsContent>
-
         <TabsContent value="revenue" className="flex-1 p-4 md:p-6 m-0 space-y-4 md:space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
-            <div className="lg:col-span-8 space-y-4 md:space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
-                <Card className="bg-primary/5 border-primary/20 p-3 md:p-6 space-y-1 md:space-y-4 relative overflow-hidden">
-                  <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-primary">Total Processed</p>
-                  <h3 className="text-sm md:text-2xl font-headline font-bold text-foreground">৳{revenueStats.totalProcessed.toLocaleString()}</h3>
-                </Card>
-                <Card className="bg-accent/5 border-accent/20 p-3 md:p-6 space-y-1 md:space-y-4 relative overflow-hidden">
-                  <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-accent">Imperial Tax</p>
-                  <h3 className="text-sm md:text-2xl font-headline font-bold text-accent">৳{revenueStats.totalFees.toLocaleString()}</h3>
-                </Card>
-                <Card className="bg-muted/20 border-white/10 p-3 md:p-6 space-y-1 md:space-y-4 col-span-2 md:col-span-1">
-                  <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Merchant Pulse</p>
-                  <h3 className="text-sm md:text-2xl font-headline font-bold text-foreground">{revenueStats.activeMerchants} <span className="text-xs text-muted-foreground">ACTIVE</span></h3>
-                </Card>
-              </div>
-              <div className="overflow-hidden bg-black/20 rounded-2xl p-2 md:p-4 border border-white/5 shadow-inner">
-                <MerchantGrowthChart />
-              </div>
-            </div>
-            
-            <div className="lg:col-span-4 space-y-4 md:space-y-6">
-              <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl space-y-4 shadow-xl">
-                <h4 className="text-[10px] md:text-xs font-headline font-bold uppercase tracking-widest flex items-center gap-2 text-primary">
-                  <Activity size={16} className="animate-pulse" /> Growth Trends
-                </h4>
-                <div className="space-y-2 md:space-y-3">
-                  {marketTrends.map((t, i) => (
-                    <div key={i} className="flex justify-between items-center p-2 md:p-3 bg-black/40 rounded-xl border border-white/5 group hover:border-primary/40 transition-all">
-                      <span className="text-[9px] md:text-xs font-bold text-foreground/80">{t.sector}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] md:text-xs text-accent font-bold">{t.growth}</span>
-                        <TrendingUp size={12} className="text-accent" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="p-4 bg-accent/5 border border-accent/20 rounded-2xl space-y-2">
-                 <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Treasury Status</p>
-                 <div className="flex items-center gap-2">
-                   <ShieldCheck className="text-accent" size={16} />
-                   <p className="text-xs font-bold">LOCKED & VERIFIED</p>
+           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-8 space-y-6">
+                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                    <Card className="bg-primary/5 border-primary/20 p-6 space-y-2">
+                       <p className="text-[10px] font-bold uppercase text-primary">Global Processed</p>
+                       <h3 className="text-2xl font-headline font-bold">$148,250</h3>
+                       <p className="text-[8px] text-muted-foreground">+12.4% from Global Nodes</p>
+                    </Card>
+                    <Card className="bg-accent/5 border-accent/20 p-6 space-y-2">
+                       <p className="text-[10px] font-bold uppercase text-accent">Total Revenue</p>
+                       <h3 className="text-2xl font-headline font-bold text-accent">$2,223</h3>
+                       <p className="text-[8px] text-accent font-bold">1.5% SERVICE FEE COLLECTED</p>
+                    </Card>
                  </div>
-                 <p className="text-[8px] text-muted-foreground italic">সবগুলো ট্রানজেকশন SHA256withRSA দ্বারা সুরক্ষিত।</p>
+                 <MerchantGrowthChart />
               </div>
-            </div>
-          </div>
+              <div className="lg:col-span-4 p-6 bg-muted/20 border border-white/5 rounded-[2.5rem] space-y-6">
+                 <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2"><Trophy size={16} /> Wealth Strategy</h4>
+                 <p className="text-xs text-muted-foreground leading-relaxed italic">"মহামান্য সম্রাট, আপনার এই রাজস্ব মডেল অনুযায়ী প্রতি ১ মিলিয়ন ডলার লেনদেনে সাম্রাজ্য ১৫,০০০ ডলার নিখুঁত আয় নিশ্চিত করবে। এটি আপনার ৪০০ প্রজেক্টের যাত্রায় একটি স্থায়ী অর্থনৈতিক ভিত্তি।"</p>
+                 <div className="space-y-4">
+                    <div className="flex justify-between text-[10px] uppercase font-bold">
+                       <span>Target: $100K Monthly</span>
+                       <span className="text-primary">22% Achieved</span>
+                    </div>
+                    <Progress value={22} className="h-1 bg-white/5" />
+                 </div>
+              </div>
+           </div>
         </TabsContent>
 
         <TabsContent value="ledger" className="flex-1 p-4 md:p-6 m-0 space-y-4">
@@ -257,34 +298,33 @@ export function BankDirectory() {
                 </div>
               ) : (
                 ledgerLogs.map((log) => (
-                  <div key={log.id} className={`p-4 rounded-2xl border transition-all hover:border-primary/40 ${log.action === 'SETTLEMENT_COMPLETED' || log.action === 'LOAN_DISBURSED' ? 'bg-accent/5 border-accent/20 shadow-[0_0_15px_rgba(34,211,238,0.1)]' : 'bg-primary/5 border-primary/20'}`}>
+                  <div key={log.id} className={`p-4 rounded-2xl border transition-all hover:border-primary/40 ${log.action === 'GLOBAL_PAYOUT_EXECUTED' || log.action === 'SETTLEMENT_COMPLETED' ? 'bg-accent/5 border-accent/20' : 'bg-primary/5 border-primary/20'}`}>
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${log.action === 'SETTLEMENT_COMPLETED' || log.action === 'LOAN_DISBURSED' ? 'bg-accent/20 text-accent' : 'bg-primary/20 text-primary'}`}>
-                          {log.action === 'LOAN_DISBURSED' ? <Landmark size={16} /> : log.action === 'SETTLEMENT_COMPLETED' ? <CheckCircle2 size={16} /> : <FileText size={16} />}
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${log.action === 'GLOBAL_PAYOUT_EXECUTED' ? 'bg-accent/20 text-accent' : 'bg-primary/20 text-primary'}`}>
+                          {log.action === 'GLOBAL_PAYOUT_EXECUTED' ? <Globe size={16} /> : <CheckCircle2 size={16} />}
                         </div>
                         <div>
                           <p className="text-[10px] font-bold uppercase tracking-widest text-foreground">{log.action.replace(/_/g, ' ')}</p>
-                          <p className="text-[8px] text-muted-foreground font-mono">HASH: {log.signature?.substring(0, 20)}...</p>
+                          <p className="text-[8px] text-muted-foreground font-mono">ID: {log.details?.txnId || log.id.substring(0, 10)}</p>
                         </div>
                       </div>
                       <Badge variant="outline" className="text-[7px] border-white/10 bg-black/40">
-                        {log.timestamp?.toDate?.()?.toLocaleTimeString() || 'Pending'}
+                        {log.timestamp?.toDate?.()?.toLocaleTimeString() || 'Just Now'}
                       </Badge>
                     </div>
-                    
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 p-3 bg-black/40 rounded-xl border border-white/5">
                        <div className="space-y-0.5">
-                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Total Amount</p>
-                          <p className="text-sm font-bold text-foreground">৳{log.details?.amount?.toLocaleString()}</p>
+                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Total</p>
+                          <p className="text-sm font-bold text-foreground">${log.details?.amount}</p>
                        </div>
                        <div className="space-y-0.5">
-                          <p className="text-[7px] uppercase font-bold text-muted-foreground">{log.action === 'LOAN_DISBURSED' ? 'Interest' : 'Imperial Fee (1.5%)'}</p>
-                          <p className="text-sm font-bold text-accent">{log.action === 'LOAN_DISBURSED' ? log.details?.interestRate : `৳${log.details?.feeCollected || log.details?.serviceFee || 0}`}</p>
+                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Imperial Fee</p>
+                          <p className="text-sm font-bold text-accent">${log.details?.imperialFee || log.details?.feeCollected || 0}</p>
                        </div>
                        <div className="space-y-0.5 col-span-2">
-                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Target Merchant</p>
-                          <p className="text-sm font-bold text-primary truncate">{log.details?.merchantName || log.details?.merchantId || 'TXT-001'}</p>
+                          <p className="text-[7px] uppercase font-bold text-muted-foreground">Recipient/Target</p>
+                          <p className="text-sm font-bold text-primary truncate">{log.details?.recipient || log.details?.merchantName || 'GLOBAL_NODE'}</p>
                        </div>
                     </div>
                   </div>
@@ -294,39 +334,20 @@ export function BankDirectory() {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="merchants" className="flex-1 p-4 md:p-6 m-0">
-          <MerchantRegistry />
-        </TabsContent>
-
-        <TabsContent value="fraud" className="flex-1 p-4 md:p-6 m-0 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="bg-destructive/5 border-destructive/20 p-4 md:p-6 space-y-2">
-              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-destructive">Frozen Funds</p>
-              <h3 className="text-sm md:text-2xl font-headline font-bold text-destructive">৳{fraudStats.totalFrozen.toLocaleString()}</h3>
-              <p className="text-[8px] text-muted-foreground">High-risk merchant activity detected.</p>
-            </Card>
-            <Card className="bg-accent/5 border-accent/20 p-4 md:p-6 space-y-2">
-              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-accent">Recovery Success</p>
-              <h3 className="text-sm md:text-2xl font-headline font-bold text-accent">{fraudStats.recoveryRate}</h3>
-              <p className="text-[8px] text-muted-foreground">Funds redirected back to the grid.</p>
-            </Card>
-          </div>
-        </TabsContent>
-
         <TabsContent value="global" className="flex-1 p-0 m-0 overflow-hidden">
           <div className="p-4 border-b border-white/5 bg-muted/10 flex justify-between items-center">
              <div className="relative w-full max-w-xs">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={12} />
                 <Input 
-                  placeholder="Global Banks..." 
+                  placeholder="Search Global Nodes..." 
                   className="pl-8 h-8 bg-background/50 border-white/10 text-xs"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
              </div>
-             <Badge variant="outline" className="text-[7px] border-primary/40 text-primary">STRIPE_CONNECT_V2</Badge>
+             <Badge variant="outline" className="text-[7px] border-primary/40 text-primary">155+ COUNTRIES CONNECTED</Badge>
           </div>
-          <ScrollArea className="h-[400px] md:h-[500px]">
+          <ScrollArea className="h-[500px]">
             <div className="p-4 space-y-3">
               {filteredBanks.map((bank) => (
                 <div key={bank.id} className="p-4 bg-card/60 border border-white/5 rounded-2xl flex items-center justify-between group hover:border-primary/30 transition-all">
@@ -356,36 +377,6 @@ export function BankDirectory() {
               ))}
             </div>
           </ScrollArea>
-        </TabsContent>
-
-        <TabsContent value="local" className="flex-1 p-4 md:p-6 m-0 space-y-4 md:space-y-6">
-          <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 overflow-x-auto no-scrollbar shadow-lg">
-            <div className="flex items-center justify-between mb-4 md:mb-6 min-w-[300px]">
-              <h4 className="text-[10px] md:text-sm font-headline font-bold uppercase tracking-widest flex items-center gap-2">
-                <Activity size={16} className="text-primary animate-pulse" /> Local Settlement Visualizer
-              </h4>
-              <Badge className="bg-accent text-background font-bold text-[7px] uppercase">Anycast Active</Badge>
-            </div>
-            
-            <div className="relative flex justify-between items-center px-2 md:px-4 min-w-[350px] py-4">
-              <div className="absolute top-1/2 left-0 right-0 h-px bg-white/10 -translate-y-1/2 -z-10" />
-              {steps.map((step) => {
-                const Icon = step.icon;
-                const isCompleted = activeStep >= step.id;
-                const isCurrent = activeStep === step.id;
-                return (
-                  <div key={step.id} className="flex flex-col items-center gap-1.5 md:gap-2 relative">
-                    <div className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isCompleted ? 'bg-primary border-primary text-background' : isCurrent ? 'bg-muted border-accent text-accent animate-pulse' : 'bg-card border-white/5 text-muted-foreground'}`}>
-                      <Icon className="w-[14px] h-[14px] md:w-4 md:h-4" />
-                    </div>
-                    <span className={`text-[6px] md:text-[8px] font-bold uppercase text-center ${isCompleted ? 'text-primary' : 'text-muted-foreground'}`}>
-                      {step.label}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
         </TabsContent>
       </Tabs>
     </Card>

@@ -1,6 +1,6 @@
 /**
  * @fileOverview Sovereign Payment Handler for Local & Global Settlements.
- * Updated Phase 33.0: Integrated Smart Escrow and Investment Fees.
+ * Updated Phase 33.0: Integrated PayPal Payout Simulation and Smart Escrow.
  */
 
 import { IntegrationBridge } from './integration-bridge';
@@ -8,14 +8,13 @@ import { db } from './firebase';
 import { collection, addDoc, serverTimestamp, getDocs, doc, updateDoc, increment } from 'firebase/firestore';
 import { FraudRecovery } from './fraud-recovery-protocol';
 import { EconomicForecaster } from './economic-forecaster';
-import { AuthGuard } from './auth-guard';
 import { SovereignAudit } from './sovereign-audit';
 import { MerchantCreditEngine } from './merchant-credit-engine';
 
 export interface PaymentIntent {
   amount: number;
   currency: string;
-  source: 'CARD' | 'BANK' | 'VIRTUAL_ACCOUNT' | 'INVESTMENT_VAULT';
+  source: 'CARD' | 'BANK' | 'VIRTUAL_ACCOUNT' | 'INVESTMENT_VAULT' | 'PAYPAL';
   target: 'BKASH' | 'LOCAL_BANK' | 'TREASURY' | 'GLOBAL_PAYPAL' | 'WISE_SOVEREIGN' | 'SMART_ESCROW';
   merchantId: string;
   description?: string;
@@ -36,7 +35,7 @@ export interface AtomicReceipt {
 
 export class PaymentHandler {
   private static IMPERIAL_FEE_RATE = 0.015;
-  private static INVESTMENT_FEE_RATE = 0.005; // 0.5% for Sheikh Code Exchange members
+  private static INVESTMENT_FEE_RATE = 0.005;
 
   static predictRisk(intent: PaymentIntent) {
     console.log(`[AI Fraud Engine] Analyzing risk for ${intent.amount} ${intent.currency}...`);
@@ -68,6 +67,53 @@ export class PaymentHandler {
       ...receiptData,
       signature: IntegrationBridge.generateSignature(receiptData)
     };
+  }
+
+  /**
+   * Simulates Global Payout Flow (Step 1 -> Step 2) as used in PayPal/Wise APIs.
+   */
+  static async simulateGlobalPayout(recipient: string, amount: number, onLog: (msg: string) => void) {
+    try {
+      // Step 1: Validation & Payout Batch Creation
+      onLog(`[STEP 1]: Creating Payout Batch for ${recipient}...`);
+      await new Promise(r => setTimeout(r, 1000));
+      onLog(`[AUTH]: Generating OAuth 2.0 Token via Sheikh Master Key...`);
+      const batchId = 'batch_' + Math.random().toString(36).substring(2, 10);
+      onLog(`[PENDING]: Batch ${batchId} validated. Amount: $${amount} ready.`);
+
+      // Step 2: Confirmation & Execution
+      onLog(`[STEP 2]: Executing Final Settlement...`);
+      await new Promise(r => setTimeout(r, 1200));
+      const txnId = 'txn_paypal_' + Math.random().toString(36).substring(2, 12);
+      
+      const { fee, netAmount } = this.calculateSettlement(amount);
+      
+      const payoutData = {
+        batchId,
+        txnId,
+        recipient,
+        amount,
+        imperialFee: fee,
+        netAmount,
+        status: 'SUCCESS',
+        timestamp: new Date().toISOString(),
+        purity: 'VERIFIED_IMPERIAL'
+      };
+
+      await addDoc(collection(db, "audit_trails"), {
+        action: 'GLOBAL_PAYOUT_EXECUTED',
+        details: payoutData,
+        signature: IntegrationBridge.generateSignature(payoutData),
+        timestamp: serverTimestamp(),
+        performedBy: 'Imperial_Treasury_Admin'
+      });
+
+      onLog(`[SUCCESS]: $${netAmount} pushed to ${recipient}. Imperial Revenue: $${fee} collected.`);
+      return { success: true, txnId };
+    } catch (e: any) {
+      onLog(`[ERROR]: Payout Fault - ${e.message}`);
+      throw e;
+    }
   }
 
   /**

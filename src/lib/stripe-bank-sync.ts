@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Stripe Bank Synchronization Service for Imperial Treasury.
  * Fetches and maps global banking nodes to Sovereign Standards.
@@ -30,6 +29,8 @@ export const StripeBankSync = {
 
     const nodes: BankNode[] = [
       { id: 'bn-chase', country: 'USA', bankName: 'J.P. Morgan Chase & Co.', logoUrl: 'https://placehold.co/40x40/00467f/white?text=CH', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_chase_882' },
+      { id: 'bn-paypal', country: 'GLOBAL', bankName: 'PayPal Business Grid', logoUrl: 'https://placehold.co/40x40/003087/white?text=PP', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_paypal_global_42' },
+      { id: 'bn-wise', country: 'GLOBAL', bankName: 'Wise Sovereign Node', logoUrl: 'https://placehold.co/40x40/00b9ff/white?text=WI', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_wise_grid_99' },
       { id: 'bn-barclays', country: 'UK', bankName: 'Barclays International', logoUrl: 'https://placehold.co/40x40/00aeef/white?text=BA', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_barclays_119' },
       { id: 'bn-city', country: 'BD', bankName: 'City Bank (Sovereign Hub)', logoUrl: 'https://placehold.co/40x40/ed1c24/white?text=CB', status: 'READY', pushAvailable: true, handshakeId: 'rsa_city_bd_402' },
       { id: 'bn-revolut', country: 'EU', bankName: 'Revolut Business (Anycast)', logoUrl: 'https://placehold.co/40x40/000000/white?text=RE', status: 'CONNECTED', pushAvailable: true, handshakeId: 'rsa_rev_eu_990' },
