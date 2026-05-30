@@ -15,7 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { WebRTCManager } from '@/lib/webrtc-signaling'
 import { ResourceMap } from './resource-map'
 import { CommunicationConsole } from './communication-console'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MediaControls } from './media-controls'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { errorEmitter } from '@/firebase/error-emitter'
@@ -247,7 +247,7 @@ export function DispatcherConsole() {
                                      <BrainCircuit size={16} />
                                      <span className="text-[10px] font-bold uppercase tracking-widest">AI Strategy</span>
                                   </div>
-                                  <p className="text-[11px] text-foreground/80 leading-relaxed italic">"{recommendation.reasoning}"</p>
+                                  <p className="text-11px text-foreground/80 leading-relaxed italic">"{recommendation.reasoning}"</p>
                                   <Button onClick={() => handleDispatch(recommendation.recommendedResponderId)} className="w-full bg-primary text-background font-bold text-xs h-9 rounded-xl">
                                      AUTHORIZE DEPLOYMENT
                                   </Button>
