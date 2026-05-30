@@ -1,18 +1,15 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Share2, Plus, Globe, Key, Trash2, Send, ShieldCheck, BookOpen, Terminal, CheckCircle2, Lock, Cpu, Zap, Database, Code2, Link, Map, Search, ArrowRightLeft, ShieldAlert, Activity, RefreshCw, Rocket, History, TrendingUp, ShieldX, Eye, Filter, Skull, UserX, AlertTriangle, RefreshCcw, Swords, Target, Crosshair, Sparkles, BrainCircuit, Fingerprint, Network, Scale, Trophy, Cloud, HardDrive, Download, BarChart3, Code, TerminalSquare, Server } from 'lucide-react'
+import { Globe, Key, Cpu, Zap, Database, Code2, ShieldAlert, Activity, RefreshCw, Trophy, BrainCircuit, Network, HardDrive, Server, TerminalSquare, Code, Webhook, Box, ArrowRightLeft, ShieldCheck, Landmark } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { db } from '@/lib/firebase'
-import { collection, onSnapshot, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore'
 import { IntegrationBridge } from '@/lib/integration-bridge'
-import { SovereignConnector } from '@/lib/sovereign-connector'
-import { SovereignGuard } from '@/lib/sovereign-guard'
 import { SelfHealing } from '@/lib/self-healing'
 import { GoogleDriveBridge, VaultStats } from '@/lib/google-drive-bridge'
 import { SovereignAudit } from '@/lib/sovereign-audit'
@@ -28,27 +25,15 @@ import { FirestorePermissionError } from '@/firebase/errors'
 
 export function IntegrationPanel() {
   const [apps, setApps] = useState<any[]>([])
-  const [suspects, setSuspects] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
-  const [newApp, setNewApp] = useState({ name: '', webhook: '' })
   const [healingStatus, setHealingStatus] = useState(SelfHealing.getStatus())
   const [vaultStats, setVaultStats] = useState<VaultStats>(GoogleDriveBridge.getVaultStats())
   const [devKey, setDevKey] = useState<string | null>(null)
+  const [activeSignals, setActiveSignals] = useState<any[]>([])
   
-  const guardStats = SovereignGuard.getStats();
   const { toast } = useToast()
 
   useEffect(() => {
-    // Generate Success Report once for Phase 32.0 if not already logged
-    const finalizePhase = async () => {
-      await SovereignAudit.logSuccessReport('PHASE_32.0_GLOBAL_VAULT', {
-        efficiency: '92%',
-        capacity: '5TB',
-        nodes: '42/42'
-      });
-    };
-    finalizePhase();
-
     const unsubApps = onSnapshot(query(collection(db, "integrations")), (snapshot) => {
       setApps(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (err) => {
@@ -57,13 +42,8 @@ export function IntegrationPanel() {
       }
     });
 
-    const suspectsQ = query(collection(db, "suspect_profiles"), orderBy("timestamp", "desc"), limit(15));
-    const unsubSuspects = onSnapshot(suspectsQ, (snapshot) => {
-      setSuspects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (err) => {
-      if (err.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: '/suspect_profiles', operation: 'list' }));
-      }
+    const unsubSignals = onSnapshot(query(collection(db, "audit_trails"), orderBy("timestamp", "desc"), limit(10)), (snapshot) => {
+      setActiveSignals(snapshot.docs.filter(d => d.data().action === 'PLUGIN_SIGNAL_DISPATCHED').map(d => d.data()));
     });
 
     const interval = setInterval(() => {
@@ -73,7 +53,7 @@ export function IntegrationPanel() {
 
     return () => {
       unsubApps();
-      unsubSuspects();
+      unsubSignals();
       clearInterval(interval);
     }
   }, [])
@@ -101,12 +81,12 @@ export function IntegrationPanel() {
               SOVEREIGN API COMMAND
             </CardTitle>
             <CardDescription className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.3em] font-bold text-primary/60">
-              API Interceptor • Adaptive Guard • Phase 32.1
+              API Interceptor • Unified Aggregator • v33.5
             </CardDescription>
           </div>
           <div className="flex gap-2">
             <Badge variant="outline" className={`text-[8px] md:text-[10px] gap-1.5 py-1 ${healingStatus.status === 'OPTIMAL' ? 'border-accent/40 text-accent' : 'border-destructive/40 text-destructive animate-pulse'}`}>
-              <RefreshCcw size={12} className={healingStatus.status === 'REPAIRING' ? 'animate-spin' : ''} /> {healingStatus.status}
+              <RefreshCw size={12} className={healingStatus.status === 'REPAIRING' ? 'animate-spin' : ''} /> {healingStatus.status}
             </Badge>
           </div>
         </div>
@@ -115,13 +95,12 @@ export function IntegrationPanel() {
       <Tabs defaultValue="war-room" className="flex-1 flex flex-col">
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
-            <TabsTrigger value="war-room" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap"><Swords size={12}/> ওয়ার-রুম</TabsTrigger>
-            <TabsTrigger value="global-api" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap"><Globe size={12}/> Global API (Proj 43)</TabsTrigger>
-            <TabsTrigger value="vault" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><HardDrive size={12}/> ভল্ট (Data Scale)</TabsTrigger>
-            <TabsTrigger value="victory" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><Trophy size={12}/> বিজয়</TabsTrigger>
-            <TabsTrigger value="judiciary" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap"><Scale size={12}/> বিচার বিভাগ</TabsTrigger>
-            <TabsTrigger value="evolution" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><BrainCircuit size={12}/> প্রেডিকশন</TabsTrigger>
-            <TabsTrigger value="apps" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap"><Server size={12}/> পার্টনার্স</TabsTrigger>
+            <TabsTrigger value="war-room" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap">ওয়ার-রুম</TabsTrigger>
+            <TabsTrigger value="global-api" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap">Global API</TabsTrigger>
+            <TabsTrigger value="webhooks" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><Webhook size={12}/> ওয়েবহুকস</TabsTrigger>
+            <TabsTrigger value="vault" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap">ভল্ট</TabsTrigger>
+            <TabsTrigger value="judiciary" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap">বিচার বিভাগ</TabsTrigger>
+            <TabsTrigger value="apps" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap">প্লাগিনস</TabsTrigger>
           </TabsList>
         </div>
 
@@ -129,7 +108,7 @@ export function IntegrationPanel() {
           <ThreatMap />
         </TabsContent>
 
-        <TabsContent value="global-api" className="flex-1 p-4 md:p-6 space-y-6 m-0 animate-in fade-in zoom-in-95">
+        <TabsContent value="global-api" className="flex-1 p-4 md:p-6 space-y-6 m-0 animate-in fade-in">
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="bg-primary/5 border-primary/20 p-6 space-y-6">
                  <div className="flex items-center gap-4">
@@ -138,7 +117,7 @@ export function IntegrationPanel() {
                     </div>
                     <div>
                        <h3 className="text-lg font-headline font-bold uppercase tracking-widest">Global Gateway API</h3>
-                       <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Project 43 | The Open Empire</p>
+                       <p className="text-[10px] text-muted-foreground uppercase font-bold">Project 43 | The Open Empire</p>
                     </div>
                  </div>
                  <p className="text-xs text-muted-foreground leading-relaxed">আপনার ৪২তম প্রজেক্টের ডাটা ভল্টকে এখন বিশ্বের যেকোনো প্রান্তের ডেভেলপারদের জন্য উন্মুক্ত করা হয়েছে। এটি একটি উচ্চ-নিরাপত্তা সম্পন্ন গেটওয়ে যা RSA v2 প্রোটোকল মেনে চলে।</p>
@@ -159,92 +138,123 @@ export function IntegrationPanel() {
                  )}
               </Card>
 
-              <Card className="bg-muted/20 border-white/10 p-6 flex flex-col justify-between">
-                 <div className="space-y-4">
-                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                       <TerminalSquare size={16} /> Quick Start Documentation
-                    </h4>
-                    <div className="p-4 bg-slate-950 rounded-xl font-mono text-[10px] text-accent/80 overflow-x-auto">
-                       curl -X POST https://core.sheikh/api/v1/gateway \<br />
-                       &nbsp;&nbsp;-H "X-Imperial-Key: {devKey || 'GKEY_XXXX'}" \<br />
-                       &nbsp;&nbsp;-d '{"action": "GET_VAULT_STATUS"}'
-                    </div>
-                 </div>
-                 <div className="pt-6 border-t border-white/5 mt-6">
-                    <p className="text-[9px] text-muted-foreground italic leading-relaxed">
-                       "মহামান্য সম্রাট, এই গেটওয়ে ব্যবহারের প্রতিটি রিকোয়েস্ট আপনার অডিট ট্রেইলে রিয়েল-টাইমে নথিবদ্ধ হবে। অননুমোদিত ব্যবহারের চেষ্টা করলে সিস্টেমটি স্বয়ংক্রিয়ভাবে কি (Key) বাতিল করে দেবে।"
-                    </p>
+              <Card className="bg-muted/20 border-white/10 p-6">
+                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-4">
+                    <TerminalSquare size={16} /> Quick Start SDK
+                 </h4>
+                 <div className="p-4 bg-slate-950 rounded-xl font-mono text-[10px] text-accent/80 overflow-x-auto">
+                    import { SheikhHub } from '@sheikh/sdk';<br /><br />
+                    const hub = new SheikhHub({ key: '{devKey || 'GKEY_XXXX'}' });<br />
+                    const vault = await hub.vault.getStats();
                  </div>
               </Card>
            </div>
         </TabsContent>
 
-        <TabsContent value="vault" className="flex-1 p-4 md:p-6 space-y-6 m-0 animate-in fade-in zoom-in-95">
+        <TabsContent value="webhooks" className="flex-1 p-4 md:p-6 m-0 space-y-6">
+           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              <div className="md:col-span-4 space-y-4">
+                 <Card className="bg-accent/5 border-accent/20 p-5 space-y-4">
+                    <div className="flex items-center gap-3">
+                       <Webhook className="text-accent" size={24} />
+                       <h4 className="text-xs font-bold uppercase">Signal Dispatcher</h4>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic">আপনার সিস্টেম থেকে থার্ড-পার্টি অ্যাপে পাঠানো লাইভ সিগন্যালগুলো এখানে মনিটর করুন।</p>
+                 </Card>
+              </div>
+              <div className="md:col-span-8">
+                 <Card className="bg-black/40 border-white/5 rounded-2xl overflow-hidden flex flex-col h-[300px]">
+                    <div className="p-3 bg-muted/20 border-b border-white/5 flex justify-between items-center">
+                       <span className="text-[10px] font-bold uppercase text-accent">Active Webhook Signals</span>
+                       <Badge variant="outline" className="text-[7px] border-accent/40 text-accent">LIVE_FEED</Badge>
+                    </div>
+                    <ScrollArea className="flex-1 p-3 font-mono text-[10px]">
+                       {activeSignals.length === 0 ? (
+                         <div className="h-full flex flex-col items-center justify-center opacity-20">
+                            <Activity size={32} />
+                            <p className="mt-2 uppercase tracking-widest">Awaiting Dispatches...</p>
+                         </div>
+                       ) : (
+                         activeSignals.map((sig, i) => (
+                           <div key={i} className="py-1 border-b border-white/5 flex justify-between animate-in slide-in-from-left-2">
+                              <span className="text-accent">[{new Date(sig.timestamp?.seconds * 1000).toLocaleTimeString()}]</span>
+                              <span className="text-primary truncate mx-2">SIGNAL_DISPATCHED_TO_PLUGINS</span>
+                              <span className="text-white/60">SIZE: {sig.details?.dataSize}B</span>
+                           </div>
+                         ))
+                       )}
+                    </ScrollArea>
+                 </Card>
+              </div>
+           </div>
+        </TabsContent>
+
+        <TabsContent value="vault" className="flex-1 p-4 md:p-6 m-0 animate-in fade-in">
            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card className="bg-accent/5 border-accent/20 p-5 space-y-4">
                  <div className="flex justify-between items-start">
                     <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center text-accent">
-                       <Cloud size={20} />
+                       <HardDrive size={20} />
                     </div>
                     <Badge className="bg-accent text-background text-[7px] uppercase font-bold">Scaling Enabled</Badge>
                  </div>
                  <div>
                     <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Drive Infrastructure</p>
                     <h3 className="text-xl font-headline font-bold text-foreground">{vaultStats.usedSpace} / {vaultStats.totalSpace}</h3>
-                    <div className="flex justify-between text-[8px] mt-2 text-accent/60 uppercase font-bold">
-                       <span>Utilization</span>
-                       <span>2.8%</span>
-                    </div>
-                    <Progress value={2.8} className="h-1 bg-white/5 mt-1" />
+                    <Progress value={2.8} className="h-1 bg-white/5 mt-2" />
                  </div>
               </Card>
-
               <Card className="bg-primary/5 border-primary/20 p-5 space-y-4">
                  <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
-                    <TrendingUp size={20} />
+                    <Database size={20} />
                  </div>
                  <div>
-                    <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Growth Vector</p>
-                    <h3 className="text-xl font-headline font-bold text-foreground">{vaultStats.growthRate}</h3>
-                    <p className="text-[8px] text-primary/60 font-mono mt-1">CAPACITY_READY: 1M+ USERS</p>
+                    <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Firestore Offload</p>
+                    <h3 className="text-xl font-headline font-bold text-foreground">{vaultStats.offloadEfficiency}% Efficiency</h3>
+                    <p className="text-[8px] text-primary/60 font-mono mt-1">PRIMARY_DB_LIGHT_OK</p>
                  </div>
               </Card>
-
               <Card className="bg-muted/20 border-white/10 p-5 space-y-4">
                  <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center text-accent">
                     <Zap size={20} />
                  </div>
                  <div>
-                    <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Offload Efficiency</p>
-                    <h3 className="text-xl font-headline font-bold text-accent">{vaultStats.offloadEfficiency}% Pure</h3>
-                    <p className="text-[8px] text-muted-foreground mt-1 italic">Firestore remains light & fast.</p>
+                    <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Exchange Volume</p>
+                    <h3 className="text-xl font-headline font-bold text-foreground">{vaultStats.exchangeVolume}</h3>
+                    <p className="text-[8px] text-muted-foreground mt-1">SINCE_PHASE_32_SYNC</p>
                  </div>
               </Card>
            </div>
         </TabsContent>
 
-        <TabsContent value="victory" className="flex-1 p-4 md:p-6 m-0">
-          <ImperialVictoryPanel />
-        </TabsContent>
         <TabsContent value="judiciary" className="flex-1 p-4 md:p-6 m-0">
           <JudiciaryPanel />
         </TabsContent>
-        <TabsContent value="evolution" className="flex-1 p-4 md:p-6 m-0">
-          <PredictiveForecasting />
-        </TabsContent>
+
         <TabsContent value="apps" className="flex-1 p-4 md:p-6 m-0 space-y-4">
            {apps.map(app => (
              <div key={app.id} className="p-4 bg-muted/20 border border-white/5 rounded-2xl flex justify-between items-center group hover:border-primary/40 transition-all">
                 <div className="flex items-center gap-4">
                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                      <Server size={20} />
+                      <Box size={20} />
                    </div>
                    <div>
                       <h4 className="text-sm font-bold text-foreground">{app.name}</h4>
-                      <p className="text-[9px] text-muted-foreground font-mono">AppID: {app.appId}</p>
+                      <div className="flex gap-2">
+                        <Badge variant="outline" className="text-[7px] border-white/10 text-muted-foreground">Type: {app.type || 'Standard'}</Badge>
+                        <Badge variant="outline" className="text-[7px] border-white/10 text-muted-foreground">AppID: {app.appId}</Badge>
+                      </div>
                    </div>
                 </div>
-                <Badge variant="outline" className="text-[8px] border-accent/40 text-accent uppercase">{app.status}</Badge>
+                <div className="flex items-center gap-4">
+                   <div className="text-right hidden sm:block">
+                      <p className="text-[8px] uppercase font-bold text-muted-foreground">Status</p>
+                      <p className="text-[10px] font-bold text-accent">{app.status.toUpperCase()}</p>
+                   </div>
+                   <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                      <RefreshCw size={14} />
+                   </Button>
+                </div>
              </div>
            ))}
         </TabsContent>

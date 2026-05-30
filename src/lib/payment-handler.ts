@@ -1,146 +1,70 @@
 /**
  * @fileOverview Sovereign Payment Handler for Local & Global Settlements.
- * Updated Phase 33.0: Integrated PayPal Payout Simulation and Smart Escrow.
+ * Updated Phase 33.5: Integrated API Aggregator and Dynamic Plugin Fees.
  */
 
 import { IntegrationBridge } from './integration-bridge';
 import { db } from './firebase';
-import { collection, addDoc, serverTimestamp, getDocs, doc, updateDoc, increment } from 'firebase/firestore';
-import { FraudRecovery } from './fraud-recovery-protocol';
-import { EconomicForecaster } from './economic-forecaster';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import { SovereignAudit } from './sovereign-audit';
-import { MerchantCreditEngine } from './merchant-credit-engine';
+import { OpenBankingAdapter } from './open-banking-adapter';
 
 export interface PaymentIntent {
   amount: number;
   currency: string;
-  source: 'CARD' | 'BANK' | 'VIRTUAL_ACCOUNT' | 'INVESTMENT_VAULT' | 'PAYPAL';
+  source: 'CARD' | 'BANK' | 'VIRTUAL_ACCOUNT' | 'INVESTMENT_VAULT' | 'PAYPAL' | 'PLUGIN_API';
   target: 'BKASH' | 'LOCAL_BANK' | 'TREASURY' | 'GLOBAL_PAYPAL' | 'WISE_SOVEREIGN' | 'SMART_ESCROW';
   merchantId: string;
   description?: string;
   isEscrow?: boolean;
 }
 
-export interface AtomicReceipt {
-  receiptId: string;
-  txnId: string;
-  amount: number;
-  netAmount: number;
-  fee: number;
-  currency: string;
-  domain: string;
-  signature: string;
-  timestamp: string;
-}
-
 export class PaymentHandler {
   private static IMPERIAL_FEE_RATE = 0.015;
-  private static INVESTMENT_FEE_RATE = 0.005;
+  private static PLUGIN_COMMISSION = 0.005; // Extra fee for third-party API use
 
-  static predictRisk(intent: PaymentIntent) {
-    console.log(`[AI Fraud Engine] Analyzing risk for ${intent.amount} ${intent.currency}...`);
-    if (intent.amount > 500000) return 'HIGH';
-    if (intent.merchantId === 'SUSPICIOUS_M_01') return 'CRITICAL';
-    return 'LOW';
-  }
-
-  static calculateSettlement(amount: number, isInvestment = false) {
-    const rate = isInvestment ? this.INVESTMENT_FEE_RATE : this.IMPERIAL_FEE_RATE;
+  static calculateSettlement(amount: number, isPlugin = false) {
+    let rate = this.IMPERIAL_FEE_RATE;
+    if (isPlugin) rate += this.PLUGIN_COMMISSION;
+    
     const fee = amount * rate;
     const netAmount = amount - fee;
     return { fee, netAmount };
   }
 
-  static generateReceipt(intent: PaymentIntent, txnId: string): AtomicReceipt {
-    const { fee, netAmount } = this.calculateSettlement(intent.amount, intent.source === 'INVESTMENT_VAULT');
-    const receiptData = {
+  /**
+   * Routes payment through the Sovereign API Aggregator.
+   */
+  static async processAggregatedPayment(intent: PaymentIntent) {
+    console.log(`[API Aggregator] Routing payment for ${intent.merchantId} via Unified Layer...`);
+    
+    const { fee, netAmount } = this.calculateSettlement(intent.amount, intent.source === 'PLUGIN_API');
+    const txnId = 'txn_agg_' + Math.random().toString(36).substring(2, 12);
+
+    const settlementData = {
       txnId,
+      merchantId: intent.merchantId,
       amount: intent.amount,
-      fee,
-      netAmount,
+      feeCollected: fee,
+      netSettled: netAmount,
       currency: intent.currency,
-      domain: IntegrationBridge.primaryDomain,
+      aggregator: 'gw-open-banking-central',
+      status: 'SUCCESS',
       timestamp: new Date().toISOString()
     };
-    return {
-      receiptId: 'rec_' + Math.random().toString(36).substring(2, 12),
-      ...receiptData,
-      signature: IntegrationBridge.generateSignature(receiptData)
-    };
-  }
 
-  /**
-   * Simulates Global Payout Flow (Step 1 -> Step 2) as used in PayPal/Wise APIs.
-   */
-  static async simulateGlobalPayout(recipient: string, amount: number, onLog: (msg: string) => void) {
-    try {
-      // Step 1: Validation & Payout Batch Creation
-      onLog(`[STEP 1]: Creating Payout Batch for ${recipient}...`);
-      await new Promise(r => setTimeout(r, 1000));
-      onLog(`[AUTH]: Generating OAuth 2.0 Token via Sheikh Master Key...`);
-      const batchId = 'batch_' + Math.random().toString(36).substring(2, 10);
-      onLog(`[PENDING]: Batch ${batchId} validated. Amount: $${amount} ready.`);
-
-      // Step 2: Confirmation & Execution
-      onLog(`[STEP 2]: Executing Final Settlement...`);
-      await new Promise(r => setTimeout(r, 1200));
-      const txnId = 'txn_paypal_' + Math.random().toString(36).substring(2, 12);
-      
-      const { fee, netAmount } = this.calculateSettlement(amount);
-      
-      const payoutData = {
-        batchId,
-        txnId,
-        recipient,
-        amount,
-        imperialFee: fee,
-        netAmount,
-        status: 'SUCCESS',
-        timestamp: new Date().toISOString(),
-        purity: 'VERIFIED_IMPERIAL'
-      };
-
-      await addDoc(collection(db, "audit_trails"), {
-        action: 'GLOBAL_PAYOUT_EXECUTED',
-        details: payoutData,
-        signature: IntegrationBridge.generateSignature(payoutData),
-        timestamp: serverTimestamp(),
-        performedBy: 'Imperial_Treasury_Admin'
-      });
-
-      onLog(`[SUCCESS]: $${netAmount} pushed to ${recipient}. Imperial Revenue: $${fee} collected.`);
-      return { success: true, txnId };
-    } catch (e: any) {
-      onLog(`[ERROR]: Payout Fault - ${e.message}`);
-      throw e;
-    }
-  }
-
-  /**
-   * Initializes a Smart Escrow transaction for high-value exchanges.
-   */
-  static async initiateEscrow(intent: PaymentIntent) {
-    console.warn(`[Smart Escrow] Locking funds: $${intent.amount} for ${intent.merchantId}...`);
-    const escrowId = `ESC-${Math.floor(100000 + Math.random() * 900000)}`;
-    
-    const escrowData = {
-      escrowId,
-      status: 'LOCKED',
-      amount: intent.amount,
-      purity: 'VERIFIED_IMPERIAL',
-      releaseCondition: 'DELIVERY_CONFIRMED',
-      timestamp: serverTimestamp()
-    };
+    // Dispatch to Webhooks if any plugin is subscribed
+    await IntegrationBridge.dispatchToPlugins('PAYMENT_SETTLED', settlementData);
 
     await addDoc(collection(db, "audit_trails"), {
-      action: 'SMART_ESCROW_LOCKED',
-      details: escrowData,
-      signature: IntegrationBridge.generateSignature(escrowData),
+      action: 'SETTLEMENT_COMPLETED',
+      details: settlementData,
+      signature: IntegrationBridge.generateSignature(settlementData),
       timestamp: serverTimestamp(),
-      performedBy: 'Autonomous_AI_Workforce'
+      performedBy: 'Imperial_Aggregator_v33'
     });
 
-    return escrowId;
+    return settlementData;
   }
 
   /**
@@ -177,125 +101,35 @@ export class PaymentHandler {
         performedBy: 'Imperial_Treasury_Admin'
       });
 
-      await SovereignAudit.logMilestone('IMPERIAL_LOAN', `Loan of ৳${amount} disbursed to ${merchant.businessName}.`);
-      
       return loanData;
     } catch (error: any) {
-      console.error("[Loan Engine] Disbursement Failed:", error);
       throw error;
     }
   }
 
   static async generateInvoice(merchant: any, amount: number, description: string) {
-    if (!merchant) throw new Error("Invalid merchant data provided.");
+    const invoiceId = `INV-SOV-${Math.floor(100000 + Math.random() * 900000)}`;
+    const { fee } = this.calculateSettlement(amount);
+    
+    const invoiceData = {
+      invoiceId,
+      merchantId: merchant.merchantId || 'TXT-001',
+      merchantName: merchant.businessName,
+      amount,
+      serviceFee: fee,
+      description,
+      status: 'pending',
+      issuedAt: new Date().toISOString()
+    };
 
-    try {
-      const invoiceId = `INV-SOV-${Math.floor(100000 + Math.random() * 900000)}`;
-      const { fee } = this.calculateSettlement(amount);
-      
-      const invoiceData = {
-        invoiceId,
-        merchantId: merchant.merchantId || 'TXT-001',
-        merchantName: merchant.businessName || 'সিরাজগঞ্জ হ্যান্ডলুম প্রোডাকশন হাউস',
-        amount,
-        serviceFee: fee,
-        description,
-        status: 'pending',
-        issuedAt: new Date().toISOString(),
-        purity: 'VERIFIED_IMPERIAL'
-      };
+    await addDoc(collection(db, "audit_trails"), {
+      action: 'INVOICE_GENERATED',
+      details: invoiceData,
+      signature: IntegrationBridge.generateSignature(invoiceData),
+      timestamp: serverTimestamp(),
+      performedBy: 'Imperial_Invoicing_Engine'
+    });
 
-      const signature = IntegrationBridge.generateSignature(invoiceData);
-
-      await addDoc(collection(db, "audit_trails"), {
-        action: 'INVOICE_GENERATED',
-        details: invoiceData,
-        signature,
-        timestamp: serverTimestamp(),
-        performedBy: 'Imperial_Invoicing_Engine'
-      });
-
-      return invoiceData;
-    } catch (error: any) {
-      console.error("[Invoice Engine] Failed to generate invoice:", error);
-      throw new Error(`Invoicing Fault: ${error.message}`);
-    }
-  }
-
-  static async simulateFinancialCycle(onLog: (msg: string) => void) {
-    try {
-      onLog("[INITIATING]: Picking Targeted Merchant for Stress Test...");
-      
-      const merchantsSnap = await getDocs(collection(db, "merchants"));
-      const merchant = merchantsSnap.docs
-        .map(d => ({ id: d.id, ...d.data() } as any))
-        .find(m => m.merchantId === "TXT-001") || { 
-          businessName: 'সিরাজগঞ্জ হ্যান্ডলুম প্রোডাকশন হাউস', 
-          merchantId: 'TXT-001',
-          category: 'Textile',
-          totalRevenue: 500000,
-          taxCollected: 10000
-        };
-      
-      onLog(`[MERCHANT]: Selected ${merchant.businessName} (${merchant.merchantId})`);
-      
-      onLog("[CREDIT]: Running Sovereign Credit Analysis...");
-      const credit = MerchantCreditEngine.analyzeSovereignCredit(merchant.totalRevenue || 0, merchant.taxCollected || 0, 8);
-      onLog(`[SUCCESS]: Credit Score: ${credit.score}/1000. Eligibility: ${credit.eligibility}`);
-
-      if (credit.eligibility !== 'NONE') {
-        const loanAmount = 50000;
-        onLog(`[LOAN]: Initiating Imperial Loan Disbursement of ৳${loanAmount}...`);
-        await this.disburseLoan(merchant, loanAmount);
-        onLog(`[SUCCESS]: ৳${loanAmount} pushed to ${merchant.businessName} local node.`);
-      }
-
-      const amount = 10000;
-      onLog(`[INVOICE]: Generating Sovereign Bill for ৳${amount}...`);
-      const invoice = await this.generateInvoice(merchant, amount, "Imperial Service Fee - Strategic Validation");
-      
-      onLog("[SECURITY]: Executing Zero-Trust Handshake (RSA v2)...");
-      await new Promise(r => setTimeout(r, 1200));
-
-      const intent: PaymentIntent = {
-        amount: invoice.amount,
-        currency: 'BDT',
-        source: 'VIRTUAL_ACCOUNT',
-        target: 'TREASURY',
-        merchantId: merchant.merchantId
-      };
-
-      const risk = this.predictRisk(intent);
-      const { fee, netAmount } = this.calculateSettlement(intent.amount);
-      const settlementId = 'set_full_' + Math.random().toString(36).substring(2, 10);
-      const receipt = this.generateReceipt(intent, settlementId);
-
-      onLog(`[REVENUE]: Imperial Fee ৳${fee} collected. Net Settlement: ৳${netAmount}`);
-
-      await addDoc(collection(db, "audit_trails"), {
-        action: 'SETTLEMENT_COMPLETED',
-        details: { 
-          settlementId, 
-          invoiceId: invoice.invoiceId,
-          merchantId: merchant.merchantId,
-          merchantName: merchant.businessName,
-          amount: intent.amount, 
-          feeCollected: fee,
-          netSettled: netAmount,
-          risk, 
-          receipt,
-          purity: 'ZERO_TRUST_VERIFIED'
-        },
-        signature: IntegrationBridge.generateSignature({ settlementId, status: 'VERIFIED' }),
-        timestamp: serverTimestamp(),
-        performedBy: 'Autonomous_Revenue_Engine'
-      });
-
-      onLog(`[COMPLETED]: Cycle Finished. Settlement ID: ${settlementId}`);
-      return { success: true, settlementId, fee };
-    } catch (error: any) {
-      onLog(`[CRITICAL_ERROR]: ${error.message}`);
-      throw error;
-    }
+    return invoiceData;
   }
 }
