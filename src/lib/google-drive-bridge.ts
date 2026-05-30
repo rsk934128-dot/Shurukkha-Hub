@@ -2,7 +2,7 @@
 /**
  * @fileOverview Imperial Google Drive Bridge.
  * Manages the connection between Shurukkha Hub and External Cloud Storage.
- * Optimized Phase 31.8: Handles Data Offloading and Growth Scalability.
+ * Optimized Phase 31.8: Handles Data Offloading, Code Exchange, and Growth Scalability.
  */
 
 import { IntegrationBridge } from './integration-bridge';
@@ -13,19 +13,20 @@ export interface VaultStats {
   fileCount: number;
   syncStatus: 'OPTIMAL' | 'SYNCING' | 'ERROR';
   lastBackup: string;
-  growthRate: string; // New metric for scalability
-  offloadEfficiency: number; // % of data offloaded to drive
+  growthRate: string; 
+  offloadEfficiency: number; 
+  exchangeVolume: string; // New metric for Sheikh Code Exchange
 }
 
 export const GoogleDriveBridge = {
   vaultId: 'imperial_vault_42nd_archive',
 
   /**
-   * Simulates uploading a heavy forensic file to the external vault.
+   * Simulates uploading a heavy forensic file or code snippet to the external vault.
    * This offloads weight from the primary Firestore instance.
    */
   async archiveFile(fileName: string, data: any): Promise<string> {
-    console.warn(`[Vault Bridge] Offloading ${fileName} to Google Drive for scalability...`);
+    console.warn(`[Vault Bridge] Offloading ${fileName} to Sovereign Code Vault...`);
     
     // Simulate API Latency for high-volume handling
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -54,12 +55,13 @@ export const GoogleDriveBridge = {
   getVaultStats: (): VaultStats => {
     return {
       usedSpace: '142.8 GB',
-      totalSpace: '5.0 TB', // Scaled for high volume
+      totalSpace: '5.0 TB', 
       fileCount: 42850,
       syncStatus: 'OPTIMAL',
       lastBackup: new Date().toISOString(),
       growthRate: '+12.4% / Month',
-      offloadEfficiency: 92
+      offloadEfficiency: 92,
+      exchangeVolume: '1.2 PB' // Imperial Code Exchange scale
     };
   }
 };

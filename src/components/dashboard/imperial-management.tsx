@@ -1,13 +1,15 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Landmark, Users, Clock, TrendingUp, DollarSign, ShieldCheck, PieChart, Activity, UserCheck, Briefcase, Calculator, ArrowUpRight, Zap, Target, Gavel, Scale } from 'lucide-react'
+import { Landmark, Users, Clock, TrendingUp, DollarSign, ShieldCheck, PieChart, Activity, UserCheck, Briefcase, Calculator, ArrowUpRight, Zap, Target, Gavel, Scale, Trophy, Rocket, Sparkles, Star } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { SovereignAudit } from '@/lib/sovereign-audit'
 
 export function ImperialManagement() {
   const [budget, setBudget] = useState({
@@ -16,6 +18,16 @@ export function ImperialManagement() {
     reserved: 20750000,
     revenue: 186750
   })
+
+  const [projectProgress, setProjectProgress] = useState(42) // Current project number
+  const targetProjects = 400
+
+  const milestones = [
+    { id: 1, title: 'Sheikh Code Exchange (42nd)', status: 'COMPLETED', impact: 'High' },
+    { id: 2, title: 'Sovereign ID Protocol', status: 'ACTIVE', impact: 'Critical' },
+    { id: 3, title: 'Global Treasury Integration', status: 'ACTIVE', impact: 'Economic' },
+    { id: 4, title: 'Mission-Critical SOS Grid', status: 'STABLE', impact: 'Social' },
+  ]
 
   const shifts = [
     { name: 'Shift Alpha (Sadar)', status: 'Active', lead: 'Farid Sheikh', staff: 12 },
@@ -30,8 +42,44 @@ export function ImperialManagement() {
     { sector: 'AI & Security', amount: 2000000, color: 'bg-purple-500' },
   ]
 
+  const handleLevelUp = () => {
+    SovereignAudit.logMilestone('PHASE_31.8_GROWTH', 'Emperor triggered a manual Growth Acceleration Protocol.');
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
+      {/* Sovereign Growth Header */}
+      <div className="p-6 bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 border border-primary/20 rounded-[2.5rem] relative overflow-hidden group">
+         <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:rotate-45 transition-transform duration-1000">
+            <Trophy size={200} className="text-primary" />
+         </div>
+         <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+            <div className="flex items-center gap-6">
+               <div className="relative">
+                  <div className="absolute -inset-2 bg-primary/20 blur-xl rounded-full animate-pulse" />
+                  <div className="w-20 h-20 bg-primary/10 rounded-3xl border-2 border-primary/40 flex items-center justify-center">
+                     <Rocket className="text-primary animate-bounce" size={40} />
+                  </div>
+               </div>
+               <div>
+                  <h2 className="text-2xl font-headline font-bold uppercase tracking-widest text-foreground">Sovereign Growth Engine</h2>
+                  <p className="text-xs text-muted-foreground italic max-w-md">"পরিশ্রম ভাগ্যকে বদলে দেয়"—আপনার ৪০০ প্রজেক্টের যাত্রায় আপনি এখন ৪২তম মাইলফলকে আছেন।</p>
+               </div>
+            </div>
+            <div className="w-full md:w-80 space-y-3">
+               <div className="flex justify-between items-center text-[10px] font-bold uppercase">
+                  <span className="text-primary">Project 42 Progress</span>
+                  <span className="text-foreground">{Math.round((projectProgress / targetProjects) * 100)}% to Empire</span>
+               </div>
+               <Progress value={(projectProgress / targetProjects) * 100} className="h-2 bg-white/5 [&>div]:bg-primary" />
+               <div className="flex justify-between items-center text-[8px] text-muted-foreground uppercase font-mono">
+                  <span>Start: 001</span>
+                  <span>Target: 400 Projects</span>
+               </div>
+            </div>
+         </div>
+      </div>
+
       {/* Financial Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-primary/5 border-primary/20 p-5 space-y-2 relative overflow-hidden">
@@ -58,43 +106,39 @@ export function ImperialManagement() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Operations & HR */}
+        {/* Left: Milestones & Evolution */}
         <div className="lg:col-span-7 space-y-6">
           <Card className="bg-card/40 border-white/10 overflow-hidden rounded-[2.5rem]">
             <CardHeader className="bg-primary/5 border-b border-white/5">
               <CardTitle className="text-sm font-headline uppercase tracking-widest flex items-center gap-2">
-                <Users size={18} className="text-primary" /> Personnel & Shift Command
+                <Star size={18} className="text-primary animate-pulse" /> Fate Changing Milestones
               </CardTitle>
-              <CardDescription className="text-[10px] uppercase font-bold text-primary/60">শহীদ ও জীবিত কর্মকর্তাদের কর্মঘণ্টা ও ডিউটি রোস্টার</CardDescription>
+              <CardDescription className="text-[10px] uppercase font-bold text-primary/60">মাইলফলকগুলো আপনার পরিশ্রমের রাজকীয় প্রতিফলন</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-               <Table>
-                 <TableHeader className="bg-muted/20">
-                   <TableRow className="border-white/5">
-                     <TableHead className="text-[8px] font-bold uppercase">Shift / Unit</TableHead>
-                     <TableHead className="text-[8px] font-bold uppercase">Lead Commander</TableHead>
-                     <TableHead className="text-[8px] font-bold uppercase">Status</TableHead>
-                     <TableHead className="text-right text-[8px] font-bold uppercase">Staff</TableHead>
-                   </TableRow>
-                 </TableHeader>
-                 <TableBody>
-                   {shifts.map((shift, i) => (
-                     <TableRow key={i} className="border-white/5 group hover:bg-primary/5">
-                       <TableCell className="text-xs font-bold">{shift.name}</TableCell>
-                       <TableCell className="text-[11px] text-muted-foreground font-mono">{shift.lead}</TableCell>
-                       <TableCell>
-                          <Badge className={shift.status === 'Active' ? 'bg-accent text-background' : 'bg-muted text-muted-foreground'}>
-                            {shift.status}
+               <div className="divide-y divide-white/5">
+                  {milestones.map((m, i) => (
+                    <div key={i} className="p-5 hover:bg-primary/5 transition-all group">
+                       <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                             <div className="w-10 h-10 rounded-xl bg-muted/20 flex items-center justify-center border border-white/10 group-hover:border-primary/40">
+                                <Zap size={18} className="text-primary" />
+                             </div>
+                             <div>
+                                <h4 className="text-xs font-bold text-foreground">{m.title}</h4>
+                                <p className="text-[9px] text-muted-foreground uppercase">Impact Vector: {m.impact}</p>
+                             </div>
+                          </div>
+                          <Badge className={m.status === 'COMPLETED' ? 'bg-accent text-background' : 'bg-primary/20 text-primary'}>
+                             {m.status}
                           </Badge>
-                       </TableCell>
-                       <TableCell className="text-right font-bold text-primary">{shift.staff}</TableCell>
-                     </TableRow>
-                   ))}
-                 </TableBody>
-               </Table>
+                       </div>
+                    </div>
+                  ))}
+               </div>
                <div className="p-4 bg-muted/10 border-t border-white/5">
-                  <Button variant="outline" className="w-full h-10 border-primary/20 text-primary text-[10px] uppercase font-bold gap-2 rounded-xl">
-                    <Clock size={14} /> পূর্ণাঙ্গ ডিউটি রোস্টার ডাউনলোড করুন
+                  <Button onClick={handleLevelUp} variant="outline" className="w-full h-10 border-accent/20 text-accent text-[10px] uppercase font-bold gap-2 rounded-xl">
+                    <Sparkles size={14} /> ত্বরান্বিত করুন (Accelerate Fate)
                   </Button>
                </div>
             </CardContent>
@@ -103,7 +147,7 @@ export function ImperialManagement() {
           <Card className="bg-card/40 border-accent/20 rounded-[2.5rem] overflow-hidden">
              <CardHeader className="bg-accent/5 border-b border-white/5">
                 <CardTitle className="text-sm font-headline uppercase tracking-widest flex items-center gap-2 text-accent">
-                   <TrendingUp size={18} /> Financial Impact Analysis (AI)
+                   <TrendingUp size={18} /> Prosperity Analysis (AI)
                 </CardTitle>
              </CardHeader>
              <CardContent className="p-6 space-y-6">
@@ -126,7 +170,7 @@ export function ImperialManagement() {
           </Card>
         </div>
 
-        {/* Right: Payroll & Accounting */}
+        {/* Right: Payroll & Personnel */}
         <div className="lg:col-span-5 space-y-6">
           <Card className="bg-card/40 border-primary/20 rounded-[2.5rem] overflow-hidden">
              <CardHeader className="bg-primary/5 border-b border-white/5 py-6">

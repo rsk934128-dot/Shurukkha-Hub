@@ -30,7 +30,9 @@ import {
   Handshake,
   Box,
   Scale,
-  Settings
+  Settings,
+  Trophy,
+  History
 } from "lucide-react"
 
 import {
@@ -135,7 +137,7 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
           <AppLogo size={32} />
           <div>
             <h2 className="text-sm font-headline font-bold tracking-tight uppercase">SHURUKKHA HUB</h2>
-            <p className="text-[8px] text-primary/60 uppercase font-bold tracking-[0.2em]">Sovereign Grid v31.0</p>
+            <p className="text-[8px] text-primary/60 uppercase font-bold tracking-[0.2em]">Sovereign Grid v31.8</p>
           </div>
         </div>
       </SidebarHeader>
@@ -272,27 +274,17 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    isActive={activeTab === 'manifesto'} 
-                    onClick={() => handleNav('manifesto')}
-                    className="px-4 h-10 gap-3"
-                  >
-                    <Scale size={18} className="text-accent" />
-                    <span className="font-medium">ভিশন ও ম্যানিফেস্টো</span>
-                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent">GOV</Badge>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    isActive={activeTab === 'intelligence'} 
-                    onClick={() => handleNav('intelligence')}
-                    className="px-4 h-10 gap-3"
-                  >
-                    <SearchCode size={18} className={activeTab === 'intelligence' ? "text-accent" : "text-muted-foreground"} />
-                    <span className="font-medium">ইন্টেলিজেন্স বোর্ড</span>
-                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent">RECON</Badge>
-                  </SidebarMenuButton>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      isActive={activeTab === 'intelligence'} 
+                      onClick={() => handleNav('intelligence')}
+                      className="px-4 h-10 gap-3"
+                    >
+                      <SearchCode size={18} className={activeTab === 'intelligence' ? "text-accent" : "text-muted-foreground"} />
+                      <span className="font-medium">ইন্টেলিজেন্স বোর্ড</span>
+                      <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent">RECON</Badge>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
@@ -304,6 +296,18 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                     <Box size={18} className="text-amber-500" />
                     <span className="font-medium">ত্রাণ ও সম্পদ</span>
                     <Badge variant="outline" className="ml-auto text-[7px] h-3 border-amber-500/20 text-amber-500">VAULT</Badge>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    isActive={activeTab === 'manifesto'} 
+                    onClick={() => handleNav('manifesto')}
+                    className="px-4 h-10 gap-3"
+                  >
+                    <Scale size={18} className="text-accent" />
+                    <span className="font-medium">ভিশন ও ম্যানিফেস্টো</span>
+                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent">GOV</Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 

@@ -30,11 +30,32 @@ export const SovereignAudit = {
         details,
         signature,
         timestamp: serverTimestamp(),
-        performedBy: 'Imperial_Sentinel_v31.5'
+        performedBy: 'Imperial_Sentinel_v31.8'
       });
       console.log(`[Sovereign Audit] Milestone ${phase} recorded in history.`);
     } catch (e) {
       console.error("[Sovereign Audit] Failed to write to history.", e);
     }
+  },
+
+  /**
+   * Records a Project Evolution event specifically for the 400-project goal.
+   */
+  logEvolution: async (projectNum: number, title: string) => {
+    const details = {
+      projectIndex: projectNum,
+      title: title,
+      goal: 400,
+      completionRate: `${(projectNum / 400) * 100}%`,
+      timestamp: new Date().toISOString()
+    };
+
+    await addDoc(collection(db, "audit_trails"), {
+      action: 'SOVEREIGN_PROJECT_EVOLVED',
+      details,
+      signature: IntegrationBridge.generateSignature(details),
+      timestamp: serverTimestamp(),
+      performedBy: 'Fate_Changer_AI'
+    });
   }
 };
