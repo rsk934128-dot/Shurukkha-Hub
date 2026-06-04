@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect, useState } from 'react'
@@ -126,7 +127,7 @@ export default function WelcomeLanding() {
         {/* Dynamic Banner Carousel Section */}
         <section id="home" className="relative w-full overflow-hidden">
           <Carousel 
-            plugins={[Autoplay({ delay: 5000 })]}
+            plugins={[Autoplay({ delay: 5000, stopOnInteraction: false })]}
             className="w-full h-[100vh]"
           >
             <CarouselContent>
@@ -446,7 +447,7 @@ function FeatureCard({ icon: Icon, title, tag, desc, cases, color, glow }: any) 
         </div>
         
         <div className="space-y-4 pt-8 border-t border-white/5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/60">Capabilities:</p>
+          <p className="text-[10px] font-bold uppercase tracking-0.3em text-primary/60">Capabilities:</p>
           <div className="grid gap-3">
             {cases.map((c: string, i: number) => (
               <div key={i} className="flex items-center gap-3 text-sm text-foreground/80 group/item">
