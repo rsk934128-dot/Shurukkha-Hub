@@ -1,8 +1,10 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode, MessageSquare, Handshake, Box, Scale, Settings, Search, BookOpen, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { SOSButton } from '@/components/dashboard/sos-button'
 import { AIAdviceTool } from '@/components/intelligence/ai-advice-tool'
 import { IncidentReport } from '@/components/dashboard/incident-report'
