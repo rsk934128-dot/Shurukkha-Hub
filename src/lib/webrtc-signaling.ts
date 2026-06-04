@@ -1,4 +1,3 @@
-
 'use client';
 
 /**
@@ -100,13 +99,14 @@ export class WebRTCManager {
       if (this.isDisposed || !this.peerConnection) return;
       const data = snapshot.data();
       
-      if (data?.answer && this.peerConnection.signalingState === 'have-local-offer') {
+      if (data?.answer && !this.peerConnection.remoteDescription && this.peerConnection.signalingState === 'have-local-offer') {
         this.isProcessingRemoteDescription = true;
         try {
-          await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+          const answerDesc = new RTCSessionDescription(data.answer);
+          await this.peerConnection.setRemoteDescription(answerDesc);
           await this.flushCandidates();
         } catch (e) {
-          console.error("[WebRTC] Answer processing fault.");
+          console.error("[WebRTC] Answer processing fault:", e);
         } finally {
           this.isProcessingRemoteDescription = false;
         }
@@ -119,7 +119,9 @@ export class WebRTCManager {
         if (change.type === 'added') {
           const data = change.doc.data();
           if (data.owner !== 'caller') {
-            this.addCandidate(data as RTCIceCandidateInit);
+            // Filter out internal metadata before passing to RTCIceCandidate
+            const { candidate, sdpMid, sdpMLineIndex, usernameFragment } = data;
+            this.addCandidate({ candidate, sdpMid, sdpMLineIndex, usernameFragment });
           }
         }
       });
@@ -178,6 +180,7 @@ export class WebRTCManager {
         this.isProcessingRemoteDescription = false;
         await this.flushCandidates();
       } catch (e) {
+        console.error("[WebRTC] Offer processing fault:", e);
         this.isProcessingRemoteDescription = false;
       }
     }
@@ -188,7 +191,8 @@ export class WebRTCManager {
         if (change.type === 'added') {
           const data = change.doc.data();
           if (data.owner !== 'recipient') {
-            this.addCandidate(data as RTCIceCandidateInit);
+            const { candidate, sdpMid, sdpMLineIndex, usernameFragment } = data;
+            this.addCandidate({ candidate, sdpMid, sdpMLineIndex, usernameFragment });
           }
         }
       });
@@ -202,7 +206,9 @@ export class WebRTCManager {
     if (this.peerConnection.remoteDescription && !this.isProcessingRemoteDescription) {
       try {
         await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (e) {}
+      } catch (e) {
+        console.warn("[WebRTC] Candidate addition skipped:", e);
+      }
     } else {
       this.candidateQueue.push(candidate);
     }
@@ -215,7 +221,9 @@ export class WebRTCManager {
       if (candidate) {
         try {
           await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (e) {}
+        } catch (e) {
+          console.warn("[WebRTC] Queued candidate addition fault:", e);
+        }
       }
     }
   }
