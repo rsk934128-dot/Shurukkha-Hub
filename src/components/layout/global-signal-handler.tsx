@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -30,7 +29,7 @@ export function GlobalSignalHandler() {
     // High-availability query for WebRTC sessions
     const sessionsRef = collection(db, 'webrtc_sessions');
     
-    // We listen to all active or ringing sessions where the user is a participant
+    // Listen to collection changes. Manual filtering to avoid composite index requirements
     const unsubscribeCalls = onSnapshot(sessionsRef, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         const data = change.doc.data() as any;
@@ -52,7 +51,7 @@ export function GlobalSignalHandler() {
           return;
         }
 
-        // 3. Trigger for Ringing Calls (New)
+        // 3. Trigger for Ringing Calls (Optimistic and Incoming)
         if (data.status === 'ringing') {
           // If we already processed this session as ended, ignore it
           if (processedCallIds.current.has(sessionId)) return;
@@ -60,17 +59,15 @@ export function GlobalSignalHandler() {
           // If this session is already active in our UI, don't re-trigger
           if (activeCall && activeCall.sessionId === sessionId) return;
 
-          // Time Guard: Only accept calls created around or after mount time
+          // Time Guard: Only ignore if it has a valid timestamp and it's older than 1 minute before mount
+          // This allows new calls and optimistic local updates (timestamp 0)
           const callTimestamp = data.timestamp?.toMillis ? data.timestamp.toMillis() : 0;
-          
-          // If timestamp is 0 (optimistic local update), it's brand new
-          // If timestamp exists, it must be recent (within 10 seconds of mount or after)
-          if (callTimestamp > 0 && callTimestamp < (mountTime.current - 10000)) {
+          if (callTimestamp > 0 && callTimestamp < (mountTime.current - 60000)) {
             console.log(`[Signal Hub] Stale session ignored: ${sessionId}`);
             return;
           }
 
-          console.warn(`[Signal Hub] INCOMING COMMAND SIGNAL DETECTED: ${sessionId}`);
+          console.warn(`[Signal Hub] COMMAND SIGNAL DETECTED: ${sessionId}`);
           
           const callPayload = {
             sessionId,
@@ -81,7 +78,7 @@ export function GlobalSignalHandler() {
             isIncoming: isRecipient
           };
 
-          // FORCE UI OPEN
+          // FORCE UI OPEN for both caller and recipient
           setActiveCall(callPayload);
           
           if (isRecipient) {
@@ -129,7 +126,7 @@ export function GlobalSignalHandler() {
   return (
     <>
       {activeCall && (
-        <div className="fixed inset-0 z-[10000] pointer-events-auto">
+        <div className="fixed inset-0 z-[99999] pointer-events-auto">
           <CallOverlay 
             callData={activeCall} 
             onClose={() => {
