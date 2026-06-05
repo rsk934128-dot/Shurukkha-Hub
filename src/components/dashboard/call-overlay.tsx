@@ -140,8 +140,10 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   }
 
   const handleHangUp = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     handleEndCall(true);
   }
 

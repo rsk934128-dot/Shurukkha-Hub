@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useFirestore, useUser } from '@/firebase'
-import { collection, query, where, onSnapshot, limit } from 'firebase/firestore'
+import { collection, query, onSnapshot, limit } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { NotificationManager } from '@/lib/notification-manager'
 import { CallOverlay } from '@/components/dashboard/call-overlay'
@@ -26,17 +26,14 @@ export function GlobalSignalHandler() {
 
     console.log(`[Signal Hub] Sovereign Monitor Active for UID: ${currentUser.uid}`);
 
+    // Simplify query to the absolute minimum to avoid Index Errors
     const sessionsRef = collection(db, 'webrtc_sessions');
-    // Simplified query to avoid composite index requirements
-    const callsQ = query(
-      sessionsRef,
-      where('status', '==', 'ringing'),
-      limit(20)
-    );
+    const callsQ = query(sessionsRef, limit(10));
 
     const unsubscribeCalls = onSnapshot(callsQ, (snapshot) => {
-      // Sort client-side to ensure newest calls are processed first without needing a composite index
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      
+      // Sort client-side to ensure newest first
       docs.sort((a, b) => {
         const timeA = a.timestamp?.toMillis?.() || a.timestamp?.seconds * 1000 || 0;
         const timeB = b.timestamp?.toMillis?.() || b.timestamp?.seconds * 1000 || 0;
@@ -46,45 +43,42 @@ export function GlobalSignalHandler() {
       docs.forEach((data) => {
         const sessionId = data.id;
         
+        // Skip ended calls or calls where current user is not involved
+        if (data.status === 'ended') return;
+        
         const isRecipient = data.recipientId === currentUser.uid;
         const isCaller = data.callerId === currentUser.uid;
         
         if (!isRecipient && !isCaller) return;
         if (processedCallIds.current.has(sessionId)) return;
 
-        // Skip very old calls (from previous sessions) but be more lenient
-        const sessionTime = data.timestamp?.toMillis?.() || data.timestamp?.seconds * 1000 || Date.now();
-        if (sessionTime < appMountTime.current - 60000) return; // 1 min buffer
+        // Ensure we only process recent "ringing" calls
+        if (data.status === 'ringing') {
+          const sessionTime = data.timestamp?.toMillis?.() || data.timestamp?.seconds * 1000 || Date.now();
+          // Be more lenient with timing in the prototype
+          if (sessionTime < appMountTime.current - 120000) return; 
 
-        if (!activeCall && isRecipient) {
-          console.warn(`[Signal Hub] ALERT: Incoming Signal Detected! ID: ${sessionId}`);
-          
-          setActiveCall({
-            sessionId,
-            callerId: data.callerId,
-            callerName: data.callerName || "অজ্ঞাত নাগরিক",
-            callerAvatar: data.callerAvatar || '',
-            type: data.type,
-            isIncoming: true
-          });
-          
-          MobileBridge.vibrate([500, 200, 500]);
-          
-          NotificationManager.sendCallNotification(
-            data.callerName || "অজ্ঞাত নাগরিক",
-            data.type === 'video' ? "ভিডিও কল দিচ্ছেন..." : "অডিও কল দিচ্ছেন...",
-            sessionId
-          );
-        } else if (!activeCall && isCaller) {
-          console.log(`[Signal Hub] Initiating Outbound UI for Session: ${sessionId}`);
-          setActiveCall({
-            sessionId,
-            callerId: data.recipientId,
-            callerName: data.recipientName || "Recipient",
-            callerAvatar: data.recipientAvatar || '',
-            type: data.type,
-            isIncoming: false
-          });
+          if (!activeCall) {
+            console.warn(`[Signal Hub] SIGNAL DETECTED: ${sessionId} | Incoming: ${isRecipient}`);
+            
+            setActiveCall({
+              sessionId,
+              callerId: isRecipient ? data.callerId : data.recipientId,
+              callerName: isRecipient ? (data.callerName || "অজ্ঞাত নাগরিক") : (data.recipientName || "Recipient"),
+              callerAvatar: isRecipient ? data.callerAvatar : data.recipientAvatar,
+              type: data.type,
+              isIncoming: isRecipient
+            });
+            
+            if (isRecipient) {
+              MobileBridge.vibrate([500, 200, 500]);
+              NotificationManager.sendCallNotification(
+                data.callerName || "অজ্ঞাত নাগরিক",
+                data.type === 'video' ? "ভিডিও কল দিচ্ছেন..." : "অডিও কল দিচ্ছেন...",
+                sessionId
+              );
+            }
+          }
         }
       });
     }, (err) => {
@@ -122,7 +116,7 @@ export function GlobalSignalHandler() {
   return (
     <>
       {activeCall && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
+        <div className="fixed inset-0 z-[9999] pointer-events-auto">
           <CallOverlay 
             callData={activeCall} 
             onClose={() => {
