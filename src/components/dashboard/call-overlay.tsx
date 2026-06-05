@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
@@ -24,6 +25,12 @@ interface CallOverlayProps {
   } | null;
   onClose: () => void;
 }
+
+/**
+ * @fileOverview Call Interface for Shurukkha Hub.
+ * Forcefully opens and manages WebRTC sessions.
+ * Phase 35.5: Fixed Z-Index and Force-Opening Logic.
+ */
 
 export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const [status, setStatus] = useState<'ringing' | 'connected' | 'ended' | 'idle'>('idle')
@@ -131,7 +138,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
   useEffect(() => {
     if (callData) {
-      console.log("[CallOverlay] Initializing Session:", callData.sessionId);
+      console.log("[CallOverlay] Initializing Session Interface:", callData.sessionId);
       setStatus('ringing');
       setTimer(0);
       isTerminatingRef.current = false;
@@ -154,7 +161,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       if (callData.isIncoming) {
         startRingtone();
       } else {
-        // I am the caller - initiate WebRTC Optimistically
+        // I am the caller - initiate WebRTC
         const startOutgoing = async () => {
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -196,8 +203,8 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader className="sr-only">
-          <DialogTitle>Sovereign Call Interface</DialogTitle>
-          <DialogDescription>Secure communication channel via the sovereign grid.</DialogDescription>
+          <DialogTitle>Sovereign Call HUD</DialogTitle>
+          <DialogDescription>Secure Real-time Communication Channel via 42nd Node Grid.</DialogDescription>
         </DialogHeader>
 
         <div className="relative w-full h-full bg-[#05070a] flex items-center justify-center overflow-hidden">

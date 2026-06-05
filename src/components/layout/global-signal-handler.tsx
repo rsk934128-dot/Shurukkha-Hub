@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -11,6 +12,12 @@ import { AlertCenter } from '@/components/dashboard/alert-center'
 import { AVController } from '@/lib/av-controller'
 import { SovereignAudit } from '@/lib/sovereign-audit'
 import { MobileBridge } from '@/lib/mobile-bridge'
+
+/**
+ * @fileOverview Global Signal Handler for Shurukkha Hub.
+ * Manages real-time incoming and outgoing call detection across the sovereign grid.
+ * Phase 35.5: Enhanced Signal Sensitivity and Z-Index Dominance.
+ */
 
 export function GlobalSignalHandler() {
   const { user: currentUser, loading: authLoading } = useUser()
@@ -29,7 +36,7 @@ export function GlobalSignalHandler() {
     // High-availability query for WebRTC sessions
     const sessionsRef = collection(db, 'webrtc_sessions');
     
-    // Listen to collection changes. Manual filtering to avoid composite index requirements
+    // Listen to collection changes.
     const unsubscribeCalls = onSnapshot(sessionsRef, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         const data = change.doc.data() as any;
@@ -44,14 +51,14 @@ export function GlobalSignalHandler() {
         // 2. Handle Terminations
         if (data.status === 'ended') {
           if (activeCall?.sessionId === sessionId) {
-            console.log(`[Signal Hub] Call Session Ended: ${sessionId}`);
+            console.log(`[Signal Hub] Call Session Terminated: ${sessionId}`);
             setActiveCall(null);
           }
           processedCallIds.current.add(sessionId);
           return;
         }
 
-        // 3. Trigger for Ringing Calls (Optimistic and Incoming)
+        // 3. Trigger for Ringing Calls
         if (data.status === 'ringing') {
           // If we already processed this session as ended, ignore it
           if (processedCallIds.current.has(sessionId)) return;
@@ -59,15 +66,15 @@ export function GlobalSignalHandler() {
           // If this session is already active in our UI, don't re-trigger
           if (activeCall && activeCall.sessionId === sessionId) return;
 
-          // Time Guard: Only ignore if it has a valid timestamp and it's older than 1 minute before mount
-          // This allows new calls and optimistic local updates (timestamp 0)
-          const callTimestamp = data.timestamp?.toMillis ? data.timestamp.toMillis() : 0;
-          if (callTimestamp > 0 && callTimestamp < (mountTime.current - 60000)) {
-            console.log(`[Signal Hub] Stale session ignored: ${sessionId}`);
+          // Force identify as "new" if it has no timestamp yet (optimistic) 
+          // or if it's within the last 5 minutes (to avoid stale bombardment)
+          const callTimestamp = data.timestamp?.toMillis ? data.timestamp.toMillis() : Date.now();
+          if (Math.abs(Date.now() - callTimestamp) > 300000) {
+            console.log(`[Signal Hub] Stale session ignored (>5m): ${sessionId}`);
             return;
           }
 
-          console.warn(`[Signal Hub] COMMAND SIGNAL DETECTED: ${sessionId}`);
+          console.warn(`[Signal Hub] COMMAND SIGNAL DETECTED: ${sessionId} for ${isRecipient ? 'INCOMING' : 'OUTGOING'}`);
           
           const callPayload = {
             sessionId,
@@ -78,11 +85,11 @@ export function GlobalSignalHandler() {
             isIncoming: isRecipient
           };
 
-          // FORCE UI OPEN for both caller and recipient
+          // FORCE UI OPEN - High priority state update
           setActiveCall(callPayload);
           
           if (isRecipient) {
-            MobileBridge.triggerHaptic('WARNING');
+            MobileBridge.triggerHaptic('SOS');
             NotificationManager.sendCallNotification(
               data.callerName || "অজ্ঞাত নাগরিক",
               data.type === 'video' ? "ভিডিও কল দিচ্ছে..." : "অডিও কল দিচ্ছে...",
