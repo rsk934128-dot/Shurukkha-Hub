@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { CommunicationOrchestrator, Message } from '@/lib/communication-orchestrator'
 import { db } from '@/lib/firebase'
 import { useUser } from '@/firebase'
-import { collection, query, orderBy, limit, onSnapshot, where, getDocs, setDoc, doc, serverTimestamp } from 'firebase/firestore'
+import { collection, query, limit, onSnapshot, where, getDocs, setDoc, doc, serverTimestamp } from 'firebase/firestore'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
@@ -75,16 +75,23 @@ export function CommunicationConsole() {
 
     const currentChatId = CommunicationOrchestrator.getChatId(user.uid, selectedContact.id);
 
+    // Simplified query to avoid composite index requirements
     const q = query(
       collection(db, "messages"),
       where("chatId", "==", currentChatId),
-      orderBy("timestamp", "asc"),
       limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const chatMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
       
+      // Sort client-side
+      chatMsgs.sort((a, b) => {
+        const timeA = a.timestamp?.toMillis?.() || a.timestamp?.seconds * 1000 || 0;
+        const timeB = b.timestamp?.toMillis?.() || b.timestamp?.seconds * 1000 || 0;
+        return timeA - timeB;
+      });
+
       const lastMsg = chatMsgs[chatMsgs.length - 1];
       if (lastMsg && lastMsg.id !== lastMessageId.current) {
         if (lastMsg.senderId !== user.uid) {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useFirestore, useUser } from '@/firebase'
-import { collection, query, where, onSnapshot, limit, orderBy } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, limit } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { NotificationManager } from '@/lib/notification-manager'
 import { CallOverlay } from '@/components/dashboard/call-overlay'
@@ -27,18 +27,24 @@ export function GlobalSignalHandler() {
     console.log(`[Signal Hub] Sovereign Monitor Active for UID: ${currentUser.uid}`);
 
     const sessionsRef = collection(db, 'webrtc_sessions');
-    // Enhanced query: Listen for all ringing calls involving the user, ordered by newest first
+    // Simplified query to avoid composite index requirements
     const callsQ = query(
       sessionsRef,
       where('status', '==', 'ringing'),
-      orderBy('timestamp', 'desc'),
-      limit(10)
+      limit(20)
     );
 
     const unsubscribeCalls = onSnapshot(callsQ, (snapshot) => {
-      snapshot.docs.forEach((doc) => {
-        const data = doc.data();
-        const sessionId = doc.id;
+      // Sort client-side to ensure newest calls are processed first without needing a composite index
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      docs.sort((a, b) => {
+        const timeA = a.timestamp?.toMillis?.() || a.timestamp?.seconds * 1000 || 0;
+        const timeB = b.timestamp?.toMillis?.() || b.timestamp?.seconds * 1000 || 0;
+        return timeB - timeA;
+      });
+
+      docs.forEach((data) => {
+        const sessionId = data.id;
         
         const isRecipient = data.recipientId === currentUser.uid;
         const isCaller = data.callerId === currentUser.uid;
@@ -81,13 +87,6 @@ export function GlobalSignalHandler() {
           });
         }
       });
-
-      // If active call is no longer in 'ringing' status and we haven't transitioned to 'connected' internally,
-      // it means the call might have been ended by the other side before it even started.
-      if (activeCall) {
-        const currentDoc = snapshot.docs.find(d => d.id === activeCall.sessionId);
-        // Note: transitions to 'connected' are handled inside CallOverlay
-      }
     }, (err) => {
       console.error("[Signal Hub] Snapshot Error:", err);
     });
