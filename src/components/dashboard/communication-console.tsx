@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
@@ -27,6 +28,7 @@ export function CommunicationConsole() {
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [showMobileList, setShowMobileList] = useState(true)
+  const [isSending, setIsSending] = useState(false)
   
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -76,8 +78,7 @@ export function CommunicationConsole() {
 
     const currentChatId = CommunicationOrchestrator.getChatId(user.uid, selectedContact.id);
 
-    // FIXED: Removed server-side orderBy to avoid missing index error.
-    // We will sort client-side in the onSnapshot callback.
+    // Filter by chatId - index not required for simple where if small collection
     const q = query(
       collection(db, "messages"),
       where("chatId", "==", currentChatId),
@@ -85,12 +86,12 @@ export function CommunicationConsole() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      // Sort messages client-side to bypass index requirements
+      // Robust client-side sorting that handles serverTimestamp() null state (pending)
       const chatMsgs = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() } as Message))
         .sort((a, b) => {
-          const timeA = a.timestamp?.seconds || 0;
-          const timeB = b.timestamp?.seconds || 0;
+          const timeA = a.timestamp?.toMillis?.() || a.timestamp?.seconds * 1000 || Date.now();
+          const timeB = b.timestamp?.toMillis?.() || b.timestamp?.seconds * 1000 || Date.now();
           return timeA - timeB;
         });
       
@@ -105,7 +106,7 @@ export function CommunicationConsole() {
 
       setMessages(chatMsgs);
       setTimeout(scrollToBottom, 300);
-    }, async (err) => {
+    }, (err) => {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: '/messages',
@@ -127,23 +128,26 @@ export function CommunicationConsole() {
   }
 
   const handleSend = async () => {
-    if (!input.trim() || !user) return;
-    const comm = CommunicationOrchestrator.getInstance();
-    const content = input;
-    setInput(''); 
+    if (!input.trim() || !user || isSending) return;
     
-    comm.sendMessage({
-      senderId: user.uid,
-      recipientId: selectedContact.id,
-      content: content,
-      type: 'text'
-    }).catch(async (err) => {
-       errorEmitter.emit('permission-error', new FirestorePermissionError({
-         path: '/messages',
-         operation: 'create',
-         requestResourceData: { content }
-       }));
-    });
+    setIsSending(true);
+    const content = input;
+    const comm = CommunicationOrchestrator.getInstance();
+    
+    try {
+      await comm.sendMessage({
+        senderId: user.uid,
+        recipientId: selectedContact.id,
+        content: content,
+        type: 'text'
+      });
+      setInput(''); 
+    } catch (err) {
+       console.error("[Comm] Send failed", err);
+    } finally {
+      setIsSending(false);
+      setTimeout(scrollToBottom, 100);
+    }
   }
 
   const handleCall = async (type: 'audio' | 'video') => {
@@ -151,22 +155,24 @@ export function CommunicationConsole() {
     const callSessionId = `call_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const sessionRef = doc(db, 'webrtc_sessions', callSessionId);
     
-    setDoc(sessionRef, {
-      callerId: user.uid,
-      callerName: user.displayName || 'Sovereign Node',
-      callerAvatar: user.photoURL || '',
-      recipientId: selectedContact.id,
-      recipientName: selectedContact.name,
-      recipientAvatar: selectedContact.avatar,
-      status: 'ringing',
-      type: type,
-      timestamp: serverTimestamp()
-    }).catch(async (err) => {
+    try {
+      await setDoc(sessionRef, {
+        callerId: user.uid,
+        callerName: user.displayName || 'Sovereign Node',
+        callerAvatar: user.photoURL || '',
+        recipientId: selectedContact.id,
+        recipientName: selectedContact.name,
+        recipientAvatar: selectedContact.avatar || '',
+        status: 'ringing',
+        type: type,
+        timestamp: serverTimestamp()
+      });
+    } catch (err: any) {
        errorEmitter.emit('permission-error', new FirestorePermissionError({
          path: `/webrtc_sessions/${callSessionId}`,
          operation: 'create'
        }));
-    });
+    }
   }
 
   const handleSelectContact = (contact: any) => {
@@ -174,14 +180,8 @@ export function CommunicationConsole() {
     setShowMobileList(false);
   }
 
-  const startNewSignal = () => {
-    setSearchQuery('');
-    searchInputRef.current?.focus();
-  }
-
   return (
     <Card className="bg-card/40 border-primary/20 flex flex-col h-full overflow-hidden neon-glow-primary">
-      {/* Header - Adaptive */}
       <CardHeader className="bg-primary/5 border-b border-white/5 py-3 md:py-4 px-4 md:px-6 flex flex-row items-center justify-between">
         <div className="flex items-center gap-2 md:gap-3">
           {!showMobileList && (
@@ -202,9 +202,8 @@ export function CommunicationConsole() {
                   <CardTitle className="text-[11px] md:text-sm font-headline font-bold uppercase tracking-widest truncate max-w-[100px] md:max-w-none">
                     {selectedContact.name}
                   </CardTitle>
-                  {selectedContact.role === 'admin' && <Badge variant="outline" className="text-[6px] md:text-[7px] h-3 border-accent/20 text-accent uppercase font-bold bg-accent/5">Admin</Badge>}
                 </div>
-                <p className="text-[7px] md:text-[9px] text-muted-foreground font-mono uppercase tracking-tighter">SECURE_LINK</p>
+                <p className="text-[7px] md:text-[9px] text-muted-foreground font-mono uppercase tracking-tighter">SECURE_CHANNEL</p>
               </div>
             </div>
           ) : (
@@ -223,22 +222,15 @@ export function CommunicationConsole() {
             <Button onClick={() => handleCall('video')} variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-9 border-white/10 text-accent hover:bg-accent/10">
               <Video size={14} />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hidden md:flex">
-              <MoreVertical size={14} />
-            </Button>
           </div>
         )}
       </CardHeader>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Contacts Sidebar - Responsive Toggle */}
         <div className={`${showMobileList ? 'flex' : 'hidden'} md:flex w-full md:w-72 border-r border-white/5 flex-col bg-black/20`}>
           <div className="p-4 border-b border-white/5 space-y-3">
             <div className="flex items-center justify-between">
-               <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active Identites</h4>
-               <Button variant="ghost" size="sm" onClick={startNewSignal} className="h-6 px-2 text-[9px] font-bold text-primary hover:bg-primary/10 gap-1">
-                 <Plus size={12} /> NEW
-               </Button>
+               <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Identities</h4>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
@@ -260,13 +252,10 @@ export function CommunicationConsole() {
                   onClick={() => handleSelectContact(res)}
                   className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${selectedContact?.id === res.id ? 'bg-primary/20 border border-primary/30' : 'hover:bg-white/5 border border-transparent'}`}
                 >
-                  <div className="relative">
-                    <Avatar className="h-9 w-9 border border-white/10">
-                      <AvatarImage src={res.avatar || undefined} />
-                      <AvatarFallback className="text-[10px] font-bold">{res.name[0]}</AvatarFallback>
-                    </Avatar>
-                    {res.role === 'admin' && <div className="absolute -top-1 -right-1 bg-accent p-0.5 rounded-full"><Shield size={8} className="text-background fill-accent" /></div>}
-                  </div>
+                  <Avatar className="h-9 w-9 border border-white/10">
+                    <AvatarImage src={res.avatar || undefined} />
+                    <AvatarFallback className="text-[10px] font-bold">{res.name[0]}</AvatarFallback>
+                  </Avatar>
                   <div className="overflow-hidden flex-1">
                     <p className="text-[11px] font-bold truncate text-foreground">{res.name}</p>
                     <p className="text-[8px] text-muted-foreground uppercase tracking-tight">{res.role}</p>
@@ -277,7 +266,6 @@ export function CommunicationConsole() {
           </ScrollArea>
         </div>
 
-        {/* Chat Area - Responsive Toggle */}
         <div className={`${!showMobileList ? 'flex' : 'hidden'} md:flex flex-1 flex-col relative bg-[url('https://www.transparenttextures.com/patterns/grid.png')] bg-fixed`}>
           {selectedContact ? (
             <>
@@ -286,7 +274,7 @@ export function CommunicationConsole() {
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/30 animate-pulse">
                       <Signal size={64} className="mb-4" />
-                      <p className="text-[10px] md:text-xs uppercase font-bold tracking-[0.3em]">No signal history found</p>
+                      <p className="text-[10px] md:text-xs uppercase font-bold tracking-[0.3em]">No signal history</p>
                     </div>
                   ) : (
                     messages.map((msg, i) => {
@@ -298,12 +286,12 @@ export function CommunicationConsole() {
                               {msg.type === 'file' ? (
                                 <div className="flex items-center gap-3">
                                   <FileText size={18} className={isMe ? "text-background" : "text-accent"} />
-                                  <a href={msg.fileUrl} target="_blank" className="hover:underline font-bold text-[9px] md:text-[10px] uppercase">Download Vault</a>
+                                  <a href={msg.fileUrl} target="_blank" className="hover:underline font-bold text-[9px] md:text-[10px] uppercase">Download File</a>
                                 </div>
                               ) : msg.content}
                             </div>
                             <span className="text-[7px] md:text-[8px] font-mono text-muted-foreground opacity-50 px-1">
-                              {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
+                              {msg.timestamp?.toMillis ? new Date(msg.timestamp.toMillis()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending...'}
                             </span>
                           </div>
                         </div>
@@ -327,10 +315,11 @@ export function CommunicationConsole() {
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSend()}
                     placeholder="Send message..." 
+                    disabled={isSending}
                     className="flex-1 bg-transparent border-none focus-visible:ring-0 text-[12px] md:text-[13px] h-8 md:h-10"
                   />
-                  <Button onClick={handleSend} disabled={!input.trim()} className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-primary text-background shadow-lg">
-                    <Send size={16} />
+                  <Button onClick={handleSend} disabled={!input.trim() || isSending} className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-primary text-background shadow-lg">
+                    {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                   </Button>
                 </div>
               </div>
@@ -338,8 +327,7 @@ export function CommunicationConsole() {
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8 opacity-20 hidden md:flex">
               <MessageSquare size={64} className="mb-4" />
-              <p className="font-headline font-bold uppercase tracking-[0.2em] text-xs">Select an Identity</p>
-              <p className="text-[10px] mt-2">Choose a contact to establish a secure link.</p>
+              <p className="font-headline font-bold uppercase tracking-[0.2em] text-xs">Select a contact</p>
             </div>
           )}
         </div>

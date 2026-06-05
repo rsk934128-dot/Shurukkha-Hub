@@ -47,7 +47,9 @@ export class CommunicationOrchestrator {
    */
   async sendMessage(msg: Omit<Message, 'timestamp' | 'status' | 'isEncrypted' | 'chatId' | 'participants'>) {
     const chatId = CommunicationOrchestrator.getChatId(msg.senderId, msg.recipientId);
-    const messageData: any = {
+    
+    // Base message structure
+    const baseMessage: any = {
       senderId: msg.senderId,
       recipientId: msg.recipientId,
       chatId,
@@ -55,14 +57,18 @@ export class CommunicationOrchestrator {
       content: msg.content,
       type: msg.type,
       fileUrl: msg.fileUrl || null,
-      status: this.isOnline ? 'sent' : 'queued',
       isEncrypted: true,
-      timestamp: serverTimestamp()
     };
 
     if (this.isOnline) {
       try {
-        await addDoc(collection(db, "messages"), messageData);
+        const firestoreData = {
+          ...baseMessage,
+          status: 'sent',
+          timestamp: serverTimestamp()
+        };
+        
+        await addDoc(collection(db, "messages"), firestoreData);
         
         IntegrationBridge.broadcastEvent({
           type: 'OUTBOUND_SIGNAL_SENT',
@@ -71,25 +77,23 @@ export class CommunicationOrchestrator {
         });
       } catch (e) {
         console.error("[Comm] Write failed, queuing message locally...");
-        DisasterStorage.addToSyncQueue('SEND_MESSAGE', { ...messageData, timestamp: new Date().toISOString() });
+        const localData = { ...baseMessage, status: 'queued', timestamp: new Date().toISOString() };
+        DisasterStorage.addToSyncQueue('SEND_MESSAGE', localData);
       }
     } else {
-      const localMsg = { ...messageData, timestamp: new Date().toISOString() };
-      DisasterStorage.addToSyncQueue('SEND_MESSAGE', localMsg);
-      DisasterStorage.saveLocalMessage(localMsg);
+      const localData = { ...baseMessage, status: 'queued', timestamp: new Date().toISOString() };
+      DisasterStorage.addToSyncQueue('SEND_MESSAGE', localData);
+      DisasterStorage.saveLocalMessage(localData);
     }
   }
 
   /**
    * Simulates encrypted file upload using Imperial Data URIs.
-   * This avoids DNS resolution errors for non-existent domains.
    */
   async uploadFile(file: File, recipientId: string, senderId: string): Promise<string> {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Using a base64 data URI to simulate the "Vault" content
-    // In a real app, this would be a URL from Firebase Storage
-    const simulatedContent = `Imperial Sovereign Document: ${file.name}\n\nThis file is protected by RSA v2.0 Encryption within the Shurukkha Hub Vault.`;
+    const simulatedContent = `Imperial Sovereign Document: ${file.name}\n\nThis file is protected by RSA v2.0 Encryption.`;
     const b64 = typeof window !== 'undefined' ? btoa(unescape(encodeURIComponent(simulatedContent))) : '';
     const simulatedUrl = `data:text/plain;base64,${b64}`;
     
