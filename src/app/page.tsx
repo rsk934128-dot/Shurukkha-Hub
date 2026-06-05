@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useEffect, useState } from 'react'
@@ -409,6 +408,7 @@ export default function WelcomeLanding() {
               <div className="flex flex-wrap justify-center gap-6 md:gap-12 text-[9px] uppercase font-bold tracking-widest text-primary/40">
                  <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Protocols</Link>
                  <Link href="/terms" className="hover:text-primary transition-colors">Imperial Terms</Link>
+                 <Link href="/security-policy" className="hover:text-primary transition-colors">Security Policy</Link>
                  <Link href="/audit" className="hover:text-primary transition-colors">Forensic Audit</Link>
                  <Link href="/partnerships" className="hover:text-primary transition-colors">Partnership Hub</Link>
               </div>

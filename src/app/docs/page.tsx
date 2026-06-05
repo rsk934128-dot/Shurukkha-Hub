@@ -58,7 +58,7 @@ export default function DocumentationHub() {
         { title: 'Sovereign Gateway', id: 'gateway' },
         { title: 'Financial Payouts', id: 'payouts' },
         { title: 'SOS Signal Hub', id: 'sos-api' }
-      ]
+      ] section: 'footer',
     },
     {
       id: 'sdk',
@@ -291,12 +291,16 @@ export default function DocumentationHub() {
                     </div>
                   </div>
                   <div className="flex gap-4">
-                     <Button variant="outline" className="rounded-full border-white/10 text-[10px] uppercase font-bold h-10 px-6">
-                        Support Hub
-                     </Button>
-                     <Button variant="outline" className="rounded-full border-white/10 text-[10px] uppercase font-bold h-10 px-6">
-                        Security Policy
-                     </Button>
+                     <Link href="/support">
+                       <Button variant="outline" className="rounded-full border-white/10 text-[10px] uppercase font-bold h-10 px-6">
+                          Support Hub
+                       </Button>
+                     </Link>
+                     <Link href="/security-policy">
+                       <Button variant="outline" className="rounded-full border-white/10 text-[10px] uppercase font-bold h-10 px-6">
+                          Security Policy
+                       </Button>
+                     </Link>
                   </div>
                </div>
                <p className="text-[8px] font-mono text-muted-foreground/30 uppercase tracking-[0.5em]">
