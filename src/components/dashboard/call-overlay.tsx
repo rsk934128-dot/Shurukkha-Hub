@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
@@ -53,8 +54,10 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
   const startRingtone = useCallback(() => {
     stopRingtone()
+    // Play immediately
     playAlertSound()
-    ringtoneIntervalRef.current = setInterval(playAlertSound, 3000)
+    // Loop every 2.5 seconds for a persistent ring
+    ringtoneIntervalRef.current = setInterval(playAlertSound, 2500)
   }, [playAlertSound, stopRingtone])
 
   const cleanupStreams = useCallback(() => {
@@ -184,7 +187,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         cleanupStreams();
       };
     }
-  }, [callData?.sessionId, status]); // Status added as dependency to handle changes after connection
+  }, [callData?.sessionId, status, callData?.isIncoming, startRingtone, cleanupStreams, handleEndCall, stopRingtone]);
 
   const formatTime = (s: number) => {
     const mins = Math.floor(s / 60);
