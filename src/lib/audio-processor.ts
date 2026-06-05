@@ -1,7 +1,7 @@
-
 /**
  * @fileOverview Imperial AI Audio Processor.
  * Implements Voice Isolation and Acoustic Sovereignty.
+ * Updated: Improved safety checks to prevent track dropping.
  */
 
 export class AudioProcessor {
@@ -11,7 +11,10 @@ export class AudioProcessor {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext);
+      if (AudioCtx) {
+        this.audioContext = new AudioCtx();
+      }
     }
   }
 
@@ -19,25 +22,39 @@ export class AudioProcessor {
    * Applies AI-grade voice isolation to a stream.
    */
   async isolateVoice(stream: MediaStream): Promise<MediaStream> {
-    if (!this.audioContext) return stream;
+    if (!this.audioContext || stream.getAudioTracks().length === 0) {
+      return stream;
+    }
 
-    this.source = this.audioContext.createMediaStreamSource(stream);
-    this.filter = this.audioContext.createBiquadFilter();
-    
-    // High-pass filter to remove low-frequency background hum
-    this.filter.type = 'highpass';
-    this.filter.frequency.value = 100;
+    try {
+      // Resume context if it was suspended (browser policy)
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
 
-    const destination = this.audioContext.createMediaStreamDestination();
-    
-    this.source.connect(this.filter);
-    this.filter.connect(destination);
+      this.source = this.audioContext.createMediaStreamSource(stream);
+      this.filter = this.audioContext.createBiquadFilter();
+      
+      // High-pass filter to remove low-frequency background hum
+      this.filter.type = 'highpass';
+      this.filter.frequency.value = 150;
 
-    console.log("[Audio Processor] Voice Isolation ACTIVE. Noise suppressed.");
-    return destination.stream;
+      const destination = this.audioContext.createMediaStreamDestination();
+      
+      this.source.connect(this.filter);
+      this.filter.connect(destination);
+
+      console.log("[Audio Processor] Voice Isolation ACTIVE. Noise suppressed.");
+      return destination.stream;
+    } catch (e) {
+      console.warn("[Audio Processor] Processing failed, falling back to original stream.", e);
+      return stream;
+    }
   }
 
   dispose() {
-    this.audioContext?.close();
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+      this.audioContext.close().catch(() => {});
+    }
   }
 }

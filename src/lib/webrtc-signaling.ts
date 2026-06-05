@@ -1,11 +1,9 @@
-
 'use client';
 
 /**
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
  * Optimized Phase 32.2: Locked-Identity Stream Protocol and Studio-Grade AV Sync.
- * Updated: Hardened against InvalidStateError and race conditions in signaling.
- * Added: Metadata filtering for standards compliance.
+ * Updated: Fixed track merging issue where video was lost during audio processing.
  */
 
 import { db } from './firebase';
@@ -58,12 +56,28 @@ export class WebRTCManager {
     };
   }
 
+  /**
+   * Merges processed audio tracks with original video tracks.
+   */
+  private async getProcessedStream(originalStream: MediaStream): Promise<MediaStream> {
+    const optimizedStream = await AVController.optimizeStream(originalStream);
+    const isolatedStream = await this.audioProcessor.isolateVoice(optimizedStream);
+    
+    const finalStream = new MediaStream();
+    
+    // Add processed audio tracks
+    isolatedStream.getAudioTracks().forEach(track => finalStream.addTrack(track));
+    
+    // Add original video tracks (if any)
+    originalStream.getVideoTracks().forEach(track => finalStream.addTrack(track));
+    
+    return finalStream;
+  }
+
   async createCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
     if (this.isDisposed) return;
 
-    const optimizedStream = await AVController.optimizeStream(localStream);
-    const isolatedStream = await this.audioProcessor.isolateVoice(optimizedStream);
-
+    const streamToSend = await this.getProcessedStream(localStream);
     this.peerConnection = new RTCPeerConnection(this.rtcConfig);
     
     this.peerConnection.ontrack = (event) => {
@@ -77,8 +91,8 @@ export class WebRTCManager {
       onRemoteStream(this.remoteStream);
     };
 
-    isolatedStream.getTracks().forEach(track => {
-      this.peerConnection?.addTrack(track, isolatedStream);
+    streamToSend.getTracks().forEach(track => {
+      this.peerConnection?.addTrack(track, streamToSend);
     });
 
     const sessionRef = doc(db, 'webrtc_sessions', this.sessionId);
@@ -86,7 +100,6 @@ export class WebRTCManager {
 
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate && !this.isDisposed) {
-        // Imperial Standard: Filter out internal metadata from candidates
         const candidateData = event.candidate.toJSON();
         addDoc(candidatesCollection, { 
           candidate: candidateData.candidate,
@@ -106,14 +119,12 @@ export class WebRTCManager {
     await this.peerConnection.setLocalDescription(offerDescription);
 
     const offer = { sdp: offerDescription.sdp, type: offerDescription.type };
-    // Hardening: Explicitly clear answer when creating a new call to prevent InvalidStateError
     await setDoc(sessionRef, { offer, answer: null, status: 'ringing' }, { merge: true });
 
     const unsubSession = onSnapshot(sessionRef, async (snapshot) => {
       if (this.isDisposed || !this.peerConnection) return;
       const data = snapshot.data();
       
-      // Strict Check: Only process answer if we have sent an offer and are awaiting response
       if (data?.answer && !this.isProcessingRemoteDescription && this.peerConnection.signalingState === 'have-local-offer') {
         this.isProcessingRemoteDescription = true;
         try {
@@ -152,9 +163,7 @@ export class WebRTCManager {
   async answerCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
     if (this.isDisposed) return;
 
-    const optimizedStream = await AVController.optimizeStream(localStream);
-    const isolatedStream = await this.audioProcessor.isolateVoice(optimizedStream);
-
+    const streamToSend = await this.getProcessedStream(localStream);
     this.peerConnection = new RTCPeerConnection(this.rtcConfig);
 
     this.peerConnection.ontrack = (event) => {
@@ -168,8 +177,8 @@ export class WebRTCManager {
       onRemoteStream(this.remoteStream);
     };
 
-    isolatedStream.getTracks().forEach(track => {
-      this.peerConnection?.addTrack(track, isolatedStream);
+    streamToSend.getTracks().forEach(track => {
+      this.peerConnection?.addTrack(track, streamToSend);
     });
 
     const sessionRef = doc(db, 'webrtc_sessions', this.sessionId);
@@ -192,7 +201,6 @@ export class WebRTCManager {
       if (this.isDisposed || !this.peerConnection) return;
       const data = snapshot.data();
       
-      // Strict Check: Only process offer if connection is stable
       if (data?.offer && !this.isProcessingRemoteDescription && this.peerConnection.signalingState === 'stable') {
         this.isProcessingRemoteDescription = true;
         try {

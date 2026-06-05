@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
@@ -121,7 +120,9 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
       webrtcRef.current = new WebRTCManager(callData.sessionId);
       await webrtcRef.current.answerCall(stream, (remote) => {
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remote;
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remote;
+        }
       });
       
       const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
@@ -169,7 +170,9 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             if (localVideoRef.current) localVideoRef.current.srcObject = stream;
             webrtcRef.current = new WebRTCManager(callData.sessionId);
             await webrtcRef.current.createCall(stream, (remote) => {
-              if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remote;
+              if (remoteVideoRef.current) {
+                remoteVideoRef.current.srcObject = remote;
+              }
             });
           } catch (e) { handleEndCall(true); }
         };
@@ -181,7 +184,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         cleanupStreams();
       };
     }
-  }, [callData?.sessionId]);
+  }, [callData?.sessionId, status]); // Status added as dependency to handle changes after connection
 
   const formatTime = (s: number) => {
     const mins = Math.floor(s / 60);
@@ -201,7 +204,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         
         <div className="relative w-full h-full bg-slate-950 flex items-center justify-center group overflow-hidden">
           {status === 'ringing' && callData?.isIncoming && (
-            <div className="flex flex-col items-center gap-8 z-50 animate-in fade-in zoom-in-95 duration-500 w-full px-6">
+            <div className="flex flex-col items-center gap-8 z-50 animate-in fade-in zoom-in-95 duration-500 w-full px-6 text-center">
                <div className="relative">
                   <div className="absolute -inset-12 bg-primary/20 rounded-full blur-3xl animate-pulse" />
                   <Avatar className="h-40 w-40 md:h-48 md:w-48 border-4 border-primary/40 relative z-10 shadow-2xl">
@@ -230,7 +233,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             </div>
           )}
 
-          {/* Locked Video HUDs */}
           <div className={`w-full h-full relative ${status === 'connected' ? 'block' : 'hidden'}`}>
              <video 
                 ref={remoteVideoRef} 
@@ -253,16 +255,16 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
           </div>
 
           {status === 'ringing' && !callData?.isIncoming && (
-             <div className="flex flex-col items-center gap-6 z-10">
+             <div className="flex flex-col items-center gap-6 z-10 text-center">
                 <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-primary/40">
                   <AvatarImage src={callData?.callerAvatar || undefined} />
                   <AvatarFallback className="text-4xl font-bold">S</AvatarFallback>
                 </Avatar>
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold">{callData?.callerName}</h2>
+                  <h2 className="text-2xl font-bold text-white">{callData?.callerName}</h2>
                   <p className="text-xs font-mono text-primary uppercase tracking-[0.4em] animate-pulse">Establishing Signal...</p>
                 </div>
-                <Button onClick={() => handleEndCall(true)} variant="destructive" className="h-16 w-16 rounded-full">
+                <Button onClick={() => handleEndCall(true)} variant="destructive" className="h-16 w-16 rounded-full border-4 border-background">
                   <PhoneOff size={24} />
                 </Button>
              </div>
@@ -292,8 +294,10 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                 onClick={() => {
                   if (localStreamRef.current) {
                     const track = localStreamRef.current.getAudioTracks()[0];
-                    track.enabled = !track.enabled;
-                    setIsMicMuted(!track.enabled);
+                    if (track) {
+                      track.enabled = !track.enabled;
+                      setIsMicMuted(!track.enabled);
+                    }
                   }
                 }}
                 className={`h-12 w-12 rounded-full border border-white/5 ${isMicMuted ? 'bg-destructive/20 text-destructive' : 'text-white'}`}
