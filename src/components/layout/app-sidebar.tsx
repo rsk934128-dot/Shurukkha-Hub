@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -56,6 +57,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { NotificationManager } from "@/lib/notification-manager"
+import Link from 'next/link'
 
 interface AppSidebarProps {
   userRole: 'citizen' | 'authority' | 'admin'
@@ -238,6 +240,18 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   <LayoutGrid size={18} />
                   <span className="font-bold">Public Exchange</span>
                   <Badge className="ml-auto bg-accent text-background text-[7px] h-4">NEW</Badge>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild
+                  className="px-4 h-10 gap-3 text-primary hover:bg-primary/10"
+                >
+                  <Link href="/docs" target="_blank">
+                    <BookOpen size={18} />
+                    <span className="font-bold">Imperial Documentation</span>
+                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-primary/20 text-primary">DOCS</Badge>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
