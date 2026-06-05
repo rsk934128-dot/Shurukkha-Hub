@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react'
@@ -224,9 +223,11 @@ export default function DocumentationHub() {
                   </div>
                   <h4 className="text-xl font-headline font-bold uppercase tracking-tight">RSA v2 Security</h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">আমাদের প্রতিটি রিকোয়েস্ট SHA256withRSA অ্যালগরিদম দ্বারা স্বাক্ষরিত। এটি নিশ্চিত করে যে আপনার ডাটা পথে কেউ পরিবর্তন করতে পারবে না।</p>
-                  <Button variant="link" className="p-0 text-primary text-[10px] uppercase font-bold tracking-widest gap-2">
-                    Learn about Encryption <ChevronRight size={14} />
-                  </Button>
+                  <Link href="/docs/encryption">
+                    <Button variant="link" className="p-0 text-primary text-[10px] uppercase font-bold tracking-widest gap-2">
+                      Learn about Encryption <ChevronRight size={14} />
+                    </Button>
+                  </Link>
                </Card>
 
                <Card className="bg-card/40 border-white/5 rounded-[2.5rem] p-8 space-y-4 group hover:border-accent/40 transition-all">
