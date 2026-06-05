@@ -1,15 +1,16 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PortfolioEngine, Asset } from '@/lib/portfolio-engine'
-import { TrendingUp, TrendingDown, Wallet, Zap, BrainCircuit, ShieldCheck, ArrowUpRight, Activity, Globe, DollarSign } from 'lucide-react'
+import { TrendingUp, TrendingDown, Wallet, Zap, BrainCircuit, ShieldCheck, ArrowUpRight, Activity, Globe, DollarSign, Loader2, Terminal } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useToast } from '@/hooks/use-toast'
 
 const COLORS = ['#7597FF', '#34D399', '#FBBF24', '#A855F7'];
 
@@ -26,12 +27,35 @@ const TREND_DATA = [
 export function PortfolioViewer() {
   const [assets, setAssets] = useState<Asset[]>([])
   const [metrics, setMetrics] = useState<any>(null)
+  const [isSimulating, setIsSimulating] = useState(false)
+  const [simLogs, setSimLogs] = useState<string[]>([])
+  const [aiInsight, setAIInsight] = useState<string>('')
+  const { toast } = useToast()
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const data = PortfolioEngine.getLiveAssets();
     setAssets(data);
-    setMetrics(PortfolioEngine.calculateMetrics(data));
+    const m = PortfolioEngine.calculateMetrics(data);
+    setMetrics(m);
+    setAIInsight(PortfolioEngine.getAIInsight(m));
   }, []);
+
+  const handleRunSimulation = async () => {
+    setIsSimulating(true);
+    setSimLogs([]);
+    try {
+      const result = await PortfolioEngine.runMarketSimulation((msg) => {
+        setSimLogs(prev => [...prev, msg]);
+      });
+      setAIInsight(result);
+      toast({ title: "SIMULATION SUCCESSFUL", description: "Imperial Insights have been updated." });
+    } catch (e) {
+      toast({ title: "SIMULATION FAILED", variant: "destructive" });
+    } finally {
+      setIsSimulating(false);
+    }
+  }
 
   if (!metrics) return null;
 
@@ -139,11 +163,28 @@ export function PortfolioViewer() {
                <h4 className="text-[10px] font-headline font-bold uppercase tracking-widest">Imperial Investment AI</h4>
             </div>
             <p className="text-[11px] text-foreground/80 leading-relaxed italic border-l-2 border-accent/40 pl-4">
-              "{PortfolioEngine.getAIInsight(metrics)}"
+              "{aiInsight}"
             </p>
-            <Button variant="outline" className="w-full h-9 border-accent/20 text-accent text-[9px] font-bold uppercase rounded-xl hover:bg-accent/10">
-               Market Simulation Scan
-            </Button>
+            
+            {isSimulating ? (
+              <div className="bg-black/60 rounded-xl p-3 border border-accent/20 font-mono text-[9px] text-accent/80 h-32">
+                <ScrollArea className="h-full">
+                   {simLogs.map((log, i) => (
+                     <p key={i} className="animate-in slide-in-from-left-1 mb-1">
+                       <span className="text-muted-foreground mr-1">></span> {log}
+                     </p>
+                   ))}
+                </ScrollArea>
+              </div>
+            ) : (
+              <Button 
+                onClick={handleRunSimulation}
+                variant="outline" 
+                className="w-full h-9 border-accent/20 text-accent text-[9px] font-bold uppercase rounded-xl hover:bg-accent/10"
+              >
+                 <Terminal size={14} className="mr-2" /> Market Simulation Scan
+              </Button>
+            )}
           </Card>
         </div>
       </div>
@@ -156,7 +197,7 @@ export function PortfolioViewer() {
          </div>
          <ScrollArea className="h-[300px]">
             <div className="divide-y divide-white/5">
-               {assets.map(asset => (
+               {assets.map((asset, i) => (
                  <div key={asset.id} className="p-4 hover:bg-white/[0.02] transition-colors flex items-center justify-between group">
                     <div className="flex items-center gap-4">
                        <div className="w-10 h-10 rounded-xl bg-muted/40 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-all">
@@ -176,7 +217,7 @@ export function PortfolioViewer() {
                        </div>
                        <div className="w-32 hidden md:block">
                           <p className="text-xs font-bold text-foreground">${(asset.quantity * asset.currentPrice).toLocaleString()}</p>
-                          <Progress value={Math.random() * 100} className="h-1 bg-white/5 mt-1" />
+                          <Progress value={Math.floor(Math.random() * 40) + 60} className="h-1 bg-white/5 mt-1" />
                        </div>
                        <Button variant="ghost" size="icon" className="h-8 w-8 text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                           <ArrowUpRight size={16} />
