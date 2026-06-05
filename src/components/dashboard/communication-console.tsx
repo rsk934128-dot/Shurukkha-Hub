@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { MessageSquare, Send, Paperclip, Mic, Phone, Video, User, Circle, ShieldCheck, MoreVertical, Search, Download, FileText, Loader2, Signal, Landmark, UserPlus, Plus, Shield, CheckCircle2, ArrowLeft } from 'lucide-react'
+import { MessageSquare, Send, Paperclip, Phone, Video, User, ShieldCheck, Search, Loader2, Signal, ArrowLeft } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,7 +31,6 @@ export function CommunicationConsole() {
   
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const searchInputRef = useRef<HTMLInputElement>(null)
   const { playMessageSound } = useAudioEngine()
   const lastMessageId = useRef<string | null>(null)
 
@@ -41,14 +39,13 @@ export function CommunicationConsole() {
 
     const fetchUsers = async () => {
       try {
-        const q = query(collection(db, "users"), limit(200));
+        const q = query(collection(db, "users"), limit(100));
         const snap = await getDocs(q);
         const otherUsers = snap.docs
           .map(doc => ({ 
             id: doc.id, 
             name: doc.data().displayName || "Anonymous User", 
             role: doc.data().role || "citizen",
-            status: 'online',
             avatar: doc.data().photoURL || '',
             email: doc.data().email || ''
           }))
@@ -56,7 +53,7 @@ export function CommunicationConsole() {
         
         setContacts([COMMAND_CENTER_CONTACT, ...otherUsers]);
       } catch (e) {
-        console.warn("[Comm] Failed to fetch contact list.");
+        console.warn("[Comm] Contact load failed.");
       } finally {
         setLoading(false);
       }
@@ -81,20 +78,14 @@ export function CommunicationConsole() {
     const q = query(
       collection(db, "messages"),
       where("chatId", "==", currentChatId),
+      orderBy("timestamp", "asc"),
       limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const chatMsgs = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as Message))
-        .sort((a, b) => {
-          const timeA = a.timestamp?.toMillis?.() || a.timestamp?.seconds * 1000 || Date.now();
-          const timeB = b.timestamp?.toMillis?.() || b.timestamp?.seconds * 1000 || Date.now();
-          return timeA - timeB;
-        });
+      const chatMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
       
       const lastMsg = chatMsgs[chatMsgs.length - 1];
-      
       if (lastMsg && lastMsg.id !== lastMessageId.current) {
         if (lastMsg.senderId !== user.uid) {
           playMessageSound();
@@ -106,10 +97,7 @@ export function CommunicationConsole() {
       setTimeout(scrollToBottom, 300);
     }, (err) => {
       if (err.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: '/messages',
-          operation: 'list'
-        }));
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: '/messages', operation: 'list' }));
       }
     });
 
@@ -119,9 +107,7 @@ export function CommunicationConsole() {
   const scrollToBottom = () => {
     if (scrollRef.current) {
       const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (viewport) {
-        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
-      }
+      if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
     }
   }
 
@@ -130,16 +116,15 @@ export function CommunicationConsole() {
     
     setIsSending(true);
     const content = input;
-    const comm = CommunicationOrchestrator.getInstance();
+    setInput(''); 
     
     try {
-      await comm.sendMessage({
+      await CommunicationOrchestrator.getInstance().sendMessage({
         senderId: user.uid,
         recipientId: selectedContact.id,
         content: content,
         type: 'text'
       });
-      setInput(''); 
     } catch (err) {
        console.error("[Comm] Send failed", err);
     } finally {
@@ -166,10 +151,7 @@ export function CommunicationConsole() {
         timestamp: serverTimestamp()
       });
     } catch (err: any) {
-       errorEmitter.emit('permission-error', new FirestorePermissionError({
-         path: `/webrtc_sessions/${callSessionId}`,
-         operation: 'create'
-       }));
+       errorEmitter.emit('permission-error', new FirestorePermissionError({ path: sessionRef.path, operation: 'create' }));
     }
   }
 
@@ -196,11 +178,9 @@ export function CommunicationConsole() {
                 </AvatarFallback>
               </Avatar>
               <div>
-                <div className="flex items-center gap-1.5 md:gap-2">
-                  <CardTitle className="text-[11px] md:text-sm font-headline font-bold uppercase tracking-widest truncate max-w-[100px] md:max-w-none">
-                    {selectedContact.name}
-                  </CardTitle>
-                </div>
+                <CardTitle className="text-[11px] md:text-sm font-headline font-bold uppercase tracking-widest truncate max-w-[100px] md:max-w-none">
+                  {selectedContact.name}
+                </CardTitle>
                 <p className="text-[7px] md:text-[9px] text-muted-foreground font-mono uppercase tracking-tighter">SECURE_CHANNEL</p>
               </div>
             </div>
@@ -227,17 +207,13 @@ export function CommunicationConsole() {
       <div className="flex-1 flex overflow-hidden">
         <div className={`${showMobileList ? 'flex' : 'hidden'} md:flex w-full md:w-72 border-r border-white/5 flex-col bg-black/20`}>
           <div className="p-4 border-b border-white/5 space-y-3">
-            <div className="flex items-center justify-between">
-               <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Identities</h4>
-            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
               <Input 
-                ref={searchInputRef}
                 placeholder="Search..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 pl-9 text-[11px] bg-background/50 border-white/10 rounded-xl focus:ring-primary/40" 
+                className="h-9 pl-9 text-[11px] bg-background/50 border-white/10 rounded-xl" 
               />
             </div>
           </div>
@@ -281,15 +257,10 @@ export function CommunicationConsole() {
                         <div key={msg.id || i} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}>
                           <div className={`max-w-[85%] md:max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-1.5`}>
                             <div className={`p-3.5 px-4 rounded-[1.5rem] border text-[13px] md:text-[14px] shadow-sm leading-relaxed ${isMe ? 'bg-primary text-background border-primary/20 rounded-br-none' : 'bg-muted/80 backdrop-blur-md border-white/10 rounded-tl-none'}`}>
-                              {msg.type === 'file' ? (
-                                <div className="flex items-center gap-3">
-                                  <FileText size={18} className={isMe ? "text-background" : "text-accent"} />
-                                  <a href={msg.fileUrl} target="_blank" className="hover:underline font-bold text-[10px] md:text-[11px] uppercase tracking-wide">Download File</a>
-                                </div>
-                              ) : msg.content}
+                              {msg.content}
                             </div>
                             <span className="text-[8px] font-mono text-muted-foreground opacity-60 px-1 uppercase tracking-tighter">
-                              {msg.timestamp?.toMillis ? new Date(msg.timestamp.toMillis()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Encrypting...'}
+                              {msg.timestamp ? new Date(msg.timestamp.toMillis ? msg.timestamp.toMillis() : msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Encrypting...'}
                             </span>
                           </div>
                         </div>
@@ -301,13 +272,6 @@ export function CommunicationConsole() {
 
               <div className="p-3 md:p-4 bg-background/80 border-t border-white/5 backdrop-blur-xl">
                 <div className="flex items-center gap-2 md:gap-3 bg-black/40 border border-white/10 rounded-2xl p-2 px-3 md:px-4 shadow-2xl">
-                  <input type="file" ref={fileInputRef} onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file && user) CommunicationOrchestrator.getInstance().uploadFile(file, selectedContact.id, user.uid);
-                  }} className="hidden" />
-                  <Button onClick={() => fileInputRef.current?.click()} variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
-                    <Paperclip size={18} />
-                  </Button>
                   <Input 
                     value={input}
                     onChange={e => setInput(e.target.value)}

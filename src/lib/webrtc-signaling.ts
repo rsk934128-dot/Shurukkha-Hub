@@ -3,7 +3,7 @@
 /**
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
  * Optimized Phase 35.0: Locked-Identity Stream Protocol with Aggressive Resource Purge.
- * Updated: Improved cleanup logic for tracks and remote state synchronization to release hardware immediately.
+ * Updated: Ensures total track destruction and hardware release.
  */
 
 import { db } from './firebase';
@@ -14,10 +14,6 @@ import {
   onSnapshot, 
   addDoc, 
   updateDoc, 
-  getDoc,
-  deleteDoc,
-  query,
-  getDocs
 } from 'firebase/firestore';
 import { AVController } from './av-controller';
 import { AudioProcessor } from './audio-processor';
@@ -42,10 +38,8 @@ export class WebRTCManager {
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' },
     ],
-    iceCandidatePoolSize: 10,
+    iceCandidatePoolSize: 5,
   };
 
   static getAudioConstraints() {
@@ -54,12 +48,11 @@ export class WebRTCManager {
       noiseSuppression: true,
       autoGainControl: true,
       channelCount: 1,
-      sampleRate: 48000,
     };
   }
 
   /**
-   * Aggressively stops any track and removes it from the internal set.
+   * Aggressively stops all tracks in a stream.
    */
   static stopMediaStream(stream: MediaStream | null) {
     if (!stream) return;
@@ -67,17 +60,17 @@ export class WebRTCManager {
       try {
         track.enabled = false;
         track.stop();
-        console.log(`[Imperial Purge] Static Hardware Kill: ${track.kind}`);
+        console.log(`[Imperial Purge] Hardware Released: ${track.kind}`);
       } catch (e) {}
     });
   }
 
-  private trackStream(stream: MediaStream) {
+  private trackTracks(stream: MediaStream) {
     stream.getTracks().forEach(track => this.trackedTracks.add(track));
   }
 
   private async getProcessedStream(originalStream: MediaStream): Promise<MediaStream> {
-    this.trackStream(originalStream);
+    this.trackTracks(originalStream);
     const optimizedStream = await AVController.optimizeStream(originalStream);
     const isolatedStream = await this.audioProcessor.isolateVoice(optimizedStream);
     
@@ -120,56 +113,31 @@ export class WebRTCManager {
 
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate && !this.isDisposed) {
-        const candidateData = event.candidate.toJSON();
-        addDoc(candidatesCollection, { 
-          candidate: candidateData.candidate,
-          sdpMid: candidateData.sdpMid,
-          sdpMLineIndex: candidateData.sdpMLineIndex,
-          usernameFragment: candidateData.usernameFragment,
-          owner: 'caller' 
-        }).catch(() => {});
+        addDoc(candidatesCollection, { ...event.candidate.toJSON(), owner: 'caller' });
       }
     };
 
-    const offerDescription = await this.peerConnection.createOffer({
-      offerToReceiveAudio: true,
-      offerToReceiveVideo: true
-    });
-    
+    const offerDescription = await this.peerConnection.createOffer();
     await this.peerConnection.setLocalDescription(offerDescription);
 
-    const offer = { sdp: offerDescription.sdp, type: offerDescription.type };
-    await setDoc(sessionRef, { offer, answer: null, status: 'ringing' }, { merge: true });
+    await setDoc(sessionRef, { offer: { sdp: offerDescription.sdp, type: offerDescription.type }, status: 'ringing' }, { merge: true });
 
     const unsubSession = onSnapshot(sessionRef, async (snapshot) => {
       if (this.isDisposed || !this.peerConnection) return;
       const data = snapshot.data();
-      
       if (data?.answer && !this.isProcessingRemoteDescription && this.peerConnection.signalingState === 'have-local-offer') {
         this.isProcessingRemoteDescription = true;
-        try {
-          const answerDesc = new RTCSessionDescription(data.answer);
-          await this.peerConnection.setRemoteDescription(answerDesc);
-          await this.flushCandidates();
-        } catch (e) {
-          console.error("[WebRTC] Answer processing fault:", e);
-        } finally {
-          this.isProcessingRemoteDescription = false;
-        }
+        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+        await this.flushCandidates();
+        this.isProcessingRemoteDescription = false;
       }
     });
 
     const unsubCandidates = onSnapshot(candidatesCollection, (snapshot) => {
       if (this.isDisposed) return;
       snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const data = change.doc.data();
-          if (data.owner !== 'caller') {
-            const { candidate, sdpMid, sdpMLineIndex, usernameFragment } = data;
-            if (candidate) {
-              this.addCandidate({ candidate, sdpMid, sdpMLineIndex, usernameFragment });
-            }
-          }
+        if (change.type === 'added' && change.doc.data().owner !== 'caller') {
+          this.addCandidate(change.doc.data());
         }
       });
     });
@@ -186,10 +154,8 @@ export class WebRTCManager {
     this.peerConnection.ontrack = (event) => {
       if (this.isDisposed) return;
       event.streams[0].getTracks().forEach((track) => {
-        if (!this.remoteStream.getTracks().find(t => t.id === track.id)) {
-          this.remoteStream.addTrack(track);
-          this.trackedTracks.add(track);
-        }
+        this.remoteStream.addTrack(track);
+        this.trackedTracks.add(track);
       });
       onRemoteStream(this.remoteStream);
     };
@@ -203,49 +169,29 @@ export class WebRTCManager {
 
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate && !this.isDisposed) {
-        const candidateData = event.candidate.toJSON();
-        addDoc(candidatesCollection, { 
-          candidate: candidateData.candidate,
-          sdpMid: candidateData.sdpMid,
-          sdpMLineIndex: candidateData.sdpMLineIndex,
-          usernameFragment: candidateData.usernameFragment,
-          owner: 'recipient' 
-        }).catch(() => {});
+        addDoc(candidatesCollection, { ...event.candidate.toJSON(), owner: 'recipient' });
       }
     };
 
     const unsubSession = onSnapshot(sessionRef, async (snapshot) => {
       if (this.isDisposed || !this.peerConnection) return;
       const data = snapshot.data();
-      
       if (data?.offer && !this.isProcessingRemoteDescription && this.peerConnection.signalingState === 'stable') {
         this.isProcessingRemoteDescription = true;
-        try {
-          await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-          const answerDescription = await this.peerConnection.createAnswer();
-          await this.peerConnection.setLocalDescription(answerDescription);
-
-          await updateDoc(sessionRef, { answer: { type: answerDescription.type, sdp: answerDescription.sdp } });
-          await this.flushCandidates();
-        } catch (e) {
-          console.error("[WebRTC] Offer processing fault:", e);
-        } finally {
-          this.isProcessingRemoteDescription = false;
-        }
+        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+        const answer = await this.peerConnection.createAnswer();
+        await this.peerConnection.setLocalDescription(answer);
+        await updateDoc(sessionRef, { answer: { type: answer.type, sdp: answer.sdp } });
+        await this.flushCandidates();
+        this.isProcessingRemoteDescription = false;
       }
     });
 
     const unsubCandidates = onSnapshot(candidatesCollection, (snapshot) => {
       if (this.isDisposed) return;
       snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const data = change.doc.data();
-          if (data.owner !== 'recipient') {
-            const { candidate, sdpMid, sdpMLineIndex, usernameFragment } = data;
-            if (candidate) {
-              this.addCandidate({ candidate, sdpMid, sdpMLineIndex, usernameFragment });
-            }
-          }
+        if (change.type === 'added' && change.doc.data().owner !== 'recipient') {
+          this.addCandidate(change.doc.data());
         }
       });
     });
@@ -253,100 +199,45 @@ export class WebRTCManager {
     this.unsubscribers.push(unsubSession, unsubCandidates);
   }
 
-  private async addCandidate(candidate: RTCIceCandidateInit) {
+  private async addCandidate(candidate: any) {
     if (!this.peerConnection || this.isDisposed) return;
-    if (this.peerConnection.remoteDescription && !this.isProcessingRemoteDescription) {
-      try {
-        const candidateObj = new RTCIceCandidate({
-          candidate: candidate.candidate,
-          sdpMid: candidate.sdpMid,
-          sdpMLineIndex: candidate.sdpMLineIndex,
-          usernameFragment: candidate.usernameFragment
-        });
-        await this.peerConnection.addIceCandidate(candidateObj);
-      } catch (e) {
-        console.warn("[WebRTC] Candidate addition skipped:", e);
-      }
+    if (this.peerConnection.remoteDescription) {
+      await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
     } else {
       this.candidateQueue.push(candidate);
     }
   }
 
   private async flushCandidates() {
-    if (!this.peerConnection || !this.peerConnection.remoteDescription || this.isDisposed) return;
+    if (!this.peerConnection || !this.peerConnection.remoteDescription) return;
     while (this.candidateQueue.length > 0) {
       const candidate = this.candidateQueue.shift();
-      if (candidate) {
-        try {
-          const candidateObj = new RTCIceCandidate({
-            candidate: candidate.candidate,
-            sdpMid: candidate.sdpMid,
-            sdpMLineIndex: candidate.sdpMLineIndex,
-            usernameFragment: candidate.usernameFragment
-          });
-          await this.peerConnection.addIceCandidate(candidateObj);
-        } catch (e) {
-          console.warn("[WebRTC] Queued candidate addition fault:", e);
-        }
-      }
+      await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
     }
   }
 
   dispose() {
-    console.warn("[Imperial Dead-Stop] Executing total hardware and signaling purge...");
+    console.warn("[Imperial Purge] Destroying hardware references...");
     this.isDisposed = true;
     
-    // 1. Force-stop all registered tracks from the trackedTracks Set
+    // Hard-Stop all tracked tracks
     this.trackedTracks.forEach(track => {
       try {
         track.enabled = false;
         track.stop();
-        console.log(`[Purge Engine] Track Terminated: ${track.kind}`);
       } catch (e) {}
     });
     this.trackedTracks.clear();
 
-    // 2. Dispose processors and cleanup streams
     this.audioProcessor.dispose();
+    this.unsubscribers.forEach(unsub => unsub());
     
-    // 3. Stop the remote stream tracks explicitly
-    if (this.remoteStream) {
-      this.remoteStream.getTracks().forEach(track => {
-        try {
-          track.enabled = false;
-          track.stop();
-        } catch (e) {}
-      });
-    }
-
-    // 4. Cleanup Firebase subscriptions
-    this.unsubscribers.forEach(unsub => {
-      try { unsub(); } catch(e) {}
-    });
-    this.unsubscribers = [];
-
-    // 5. Close Peer Connection and stop all associated senders/receivers
     if (this.peerConnection) {
-      try {
-        this.peerConnection.getSenders().forEach(sender => {
-          if (sender.track) {
-            sender.track.enabled = false;
-            sender.track.stop();
-          }
-        });
-        this.peerConnection.getReceivers().forEach(receiver => {
-          if (receiver.track) {
-            receiver.track.enabled = false;
-            receiver.track.stop();
-          }
-        });
-        this.peerConnection.close();
-      } catch(e) {}
+      this.peerConnection.getSenders().forEach(s => s.track?.stop());
+      this.peerConnection.close();
       this.peerConnection = null;
     }
-
-    this.candidateQueue = [];
-    this.remoteStream = new MediaStream();
-    console.log("[Imperial Dead-Stop] Cleanup cycle complete. All hardware released.");
+    
+    console.log("[Imperial Purge] Done. Hardware SAFE.");
   }
 }

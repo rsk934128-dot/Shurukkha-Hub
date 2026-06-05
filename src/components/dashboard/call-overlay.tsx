@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, ShieldCheck, Loader2, User, Volume2, VolumeX, Activity, Zap, X, Maximize2, Smartphone, Speaker, RefreshCw } from 'lucide-react'
+import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, ShieldCheck, Loader2, User, Volume2, VolumeX, Activity, Zap, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -51,25 +51,29 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const startRingtone = useCallback(() => {
     stopRingtone()
     playAlertSound()
-    ringtoneIntervalRef.current = setInterval(playAlertSound, 2500)
+    ringtoneIntervalRef.current = setInterval(playAlertSound, 3000)
   }, [playAlertSound, stopRingtone])
 
-  const cleanupStreams = useCallback(() => {
-    console.warn("[Imperial Purge] Releasing hardware resources...");
+  const cleanupHardware = useCallback(() => {
+    console.warn("[Imperial Dead-Stop] Aggressive Hardware Purge Initiated...");
     
+    // 1. Unbind video elements
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
 
+    // 2. Kill local stream tracks
     if (localStreamRef.current) {
       WebRTCManager.stopMediaStream(localStreamRef.current);
       localStreamRef.current = null;
     }
 
+    // 3. Dispose signaling manager (kills all tracked tracks)
     if (webrtcRef.current) {
       webrtcRef.current.dispose();
       webrtcRef.current = null;
     }
     
+    // 4. Clear UI timers
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -81,15 +85,16 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     if (isTerminatingRef.current) return;
     isTerminatingRef.current = true;
     
-    console.warn(`[Signal Hub] Terminating session: ${callData?.sessionId}`);
+    console.log(`[Signal Hub] Terminating Session: ${callData?.sessionId}`);
     stopRingtone();
     setStatus('ended');
-    cleanupStreams();
+    cleanupHardware();
 
     if (callData && shouldUpdateServer) {
       const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
       try {
         await updateDoc(sessionRef, { status: 'ended' });
+        // Self-destruct session data after a short delay for sync
         setTimeout(async () => {
           try {
             const candidatesRef = collection(sessionRef, 'ice_candidates');
@@ -97,7 +102,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             for (const d of snap.docs) await deleteDoc(d.ref);
             await deleteDoc(sessionRef);
           } catch (e) {}
-        }, 2000);
+        }, 3000);
       } catch (err) {}
     }
 
@@ -105,17 +110,15 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       onClose();
       isTerminatingRef.current = false;
       setStatus('idle');
-    }, 500);
-  }, [callData, cleanupStreams, onClose, stopRingtone])
+    }, 800);
+  }, [callData, cleanupHardware, onClose, stopRingtone])
 
-  const handleAccept = async (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  const handleAccept = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!callData) return;
     
-    console.log("[Signal Hub] Acceptance triggered.");
+    console.log("[Signal Hub] Imperial Acceptance.");
     stopRingtone(); 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -130,8 +133,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remote;
       });
       
-      const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
-      await updateDoc(sessionRef, { status: 'connected' });
+      await updateDoc(doc(db, 'webrtc_sessions', callData.sessionId), { status: 'connected' });
       
       setStatus('connected');
       timerRef.current = setInterval(() => setTimer(prev => prev + 1), 1000);
@@ -141,12 +143,9 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     }
   }
 
-  const handleHangUp = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    console.log("[Signal Hub] Termination triggered.");
+  const handleHangUp = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     handleEndCall(true);
   }
 
@@ -191,10 +190,10 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       }
       return () => {
         unsubscribe();
-        cleanupStreams();
+        cleanupHardware();
       };
     }
-  }, [callData?.sessionId, callData?.isIncoming]);
+  }, [callData?.sessionId]);
 
   const formatTime = (s: number) => {
     const mins = Math.floor(s / 60);
@@ -211,13 +210,13 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader className="sr-only">
-          <DialogTitle>Sovereign Comm</DialogTitle>
-          <DialogDescription>Secure signal active.</DialogDescription>
+          <DialogTitle>Secure Signal</DialogTitle>
+          <DialogDescription>Sovereign Grid Communication Active</DialogDescription>
         </DialogHeader>
         
-        <div className="relative w-full h-full bg-slate-950 flex items-center justify-center overflow-hidden pointer-events-auto">
+        <div className="relative w-full h-full bg-slate-950 flex items-center justify-center overflow-hidden">
           {status === 'ringing' && callData?.isIncoming && (
-            <div className="flex flex-col items-center gap-8 z-50 animate-in fade-in zoom-in-95 duration-500 w-full px-6 text-center pointer-events-auto">
+            <div className="flex flex-col items-center gap-8 z-50 animate-in fade-in zoom-in-95 duration-500 w-full px-6 text-center">
                <div className="relative">
                   <div className="absolute -inset-12 bg-primary/20 rounded-full blur-3xl animate-pulse" />
                   <Avatar className="h-40 w-40 border-4 border-primary/40 relative z-10">
@@ -281,7 +280,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                 </Avatar>
                 <div className="text-center">
                   <h2 className="text-2xl font-bold text-white">{callData?.callerName}</h2>
-                  <p className="text-xs font-mono text-primary uppercase tracking-[0.4em] animate-pulse">Establishing Link...</p>
+                  <p className="text-xs font-mono text-primary uppercase tracking-[0.4em] animate-pulse">Connecting Node...</p>
                 </div>
                 <Button 
                   onClick={handleHangUp} 
@@ -295,7 +294,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
           {status === 'ended' && (
             <div className="absolute inset-0 bg-black/90 z-[320] flex flex-col items-center justify-center gap-4">
                <PhoneOff size={32} className="text-destructive" />
-               <p className="text-xl font-headline font-bold text-white uppercase tracking-widest">Call Terminated</p>
+               <p className="text-xl font-headline font-bold text-white uppercase tracking-widest">Call Ended</p>
             </div>
           )}
 
