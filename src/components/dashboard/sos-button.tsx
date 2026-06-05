@@ -9,8 +9,10 @@ import { collection, addDoc, serverTimestamp, doc, setDoc, onSnapshot, deleteDoc
 import { DisasterStorage } from '@/lib/disaster-storage'
 import { WebRTCManager } from '@/lib/webrtc-signaling'
 import { Badge } from '@/components/ui/badge'
+import { useUser } from '@/firebase'
 
 export function SOSButton() {
+  const { user } = useUser()
   const [isActivating, setIsActivating] = useState(false)
   const [activeSosId, setActiveSosId] = useState<string | null>(null)
   const [isCalling, setIsCalling] = useState(false)
@@ -22,30 +24,19 @@ export function SOSButton() {
   
   const { toast } = useToast()
 
-  /**
-   * CRITICAL: Aggressive hardware purge for SOS grid.
-   */
   const cleanupStreams = () => {
     console.warn("[SOS Grid] Executing high-priority hardware resource purge...");
-    
-    // 1. Reset video UI
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-
-    // 2. Kill local tracks
     if (localStreamRef.current) {
       WebRTCManager.stopMediaStream(localStreamRef.current);
       localStreamRef.current = null;
     }
-    
-    // 3. Dispose manager
     if (webrtcRef.current) {
       webrtcRef.current.dispose();
       webrtcRef.current = null;
     }
-    
     setIsCalling(false);
-    console.log("[SOS Grid] Purge success.");
   }
 
   useEffect(() => {
@@ -78,7 +69,7 @@ export function SOSButton() {
       location: userLocation ? `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}` : "অজ্ঞাত স্থান",
       status: 'pending',
       type: 'Emergency SOS',
-      reporterId: 'citizen_' + Math.random().toString(36).substring(7)
+      reporterId: user?.uid || 'anonymous_citizen'
     }
 
     try {

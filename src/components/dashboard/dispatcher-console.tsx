@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -16,10 +15,7 @@ import { WebRTCManager } from '@/lib/webrtc-signaling'
 import { ResourceMap } from './resource-map'
 import { CommunicationConsole } from './communication-console'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { MediaControls } from './media-controls'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
-import { errorEmitter } from '@/firebase/error-emitter'
-import { FirestorePermissionError } from '@/firebase/errors'
 import { useUser } from '@/firebase'
 
 const MOCK_RESPONDERS = [
@@ -63,9 +59,8 @@ export function DispatcherConsole() {
   const handleCall = async () => {
     if (!selectedAlert || !user) return;
     
-    // We initiate the call by creating/updating the session doc.
-    // The GlobalSignalHandler will see the status 'ringing' and open the CallOverlay.
-    const sessionId = selectedAlert.id; // Using alert ID as session ID for direct link
+    // Generate a unique session ID for this specific call attempt
+    const sessionId = `call_recon_${selectedAlert.id}_${Date.now()}`;
     const sessionRef = doc(db, 'webrtc_sessions', sessionId);
     
     try {
@@ -73,7 +68,7 @@ export function DispatcherConsole() {
         callerId: user.uid,
         callerName: "Command Center",
         callerAvatar: user.photoURL || '',
-        recipientId: selectedAlert.reporterId || 'unknown_citizen',
+        recipientId: selectedAlert.reporterId,
         recipientName: selectedAlert.location || 'Citizen',
         recipientAvatar: '',
         status: 'ringing',
@@ -215,7 +210,7 @@ export function DispatcherConsole() {
                                      <BrainCircuit size={16} />
                                      <span className="text-[10px] font-bold uppercase tracking-widest">AI Strategy</span>
                                   </div>
-                                  <p className="text-[11px] text-foreground/80 leading-relaxed italic">"{recommendation.reasoning}"</p>
+                                  <p className="text-11px] text-foreground/80 leading-relaxed italic">"{recommendation.reasoning}"</p>
                                   <Button onClick={() => handleDispatch(recommendation.recommendedResponderId)} className="w-full bg-primary text-background font-bold text-xs h-9 rounded-xl">
                                      AUTHORIZE DEPLOYMENT
                                   </Button>

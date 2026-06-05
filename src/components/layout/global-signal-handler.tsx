@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -9,7 +8,6 @@ import { NotificationManager } from '@/lib/notification-manager'
 import { CallOverlay } from '@/components/dashboard/call-overlay'
 import { Toaster } from '@/components/ui/toaster'
 import { AlertCenter } from '@/components/dashboard/alert-center'
-import { usePathname } from 'next/navigation'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
 import { AVController } from '@/lib/av-controller'
@@ -84,11 +82,11 @@ export function GlobalSignalHandler() {
       }
     });
 
-    // WebRTC Signaling Listener - Stale Filter Integrated
+    // WebRTC Signaling Listener - Stale Filter & ID Correlation Integrated
     const sessionsRef = collection(db, 'webrtc_sessions');
     const callsQ = query(
       sessionsRef,
-      where('status', 'in', ['ringing', 'connected', 'ended']),
+      where('status', '==', 'ringing'),
       limit(20)
     );
 
@@ -100,10 +98,11 @@ export function GlobalSignalHandler() {
         const isCaller = data.callerId === user.uid;
         
         if (isRecipient || isCaller) {
-          const sessionTime = data.timestamp?.toMillis?.() || data.timestamp?.seconds * 1000 || 0;
+          const rawTimestamp = data.timestamp;
+          const sessionTime = rawTimestamp?.toMillis?.() || rawTimestamp?.seconds * 1000 || Date.now();
           
-          // CRITICAL: Ignore sessions created before the app mounted/refreshed
-          const isStale = sessionTime > 0 && sessionTime < appMountTime.current - 3000;
+          // Ignore sessions created before the app mounted/refreshed
+          const isStale = rawTimestamp && sessionTime < appMountTime.current - 5000;
 
           if (data.status === 'ringing' && !isStale && !activeCall && lastProcessedCallId.current !== sessionId && !terminatedCallIds.current.has(sessionId)) {
             console.log(`[Signal Bridge] New Imperial Signal Detected: ${sessionId}`);
@@ -126,23 +125,14 @@ export function GlobalSignalHandler() {
             }
             lastProcessedCallId.current = sessionId;
           } 
-          
-          // Remote termination
-          else if (data.status === 'ended' && (activeCall?.sessionId === sessionId || lastProcessedCallId.current === sessionId)) {
-            if (!terminatedCallIds.current.has(sessionId)) {
-              console.log(`[Signal Bridge] Session Terminated: ${sessionId}`);
-              terminatedCallIds.current.add(sessionId);
-              setActiveCall(null);
-            }
-          }
         }
       });
 
-      // Cleanup local state if doc is purged
+      // Cleanup logic for remote termination
       if (activeCall) {
         const activeDoc = snapshot.docs.find(d => d.id === activeCall.sessionId);
-        if (!activeDoc && !terminatedCallIds.current.has(activeCall.sessionId)) {
-          console.log("[Signal Bridge] Active session purged from grid.");
+        if (activeDoc && activeDoc.data().status === 'ended' && !terminatedCallIds.current.has(activeCall.sessionId)) {
+          console.log("[Signal Bridge] Active session terminated remotely.");
           terminatedCallIds.current.add(activeCall.sessionId);
           setActiveCall(null);
         }
