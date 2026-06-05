@@ -18,33 +18,38 @@ export function GlobalSignalHandler() {
   const [activeCall, setActiveCall] = useState<any>(null)
   
   const processedCallIds = useRef<Set<string>>(new Set())
-  const appMountTime = useRef<number>(Date.now())
   const sensorLogged = useRef(false)
 
   useEffect(() => {
     if (!currentUser || !firestore || authLoading) return;
 
-    console.log(`[Signal Hub] Sovereign Monitor Active for UID: ${currentUser.uid}`);
+    console.log(`[Imperial Signal Hub] Sovereign Monitor ACTIVE for: ${currentUser.displayName || currentUser.email}`);
 
-    // Simplify query to the absolute minimum to avoid Index Errors
+    // High-availability query for WebRTC sessions
     const sessionsRef = collection(db, 'webrtc_sessions');
-    const callsQ = query(sessionsRef, limit(10));
+    const callsQ = query(sessionsRef, limit(20));
 
     const unsubscribeCalls = onSnapshot(callsQ, (snapshot) => {
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
       
-      // Sort client-side to ensure newest first
+      // Client-side sort: Ensure latest activity is processed
       docs.sort((a, b) => {
-        const timeA = a.timestamp?.toMillis?.() || a.timestamp?.seconds * 1000 || 0;
-        const timeB = b.timestamp?.toMillis?.() || b.timestamp?.seconds * 1000 || 0;
+        const timeA = a.timestamp?.toMillis?.() || a.timestamp?.seconds * 1000 || Date.now();
+        const timeB = b.timestamp?.toMillis?.() || b.timestamp?.seconds * 1000 || Date.now();
         return timeB - timeA;
       });
 
       docs.forEach((data) => {
         const sessionId = data.id;
         
-        // Skip ended calls or calls where current user is not involved
-        if (data.status === 'ended') return;
+        // Aggressive status check
+        if (data.status === 'ended') {
+          if (activeCall?.sessionId === sessionId) {
+             console.log(`[Signal Hub] Terminating UI for Session: ${sessionId}`);
+             setActiveCall(null);
+          }
+          return;
+        }
         
         const isRecipient = data.recipientId === currentUser.uid;
         const isCaller = data.callerId === currentUser.uid;
@@ -52,29 +57,27 @@ export function GlobalSignalHandler() {
         if (!isRecipient && !isCaller) return;
         if (processedCallIds.current.has(sessionId)) return;
 
-        // Ensure we only process recent "ringing" calls
+        // If a new "ringing" signal is detected, trigger the Sovereign HUD
         if (data.status === 'ringing') {
-          const sessionTime = data.timestamp?.toMillis?.() || data.timestamp?.seconds * 1000 || Date.now();
-          // Be more lenient with timing in the prototype
-          if (sessionTime < appMountTime.current - 120000) return; 
-
           if (!activeCall) {
-            console.warn(`[Signal Hub] SIGNAL DETECTED: ${sessionId} | Incoming: ${isRecipient}`);
+            console.warn(`[Signal Hub] SOVEREIGN SIGNAL DETECTED: ${sessionId} | Role: ${isRecipient ? 'RECIPIENT' : 'CALLER'}`);
             
-            setActiveCall({
+            const callPayload = {
               sessionId,
               callerId: isRecipient ? data.callerId : data.recipientId,
-              callerName: isRecipient ? (data.callerName || "অজ্ঞাত নাগরিক") : (data.recipientName || "Recipient"),
+              callerName: isRecipient ? (data.callerName || "অজ্ঞাত নাগরিক") : (data.recipientName || "প্রাপক"),
               callerAvatar: isRecipient ? data.callerAvatar : data.recipientAvatar,
               type: data.type,
               isIncoming: isRecipient
-            });
+            };
+
+            setActiveCall(callPayload);
             
             if (isRecipient) {
-              MobileBridge.vibrate([500, 200, 500]);
+              MobileBridge.triggerHaptic('WARNING');
               NotificationManager.sendCallNotification(
                 data.callerName || "অজ্ঞাত নাগরিক",
-                data.type === 'video' ? "ভিডিও কল দিচ্ছেন..." : "অডিও কল দিচ্ছেন...",
+                data.type === 'video' ? "ভিডিও কল দিচ্ছে..." : "অডিও কল দিচ্ছে...",
                 sessionId
               );
             }
@@ -116,7 +119,7 @@ export function GlobalSignalHandler() {
   return (
     <>
       {activeCall && (
-        <div className="fixed inset-0 z-[9999] pointer-events-auto">
+        <div className="fixed inset-0 z-[10000] pointer-events-auto overflow-hidden">
           <CallOverlay 
             callData={activeCall} 
             onClose={() => {
