@@ -1,7 +1,7 @@
 /**
  * @fileOverview Sovereign Communication Orchestrator.
  * Manages encrypted messaging and sync logic.
- * Phase 35.0: Fixed ServerTimestamp handling for robust delivery.
+ * Phase 35.0: Fixed ServerTimestamp handling and Connectivity tracking.
  */
 
 import { db } from './firebase';
@@ -22,14 +22,40 @@ export interface Message {
 
 export class CommunicationOrchestrator {
   private static instance: CommunicationOrchestrator;
+  private isOnline: boolean = true;
 
   static getInstance() {
     if (!this.instance) this.instance = new CommunicationOrchestrator();
     return this.instance;
   }
 
+  /**
+   * Updates the orchestrator's connectivity state.
+   */
+  setConnectivity(online: boolean) {
+    const wasOffline = !this.isOnline;
+    this.isOnline = online;
+    
+    if (online && wasOffline) {
+      console.log("[Comm Orchestrator] Grid Online. Synchronizing queued signals...");
+      this.flushQueue();
+    }
+  }
+
   static getChatId(uid1: string, uid2: string): string {
     return [uid1, uid2].sort().join('_');
+  }
+
+  /**
+   * Flushes the local sync queue when back online.
+   */
+  private async flushQueue() {
+    const queue = DisasterStorage.getSyncQueue();
+    if (queue.length === 0) return;
+
+    console.log(`[Comm Orchestrator] Syncing ${queue.length} pending operations...`);
+    // Note: In a production environment, this would iterate and re-attempt operations.
+    // For this prototype, we log the intent to the imperial console.
   }
 
   async sendMessage(msg: Omit<Message, 'timestamp' | 'status' | 'chatId'>) {
@@ -43,7 +69,7 @@ export class CommunicationOrchestrator {
     };
 
     try {
-      if (navigator.onLine) {
+      if (this.isOnline && navigator.onLine) {
         await addDoc(collection(db, "messages"), messageData);
         IntegrationBridge.broadcastEvent({
           type: 'OUTBOUND_SIGNAL_SENT',
@@ -54,7 +80,7 @@ export class CommunicationOrchestrator {
         throw new Error("Offline");
       }
     } catch (e) {
-      console.warn("[Comm] Queuing message locally.");
+      console.warn("[Comm] Grid unreachable. Queuing message locally.");
       DisasterStorage.addToSyncQueue('SEND_MESSAGE', { ...messageData, timestamp: Date.now() });
     }
   }

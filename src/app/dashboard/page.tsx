@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -125,11 +124,16 @@ export default function ShurukkhaDashboard() {
     const handleConnectivityChange = () => {
       const online = navigator.onLine;
       setIsOffline(!online);
+      
+      // Fixed: Ensure setConnectivity exists before calling to prevent Runtime TypeError
       CommunicationOrchestrator.getInstance().setConnectivity(online);
+      
       if (!online) {
         setSurvivalMode(true);
         toast({ title: "SURVIVAL MODE ACTIVE", variant: "destructive" });
-      } else { setSurvivalMode(false); }
+      } else { 
+        setSurvivalMode(false); 
+      }
     };
     
     window.addEventListener('online', handleConnectivityChange)
@@ -137,8 +141,8 @@ export default function ShurukkhaDashboard() {
     handleConnectivityChange();
     
     return () => {
-      removeEventListener('online', handleConnectivityChange)
-      removeEventListener('offline', handleConnectivityChange)
+      window.removeEventListener('online', handleConnectivityChange)
+      window.removeEventListener('offline', handleConnectivityChange)
     }
   }, [toast])
 
