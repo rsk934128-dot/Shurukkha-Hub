@@ -193,6 +193,11 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         className="max-w-[100vw] h-[100dvh] md:max-w-4xl md:h-auto md:aspect-video bg-[#05070a] border-none md:border md:border-primary/20 p-0 overflow-hidden md:rounded-[2.5rem] shadow-[0_0_80px_rgba(117,151,255,0.3)] z-[10001]"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
+        <DialogHeader className="sr-only">
+          <DialogTitle>Sovereign Call Interface</DialogTitle>
+          <DialogDescription>Secure communication channel via the sovereign grid.</DialogDescription>
+        </DialogHeader>
+
         <div className="relative w-full h-full bg-[#05070a] flex items-center justify-center overflow-hidden">
           {/* Ringing UI */}
           {status === 'ringing' && (
