@@ -22,6 +22,7 @@ export function GlobalSignalHandler() {
   const lastProcessedMsgId = useRef<string | null>(null)
   const lastProcessedCallId = useRef<string | null>(null)
   const terminatedCallIds = useRef<Set<string>>(new Set())
+  const appMountTime = useRef<number>(Date.now())
   const sensorLogged = useRef(false);
 
   useEffect(() => {
@@ -52,7 +53,7 @@ export function GlobalSignalHandler() {
   useEffect(() => {
     if (!user || !firestore) return;
 
-    // Messaging Listener - Filtered for User
+    // Messaging Listener
     const messagesRef = collection(db, "messages");
     const msgQuery = query(
       messagesRef,
@@ -83,26 +84,29 @@ export function GlobalSignalHandler() {
       }
     });
 
-    // WebRTC Signaling Listener - Improved Filtering and State Locking
+    // WebRTC Signaling Listener - Stale Filter Integrated
     const sessionsRef = collection(db, 'webrtc_sessions');
     const callsQ = query(
       sessionsRef,
       where('status', 'in', ['ringing', 'connected', 'ended']),
-      limit(50)
+      limit(20)
     );
 
     const unsubscribeCalls = onSnapshot(callsQ, (snapshot) => {
       snapshot.docs.forEach((doc) => {
         const data = doc.data();
+        const sessionId = doc.id;
         const isRecipient = data.recipientId === user.uid;
         const isCaller = data.callerId === user.uid;
         
         if (isRecipient || isCaller) {
-          const sessionId = doc.id;
+          const sessionTime = data.timestamp?.toMillis?.() || data.timestamp?.seconds * 1000 || 0;
+          
+          // CRITICAL: Ignore sessions created before the app mounted/refreshed
+          const isStale = sessionTime > 0 && sessionTime < appMountTime.current - 3000;
 
-          // Critical Protection: Prevent multiple overlays for the same active or terminated session
-          if (data.status === 'ringing' && !activeCall && lastProcessedCallId.current !== sessionId && !terminatedCallIds.current.has(sessionId)) {
-            console.log(`[Signal Bridge] Call Detected: ${sessionId} | Role: ${isRecipient ? 'Recipient' : 'Caller'}`);
+          if (data.status === 'ringing' && !isStale && !activeCall && lastProcessedCallId.current !== sessionId && !terminatedCallIds.current.has(sessionId)) {
+            console.log(`[Signal Bridge] New Imperial Signal Detected: ${sessionId}`);
             
             setActiveCall({
               sessionId,
@@ -123,10 +127,10 @@ export function GlobalSignalHandler() {
             lastProcessedCallId.current = sessionId;
           } 
           
-          // Remote termination logic
+          // Remote termination
           else if (data.status === 'ended' && (activeCall?.sessionId === sessionId || lastProcessedCallId.current === sessionId)) {
             if (!terminatedCallIds.current.has(sessionId)) {
-              console.log(`[Signal Bridge] Remote termination signal for ${sessionId}.`);
+              console.log(`[Signal Bridge] Session Terminated: ${sessionId}`);
               terminatedCallIds.current.add(sessionId);
               setActiveCall(null);
             }
@@ -134,11 +138,11 @@ export function GlobalSignalHandler() {
         }
       });
 
-      // Cleanup local state if doc is purged from grid
+      // Cleanup local state if doc is purged
       if (activeCall) {
         const activeDoc = snapshot.docs.find(d => d.id === activeCall.sessionId);
         if (!activeDoc && !terminatedCallIds.current.has(activeCall.sessionId)) {
-          console.log("[Signal Bridge] Active session doc purged from grid.");
+          console.log("[Signal Bridge] Active session purged from grid.");
           terminatedCallIds.current.add(activeCall.sessionId);
           setActiveCall(null);
         }

@@ -56,13 +56,12 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   }, [playAlertSound, stopRingtone])
 
   const cleanupStreams = useCallback(() => {
-    console.log("[Imperial Cleanup] Releasing all hardware resources...");
+    console.log("[Imperial Cleanup] Executing hardware resource release...");
     
-    // Stop all local tracks (Camera/Mic)
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => {
         track.stop();
-        console.log(`[Hardware] Track Stopped: ${track.kind}`);
+        console.log(`[Hardware] Track Force-Stopped: ${track.kind}`);
       });
       localStreamRef.current = null;
     }
@@ -70,7 +69,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     
-    // Dispose WebRTC Peer Connection
     if (webrtcRef.current) {
       webrtcRef.current.dispose();
       webrtcRef.current = null;
@@ -87,11 +85,10 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     if (isTerminatingRef.current) return;
     isTerminatingRef.current = true;
     
-    console.log(`[Signal Hub] Terminating session: ${callData?.sessionId}`);
+    console.log(`[Signal Hub] Closing session: ${callData?.sessionId}`);
     stopRingtone();
     setStatus('ended');
 
-    // Immediate Hardware Release
     cleanupStreams();
 
     if (callData && shouldUpdateServer) {
@@ -99,7 +96,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       try {
         await updateDoc(sessionRef, { status: 'ended' });
         
-        // Comprehensive Grid Cleanup after a delay
+        // Immediate cleanup of signaling data to prevent ghost calls
         setTimeout(async () => {
           try {
             const candidatesRef = collection(sessionRef, 'ice_candidates');
@@ -108,10 +105,11 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
               await deleteDoc(doc(candidatesRef, cDoc.id));
             }
             await deleteDoc(sessionRef);
+            console.log(`[Signal Hub] GRID_CLEANUP_SUCCESS for ${callData.sessionId}`);
           } catch (e) {}
-        }, 3000);
+        }, 1000);
       } catch (err: any) {
-        console.error("[Signal Hub] Termination sync failed", err);
+        console.error("[Signal Hub] Sync fault during termination", err);
       }
     }
 
@@ -146,15 +144,13 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       setStatus('connected');
       timerRef.current = setInterval(() => setTimer(prev => prev + 1), 1000);
     } catch (e) {
-      console.error("Call acceptance fault", e);
+      console.error("Session acceptance failure", e);
       handleEndCall(true);
     }
   }
 
-  // Ensure component cleanup on unmount
   useEffect(() => {
     return () => {
-      console.log("[Imperial Cleanup] Component Unmounting - Finalizing Release...");
       cleanupStreams();
     }
   }, [cleanupStreams]);
