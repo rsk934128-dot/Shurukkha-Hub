@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -19,6 +20,7 @@ export function GlobalSignalHandler() {
   
   const processedCallIds = useRef<Set<string>>(new Set())
   const sensorLogged = useRef(false)
+  const mountTime = useRef(Date.now())
 
   useEffect(() => {
     if (!currentUser || !firestore || authLoading) return;
@@ -51,6 +53,16 @@ export function GlobalSignalHandler() {
 
         // 3. Forced Trigger for Ringing Calls
         if (data.status === 'ringing') {
+          // TIME GUARD: Prevent "Automatic Calls" from old sessions
+          // If the call timestamp is before our current session mount time, ignore it.
+          const callTimestamp = data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.timestamp?.seconds * 1000 || 0);
+          
+          // Only accept calls created after this component mounted (with a 2-second buffer for safety)
+          if (callTimestamp > 0 && callTimestamp < (mountTime.current - 2000)) {
+            console.log(`[Signal Hub] Ignoring stale call session: ${sessionId}`);
+            return;
+          }
+
           // If we are already in this specific call, don't re-trigger
           if (activeCall && activeCall.sessionId === sessionId) return;
           
