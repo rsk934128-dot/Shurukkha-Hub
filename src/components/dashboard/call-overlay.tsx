@@ -200,12 +200,12 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
-  if (status === 'idle') return null;
+  if (status === 'idle' && !callData) return null;
 
   return (
-    <Dialog open={status !== 'idle'} onOpenChange={(open) => !open && handleEndCall(true)}>
+    <Dialog open={true} onOpenChange={(open) => !open && handleHangUp({ preventDefault: () => {}, stopPropagation: () => {} } as any)}>
       <DialogContent 
-        className="max-w-[100vw] h-[100dvh] md:max-w-4xl md:h-auto md:aspect-video bg-[#05070a] border-none md:border md:border-primary/20 p-0 overflow-hidden md:rounded-[2.5rem] shadow-2xl z-[300] pointer-events-auto"
+        className="max-w-[100vw] h-[100dvh] md:max-w-4xl md:h-auto md:aspect-video bg-[#05070a] border-none md:border md:border-primary/20 p-0 overflow-hidden md:rounded-[2.5rem] shadow-2xl z-[9999] pointer-events-auto"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader className="sr-only">
@@ -273,10 +273,13 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
           {(status === 'ringing' && !callData?.isIncoming) && (
              <div className="flex flex-col items-center gap-6 z-10 text-center">
-                <Avatar className="h-32 w-32 border-4 border-primary/40">
-                  <AvatarImage src={callData?.callerAvatar || undefined} />
-                  <AvatarFallback className="text-4xl font-bold">S</AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-32 w-32 border-4 border-primary/40">
+                    <AvatarImage src={callData?.callerAvatar || undefined} />
+                    <AvatarFallback className="text-4xl font-bold">{callData?.callerName?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="absolute inset-0 border-2 border-primary/40 rounded-full animate-ping" />
+                </div>
                 <div className="text-center">
                   <h2 className="text-2xl font-bold text-white">{callData?.callerName}</h2>
                   <p className="text-xs font-mono text-primary uppercase tracking-[0.4em] animate-pulse">Connecting Node...</p>

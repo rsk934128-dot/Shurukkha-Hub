@@ -27,10 +27,12 @@ export function GlobalSignalHandler() {
     console.log(`[Signal Hub] Sovereign Monitor Active for UID: ${currentUser.uid}`);
 
     const sessionsRef = collection(db, 'webrtc_sessions');
+    // Enhanced query: Listen for all ringing calls involving the user, ordered by newest first
     const callsQ = query(
       sessionsRef,
       where('status', '==', 'ringing'),
-      limit(5)
+      orderBy('timestamp', 'desc'),
+      limit(10)
     );
 
     const unsubscribeCalls = onSnapshot(callsQ, (snapshot) => {
@@ -44,8 +46,9 @@ export function GlobalSignalHandler() {
         if (!isRecipient && !isCaller) return;
         if (processedCallIds.current.has(sessionId)) return;
 
+        // Skip very old calls (from previous sessions) but be more lenient
         const sessionTime = data.timestamp?.toMillis?.() || data.timestamp?.seconds * 1000 || Date.now();
-        if (sessionTime < appMountTime.current - 15000) return; // 15s buffer
+        if (sessionTime < appMountTime.current - 60000) return; // 1 min buffer
 
         if (!activeCall && isRecipient) {
           console.warn(`[Signal Hub] ALERT: Incoming Signal Detected! ID: ${sessionId}`);
@@ -66,7 +69,8 @@ export function GlobalSignalHandler() {
             data.type === 'video' ? "ভিডিও কল দিচ্ছেন..." : "অডিও কল দিচ্ছেন...",
             sessionId
           );
-        } else if (!activeCall && isCaller && !processedCallIds.current.has(sessionId)) {
+        } else if (!activeCall && isCaller) {
+          console.log(`[Signal Hub] Initiating Outbound UI for Session: ${sessionId}`);
           setActiveCall({
             sessionId,
             callerId: data.recipientId,
@@ -78,13 +82,14 @@ export function GlobalSignalHandler() {
         }
       });
 
+      // If active call is no longer in 'ringing' status and we haven't transitioned to 'connected' internally,
+      // it means the call might have been ended by the other side before it even started.
       if (activeCall) {
         const currentDoc = snapshot.docs.find(d => d.id === activeCall.sessionId);
-        if (currentDoc && currentDoc.data().status === 'ended') {
-          processedCallIds.current.add(activeCall.sessionId);
-          setActiveCall(null);
-        }
+        // Note: transitions to 'connected' are handled inside CallOverlay
       }
+    }, (err) => {
+      console.error("[Signal Hub] Snapshot Error:", err);
     });
 
     return () => unsubscribeCalls();
@@ -118,15 +123,17 @@ export function GlobalSignalHandler() {
   return (
     <>
       {activeCall && (
-        <CallOverlay 
-          callData={activeCall} 
-          onClose={() => {
-            if (activeCall) {
-              processedCallIds.current.add(activeCall.sessionId);
-              setActiveCall(null);
-            }
-          }} 
-        />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
+          <CallOverlay 
+            callData={activeCall} 
+            onClose={() => {
+              if (activeCall) {
+                processedCallIds.current.add(activeCall.sessionId);
+                setActiveCall(null);
+              }
+            }} 
+          />
+        </div>
       )}
       <AlertCenter />
       <Toaster />
