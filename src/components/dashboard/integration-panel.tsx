@@ -149,8 +149,8 @@ export function IntegrationPanel() {
                     <TerminalSquare size={16} /> Quick Start SDK
                  </h4>
                  <div className="p-4 bg-slate-950 rounded-xl font-mono text-[10px] text-accent/80 overflow-x-auto">
-                    import { SheikhHub } from '@sheikh/sdk';<br /><br />
-                    const hub = new SheikhHub({ key: '{devKey || 'GKEY_XXXX'}' });<br />
+                    import {`{`} SheikhHub {`}`} from '@sheikh/sdk';<br /><br />
+                    const hub = new SheikhHub({`{`} key: '{devKey || 'GKEY_XXXX'}' {`}`});<br />
                     const vault = await hub.vault.getStats();
                  </div>
               </Card>
