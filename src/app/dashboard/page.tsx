@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -39,7 +40,7 @@ import { AuthGuard } from '@/lib/auth-guard'
 import { DeviceValidator } from '@/lib/device-fingerprint-validator'
 import { useRouter } from 'next/navigation'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
-import { AppSidebar } from '@/layout/app-sidebar'
+import { AppSidebar } from '@/components/layout/app-sidebar'
 import { AppLogo } from '@/components/ui/app-logo'
 import { CommunicationOrchestrator } from '@/lib/communication-orchestrator'
 import { NotificationManager } from '@/lib/notification-manager'
