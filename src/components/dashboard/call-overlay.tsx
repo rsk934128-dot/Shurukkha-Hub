@@ -54,9 +54,13 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     ringtoneIntervalRef.current = setInterval(playAlertSound, 2500)
   }, [playAlertSound, stopRingtone])
 
+  /**
+   * CRITICAL: Aggressive hardware resource release.
+   */
   const cleanupStreams = useCallback(() => {
-    console.log("[Imperial Cleanup] Initiating global hardware resource purge...");
+    console.warn("[Imperial Cleanup] Initiating global hardware resource purge...");
     
+    // 1. Stop all tracks in the local stream explicitly
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => {
         track.enabled = false;
@@ -65,15 +69,18 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       });
       localStreamRef.current = null;
     }
-    
+
+    // 2. Clear video source elements
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     
+    // 3. Dispose the WebRTC Manager which stops all tracked tracks
     if (webrtcRef.current) {
       webrtcRef.current.dispose();
       webrtcRef.current = null;
     }
     
+    // 4. Reset timers and ringtones
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -85,10 +92,11 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     if (isTerminatingRef.current) return;
     isTerminatingRef.current = true;
     
-    console.log(`[Signal Hub] TERMINATING_SESSION: ${callData?.sessionId}`);
+    console.warn(`[Signal Hub] TERMINATING_SESSION: ${callData?.sessionId}`);
     stopRingtone();
     setStatus('ended');
 
+    // FORCE CLEANUP IMMEDIATELY
     cleanupStreams();
 
     if (callData && shouldUpdateServer) {
@@ -96,6 +104,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       try {
         await updateDoc(sessionRef, { status: 'ended' });
         
+        // Brief delay before deleting to allow remote side to detect 'ended'
         setTimeout(async () => {
           try {
             const candidatesRef = collection(sessionRef, 'ice_candidates');
@@ -106,17 +115,18 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             await deleteDoc(sessionRef);
             console.log(`[Signal Hub] GRID_CLEANUP_SUCCESS: ${callData.sessionId}`);
           } catch (e) {}
-        }, 1000);
+        }, 1500);
       } catch (err: any) {
         console.error("[Signal Hub] Sync fault during termination", err);
       }
     }
 
+    // Close UI
     setTimeout(() => {
       onClose();
       isTerminatingRef.current = false;
       setStatus('idle');
-    }, 800);
+    }, 500);
   }, [callData, cleanupStreams, onClose, stopRingtone])
 
   const handleAccept = async () => {

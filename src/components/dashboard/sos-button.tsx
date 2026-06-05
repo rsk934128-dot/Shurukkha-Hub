@@ -22,15 +22,21 @@ export function SOSButton() {
   
   const { toast } = useToast()
 
+  /**
+   * AGGRESSIVE HARDWARE PURGE
+   */
   const cleanupStreams = () => {
-    console.log("[SOS Grid] Purging hardware resources...");
+    console.warn("[SOS Grid] Executing high-priority hardware resource purge...");
+    
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => {
         track.enabled = false;
         track.stop();
+        console.log(`[SOS Hardware] Track Force-Stopped: ${track.kind}`);
       });
       localStreamRef.current = null;
     }
+    
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     
@@ -38,6 +44,7 @@ export function SOSButton() {
       webrtcRef.current.dispose();
       webrtcRef.current = null;
     }
+    
     setIsCalling(false);
   }
 
@@ -99,7 +106,9 @@ export function SOSButton() {
       
       webrtcRef.current = new WebRTCManager(activeSosId);
       await webrtcRef.current.createCall(stream, (remote) => {
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remote;
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remote;
+        }
       });
       toast({ title: "লাইভ ভিডিও HUD সক্রিয়" });
     } catch (e) {
@@ -111,7 +120,9 @@ export function SOSButton() {
   const endCall = async () => {
     if (activeSosId) {
       const sessionRef = doc(db, 'webrtc_sessions', activeSosId);
-      await updateDoc(sessionRef, { status: 'ended' });
+      try {
+        await updateDoc(sessionRef, { status: 'ended' });
+      } catch(e) {}
     }
     cleanupStreams();
   }
@@ -149,14 +160,15 @@ export function SOSButton() {
                 </Button>
               </div>
             ) : (
-              <Button onClick={startLiveCall} className="w-full h-16 bg-accent text-background hover:bg-accent/90 gap-3 rounded-2xl shadow-lg font-bold text-lg animate-pulse">
-                <Video size={24} /> ভিডিও রিকন শুরু করুন
-              </Button>
+              <div className="space-y-3">
+                <Button onClick={startLiveCall} className="w-full h-16 bg-accent text-background hover:bg-accent/90 gap-3 rounded-2xl shadow-lg font-bold text-lg animate-pulse">
+                  <Video size={24} /> ভিডিও রিকন শুরু করুন
+                </Button>
+                <Button variant="ghost" onClick={() => { cleanupStreams(); setActiveSosId(null); }} className="w-full h-10 border border-white/5 rounded-xl text-[10px] uppercase font-bold text-muted-foreground hover:bg-white/5">
+                  নতুন সংকেত পাঠান (Reset)
+                </Button>
+              </div>
             )}
-            
-            <Button variant="ghost" onClick={() => { cleanupStreams(); setActiveSosId(null); }} className="w-full text-[10px] uppercase font-bold text-muted-foreground">
-              নতুন সংকেত পাঠান
-            </Button>
           </div>
         )}
         {!activeSosId && (

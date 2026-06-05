@@ -58,6 +58,18 @@ export class WebRTCManager {
     };
   }
 
+  /**
+   * Aggressively stops any track and removes it from the internal set.
+   */
+  static stopMediaStream(stream: MediaStream | null) {
+    if (!stream) return;
+    stream.getTracks().forEach(track => {
+      track.enabled = false;
+      track.stop();
+      console.log(`[Hardware Purge] Static Stop: ${track.kind}`);
+    });
+  }
+
   private trackStream(stream: MediaStream) {
     stream.getTracks().forEach(track => this.trackedTracks.add(track));
   }
@@ -279,41 +291,43 @@ export class WebRTCManager {
   }
 
   dispose() {
-    console.log("[WebRTC] Executing high-priority hardware purge protocol...");
+    console.warn("[WebRTC] Executing high-priority hardware purge protocol...");
     this.isDisposed = true;
     
-    // Stop all tracked tracks (Hardware Release)
+    // 1. Force-stop all registered tracks
     this.trackedTracks.forEach(track => {
       try {
         track.enabled = false;
         track.stop();
-        console.log(`[Hardware] Track Purged: ${track.kind}`);
+        console.log(`[Hardware] Track Terminated: ${track.kind}`);
       } catch (e) {}
     });
     this.trackedTracks.clear();
 
+    // 2. Dispose processors
     this.audioProcessor.dispose();
     
-    this.unsubscribers.forEach(unsub => unsub());
+    // 3. Cleanup Firebase subscriptions
+    this.unsubscribers.forEach(unsub => {
+      try { unsub(); } catch(e) {}
+    });
     this.unsubscribers = [];
 
+    // 4. Close Peer Connection and stop senders
     if (this.peerConnection) {
-      this.peerConnection.onicecandidate = null;
-      this.peerConnection.ontrack = null;
-      this.peerConnection.onconnectionstatechange = null;
-      this.peerConnection.onsignalingstatechange = null;
-      
-      this.peerConnection.getSenders().forEach(sender => {
-        if (sender.track) {
-          sender.track.enabled = false;
-          sender.track.stop();
-        }
-      });
-
-      this.peerConnection.close();
+      try {
+        this.peerConnection.getSenders().forEach(sender => {
+          if (sender.track) {
+            sender.track.enabled = false;
+            sender.track.stop();
+          }
+        });
+        this.peerConnection.close();
+      } catch(e) {}
       this.peerConnection = null;
     }
 
+    // 5. Hard stop the remote stream tracks
     this.remoteStream.getTracks().forEach(track => {
       track.enabled = false;
       track.stop();
