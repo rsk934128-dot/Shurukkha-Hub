@@ -68,6 +68,17 @@ export const NetworkAuditor = {
     return backupNode.id;
   },
 
+  /**
+   * Automatically attempts to repair connection to a failed node.
+   * Fixes the 'autoRepairNode is not a function' error.
+   */
+  autoRepairNode: async (nodeId: string): Promise<boolean> => {
+    console.log(`[Auto-Repair] Initiating self-healing for node: ${nodeId}`);
+    // Simulate complex handshake and repair logic
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    return Math.random() > 0.2; // 80% chance of recovery
+  },
+
   getGlobalTrafficData: (): RegionalTraffic[] => {
     return [
       { region: 'Asia Pacific', transactions: 124500, activeNodes: 18, avgLatency: 4, x: 75, y: 40 },
