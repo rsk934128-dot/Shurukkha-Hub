@@ -16,6 +16,7 @@ import { EconomicEngine, FinancialSnapshot } from '@/lib/economic-engine'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { AppLogo } from '@/components/ui/app-logo'
 
 export function ImperialManagement() {
   const [budget, setBudget] = useState({
@@ -281,7 +282,7 @@ export function ImperialManagement() {
             <Button 
               onClick={handleGenerateDecree} 
               disabled={isGeneratingDecree}
-              className="bg-accent text-background font-bold h-10 px-6 rounded-xl gap-2 shadow-lg shadow-accent/20"
+              className="bg-accent text-background font-bold h-10 px-6 rounded-xl gap-2 shadow-lg shadow-accent/20 transition-all hover:scale-105 active:scale-95"
             >
               {isGeneratingDecree ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
               GENERATE BUDGET DECREE
@@ -388,29 +389,37 @@ export function ImperialManagement() {
 
       {/* Imperial Decree Modal */}
       <Dialog open={showDecree} onOpenChange={setShowDecree}>
-        <DialogContent className="max-w-2xl bg-slate-950 border-primary/20 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
-          <DialogHeader className="p-8 bg-primary/5 border-b border-white/5">
-            <div className="flex items-center gap-4">
-              <AppLogo size={48} />
+        <DialogContent className="max-w-2xl bg-slate-950 border-primary/20 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-500">
+          <DialogHeader className="p-8 bg-primary/5 border-b border-white/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-5 rotate-12">
+               <AppLogo size={200} />
+            </div>
+            <div className="flex items-center gap-4 relative z-10">
+              <AppLogo size={56} className="animate-sos-pulse" />
               <div>
-                <DialogTitle className="text-xl font-headline font-bold tracking-widest text-primary uppercase">Imperial Budget Decree</DialogTitle>
-                <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground/60 tracking-[0.2em]">Verified Sovereign Reporting v1.0</DialogDescription>
+                <DialogTitle className="text-2xl font-headline font-bold tracking-widest text-primary uppercase leading-none">Imperial Budget Decree</DialogTitle>
+                <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground/60 tracking-[0.3em] mt-2 flex items-center gap-2">
+                   <ShieldCheck size={12} className="text-accent" /> Verified Sovereign Reporting v1.2
+                </DialogDescription>
               </div>
             </div>
           </DialogHeader>
           
-          <div className="p-8">
-            <div className="bg-black/40 border border-white/5 rounded-[1.5rem] p-6 font-mono text-[11px] leading-relaxed text-primary/80 whitespace-pre-wrap overflow-y-auto max-h-[400px] no-scrollbar">
+          <div className="p-8 relative">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none">
+               <Landmark size={300} className="text-primary" />
+            </div>
+            <div className="bg-black/40 border border-white/5 rounded-[2rem] p-8 font-mono text-[11px] leading-relaxed text-primary/90 whitespace-pre-wrap overflow-y-auto max-h-[450px] no-scrollbar relative z-10">
               {decreeText}
             </div>
           </div>
 
-          <DialogFooter className="p-6 bg-muted/20 border-t border-white/5 flex gap-4">
-             <Button variant="outline" className="flex-1 border-white/10 text-white font-bold h-12 rounded-xl gap-2 hover:bg-white/5">
-                <Download size={18} /> DOWNLOAD RAW
+          <DialogFooter className="p-6 bg-muted/20 border-t border-white/5 flex gap-4 no-print">
+             <Button variant="outline" className="flex-1 border-white/10 text-white font-bold h-14 rounded-2xl gap-2 hover:bg-white/5 transition-all">
+                <Download size={20} /> DOWNLOAD RAW
              </Button>
-             <Button onClick={() => window.print()} className="flex-1 bg-primary text-background font-bold h-12 rounded-xl gap-2 shadow-lg shadow-primary/20">
-                <Printer size={18} /> PRINT DECREE
+             <Button onClick={() => window.print()} className="flex-1 bg-primary text-background font-bold h-14 rounded-2xl gap-2 shadow-[0_0_30px_rgba(117,151,255,0.4)] transition-all hover:scale-105">
+                <Printer size={20} /> PRINT & DISPATCH
              </Button>
           </DialogFooter>
         </DialogContent>
