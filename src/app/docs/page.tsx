@@ -58,7 +58,7 @@ export default function DocumentationHub() {
         { title: 'Sovereign Gateway', id: 'gateway' },
         { title: 'Financial Payouts', id: 'payouts' },
         { title: 'SOS Signal Hub', id: 'sos-api' }
-      ] section: 'footer',
+      ]
     },
     {
       id: 'sdk',
