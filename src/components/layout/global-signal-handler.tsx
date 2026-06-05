@@ -19,7 +19,6 @@ export function GlobalSignalHandler() {
   
   const processedCallIds = useRef<Set<string>>(new Set())
   const sensorLogged = useRef(false)
-  const mountTime = useRef<number>(Date.now())
 
   useEffect(() => {
     if (!currentUser || !firestore || authLoading) return;
@@ -27,16 +26,21 @@ export function GlobalSignalHandler() {
     console.log(`[Signal Hub] Sovereign Monitor ACTIVE for: ${currentUser.email}`);
 
     // High-availability query for WebRTC sessions
-    // We remove some filtering to avoid index errors and handle logic client-side
     const sessionsRef = collection(db, 'webrtc_sessions');
-    const callsQ = query(sessionsRef, limit(10));
-
-    const unsubscribeCalls = onSnapshot(callsQ, (snapshot) => {
+    
+    // We listen to all active or ringing sessions where the user is a participant
+    const unsubscribeCalls = onSnapshot(sessionsRef, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         const data = change.doc.data() as any;
         const sessionId = change.doc.id;
 
-        // 1. Cleanup logic for ended calls
+        // 1. Identification
+        const isRecipient = data.recipientId === currentUser.uid;
+        const isCaller = data.callerId === currentUser.uid;
+        
+        if (!isRecipient && !isCaller) return;
+
+        // 2. Handle Terminations
         if (data.status === 'ended') {
           if (activeCall?.sessionId === sessionId) {
             setActiveCall(null);
@@ -45,26 +49,15 @@ export function GlobalSignalHandler() {
           return;
         }
 
-        // 2. Identify if I am part of this call
-        const isRecipient = data.recipientId === currentUser.uid;
-        const isCaller = data.callerId === currentUser.uid;
-        
-        if (!isRecipient && !isCaller) return;
-
-        // 3. New Signal Logic
+        // 3. Forced Trigger for Ringing Calls
         if (data.status === 'ringing') {
-          // Prevent re-processing the same call that we already closed or are showing
-          if (processedCallIds.current.has(sessionId)) return;
+          // If we are already in this specific call, don't re-trigger
           if (activeCall && activeCall.sessionId === sessionId) return;
+          
+          // If we already dismissed this call session, don't show it again automatically
+          if (processedCallIds.current.has(sessionId)) return;
 
-          // Time Guard: Only accept calls created near or after mountTime
-          const callTime = data.timestamp?.toMillis?.() || data.timestamp?.seconds * 1000 || Date.now();
-          if (callTime < mountTime.current - 30000) { // 30 second buffer for old signals
-             processedCallIds.current.add(sessionId);
-             return;
-          }
-
-          console.warn(`[Signal Hub] TRIGGERING CALL UI: ${sessionId}`);
+          console.warn(`[Signal Hub] CRITICAL: TRIGGERING CALL INTERFACE FOR: ${sessionId}`);
           
           const callPayload = {
             sessionId,
@@ -75,6 +68,7 @@ export function GlobalSignalHandler() {
             isIncoming: isRecipient
           };
 
+          // Immediately force the state to show the UI
           setActiveCall(callPayload);
           
           if (isRecipient) {
@@ -122,7 +116,7 @@ export function GlobalSignalHandler() {
   return (
     <>
       {activeCall && (
-        <div className="fixed inset-0 z-[9999] pointer-events-auto">
+        <div className="fixed inset-0 z-[10000] pointer-events-auto">
           <CallOverlay 
             callData={activeCall} 
             onClose={() => {

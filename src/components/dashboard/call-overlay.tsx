@@ -211,29 +211,29 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                <div className="space-y-4">
                  <h2 className="text-4xl md:text-5xl font-headline font-bold text-white tracking-tighter uppercase">{callData.callerName}</h2>
                  <Badge className="bg-primary/20 text-primary border-primary/40 px-8 py-2 uppercase tracking-[0.4em] font-bold animate-bounce text-xs">
-                    {callData.isIncoming ? `INCOMING ${callData.type}` : `OUTGOING ${callData.type}`}
+                    {callData.isIncoming ? `INCOMING ${callData.type.toUpperCase()}` : `OUTGOING ${callData.type.toUpperCase()}`}
                  </Badge>
                </div>
                
                {callData.isIncoming ? (
                  <div className="flex items-center gap-16 mt-6 relative z-[310]">
                     <Button 
-                      onClick={handleAccept} 
-                      className="h-24 w-24 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-2xl border-4 border-background flex items-center justify-center neon-glow-primary transition-transform active:scale-90"
+                      onClick={(e) => { e.stopPropagation(); handleAccept(); }} 
+                      className="h-24 w-24 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-2xl border-4 border-background flex items-center justify-center neon-glow-primary transition-transform active:scale-90 cursor-pointer pointer-events-auto"
                     >
                       <Phone size={36} />
                     </Button>
                     <Button 
-                      onClick={() => handleEndCall(true)} 
-                      className="h-24 w-24 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-2xl border-4 border-background flex items-center justify-center transition-transform active:scale-90"
+                      onClick={(e) => { e.stopPropagation(); handleEndCall(true); }} 
+                      className="h-24 w-24 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-2xl border-4 border-background flex items-center justify-center transition-transform active:scale-90 cursor-pointer pointer-events-auto"
                     >
                       <PhoneOff size={36} />
                     </Button>
                  </div>
                ) : (
                  <Button 
-                   onClick={() => handleEndCall(true)} 
-                   className="h-20 w-20 rounded-full bg-destructive border-4 border-background flex items-center justify-center transition-transform active:scale-90"
+                   onClick={(e) => { e.stopPropagation(); handleEndCall(true); }} 
+                   className="h-20 w-20 rounded-full bg-destructive border-4 border-background flex items-center justify-center transition-transform active:scale-90 cursor-pointer pointer-events-auto"
                  >
                    <PhoneOff size={28} />
                  </Button>
