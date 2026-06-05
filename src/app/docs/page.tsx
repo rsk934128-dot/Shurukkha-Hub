@@ -23,7 +23,8 @@ import {
   Trophy,
   Star,
   Layers,
-  Fingerprint
+  Fingerprint,
+  Server
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -151,6 +152,95 @@ export default function DocumentationHub() {
                   <p className="text-xs text-muted-foreground italic">"কখনও আপনার মাস্টার সিক্রেট কী অন্য কারো সাথে শেয়ার করবেন না। এটি হারানো মানে আপনার সার্বভৌমত্ব হুমকির মুখে পড়া।"</p>
                </div>
             </Card>
+          </div>
+        )
+      case 'gateway':
+        return (
+          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-5 duration-700">
+            <section className="space-y-6">
+              <Badge variant="outline" className="border-accent/40 text-accent py-1 px-4 bg-accent/5 text-[10px] font-bold tracking-widest uppercase">
+                Public API v1.0
+              </Badge>
+              <h2 className="text-4xl md:text-7xl font-headline font-bold tracking-tighter uppercase leading-[0.9]">
+                Sovereign <br/><span className="text-accent italic">Gateway API</span>
+              </h2>
+              <p className="max-w-3xl text-muted-foreground text-lg font-light leading-relaxed">
+                সভাৱেন গেটওয়ে হলো বহিরাগত ডেভেলপারদের জন্য সাম্রাজ্যের ৪২টি নোড গ্রিডের প্রবেশদ্বার। এর মাধ্যমে আপনি সরাসরি **Sovereign Vault** এর ডেটা এবং নেটওয়ার্ক স্ট্যাটাস অ্যাক্সেস করতে পারবেন।
+              </p>
+            </section>
+
+            <div className="space-y-8">
+              <div className="p-6 bg-muted/20 rounded-3xl border border-white/5 space-y-4">
+                <div className="flex items-center gap-3 text-primary">
+                  <Server size={20} />
+                  <h4 className="font-headline font-bold text-sm uppercase tracking-widest">API Endpoint</h4>
+                </div>
+                <code className="block p-4 bg-black/40 rounded-xl text-accent font-mono text-xs border border-accent/20">
+                  POST https://core.sheikh/api/v1/gateway
+                </code>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-lg font-headline font-bold uppercase flex items-center gap-2">
+                  <ShieldCheck className="text-accent" /> Authentication Headers
+                </h4>
+                <div className="bg-black/40 rounded-2xl border border-white/10 p-6 space-y-3 font-mono text-[11px]">
+                  <p className="text-muted-foreground">// Required for every request</p>
+                  <p><span className="text-primary">X-Imperial-Key:</span> sk_sov_your_access_token</p>
+                  <p><span className="text-primary">Content-Type:</span> application/json</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-lg font-headline font-bold uppercase flex items-center gap-2">
+                  <Activity className="text-primary" /> Supported Actions
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="bg-card/40 border-white/5 p-5 space-y-2">
+                    <p className="text-xs font-bold text-foreground">GET_VAULT_STATUS</p>
+                    <p className="text-[10px] text-muted-foreground">সাম্রাজ্যের ভল্টের বর্তমান ধারণক্ষমতা এবং নোড স্ট্যাটাস প্রদান করে।</p>
+                  </Card>
+                  <Card className="bg-card/40 border-white/5 p-5 space-y-2">
+                    <p className="text-xs font-bold text-foreground">PUSH_DATA_PACKET</p>
+                    <p className="text-[10px] text-muted-foreground">আপনার অ্যাপ থেকে ৪২টি নোড গ্রিডে ডেটা অফলোড করার জন্য।</p>
+                  </Card>
+                </div>
+              </div>
+
+              <div className="p-8 bg-primary/5 border border-primary/20 rounded-[2.5rem] space-y-6">
+                <h4 className="text-xl font-headline font-bold uppercase tracking-widest text-primary">Sample Request (JavaScript)</h4>
+                <div className="relative group">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute top-4 right-4 h-8 w-8 text-white/40 hover:text-white"
+                    onClick={() => copyToClipboard(`fetch('https://core.sheikh/api/v1/gateway', {
+  method: 'POST',
+  headers: {
+    'X-Imperial-Key': 'YOUR_KEY_HERE',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ action: 'GET_VAULT_STATUS' })
+})`)}
+                  >
+                    <Copy size={14} />
+                  </Button>
+                  <pre className="p-6 bg-slate-950 rounded-2xl border border-white/5 font-mono text-[10px] text-accent/80 overflow-x-auto">
+                    <code>{`const response = await fetch('https://core.sheikh/api/v1/gateway', {
+  method: 'POST',
+  headers: {
+    'X-Imperial-Key': 'YOUR_KEY_HERE',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ action: 'GET_VAULT_STATUS' })
+});
+
+const data = await response.json();
+console.log(data.payload.status); // "OPTIMAL"`}</code>
+                  </pre>
+                </div>
+              </div>
+            </div>
           </div>
         )
       default:
