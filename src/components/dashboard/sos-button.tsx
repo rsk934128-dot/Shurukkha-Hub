@@ -54,7 +54,8 @@ export function SOSButton() {
     }
   }, [activeSosId]);
 
-  const handleSOS = async () => {
+  const handleSOS = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setIsActivating(true)
     let userLocation = null;
     try {
@@ -84,7 +85,8 @@ export function SOSButton() {
     }
   }
 
-  const startLiveCall = async () => {
+  const startLiveCall = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (!activeSosId) return;
     setIsCalling(true);
     try {
@@ -108,7 +110,8 @@ export function SOSButton() {
     }
   }
 
-  const endCall = async () => {
+  const endCall = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (activeSosId) {
       const sessionRef = doc(db, 'webrtc_sessions', activeSosId);
       try {
@@ -125,7 +128,7 @@ export function SOSButton() {
           <Button 
             onClick={handleSOS} 
             disabled={isActivating}
-            className={`w-32 h-32 rounded-full border-8 border-background bg-destructive hover:bg-destructive/90 transition-all shadow-2xl ${isActivating ? 'scale-95' : 'animate-sos-pulse'}`}
+            className={`w-32 h-32 rounded-full border-8 border-background bg-destructive hover:bg-destructive/90 transition-all shadow-2xl cursor-pointer pointer-events-auto ${isActivating ? 'scale-95' : 'animate-sos-pulse'}`}
           >
             {isActivating ? <Loader2 size={48} className="animate-spin" /> : <ShieldAlert size={48} />}
             <span className="font-headline font-bold text-xl text-white">SOS</span>
@@ -146,16 +149,16 @@ export function SOSButton() {
                    </div>
                    <Badge className="absolute top-2 left-2 bg-red-600 animate-pulse text-[8px] h-4 uppercase">Live Recon</Badge>
                 </div>
-                <Button onClick={endCall} variant="destructive" className="w-full h-12 gap-2 rounded-xl font-bold shadow-lg">
+                <Button onClick={endCall} variant="destructive" className="w-full h-12 gap-2 rounded-xl font-bold shadow-lg cursor-pointer pointer-events-auto">
                   <PhoneOff size={18} /> কল শেষ করুন
                 </Button>
               </div>
             ) : (
               <div className="space-y-3">
-                <Button onClick={startLiveCall} className="w-full h-16 bg-accent text-background hover:bg-accent/90 gap-3 rounded-2xl shadow-lg font-bold text-lg animate-pulse">
+                <Button onClick={startLiveCall} className="w-full h-16 bg-accent text-background hover:bg-accent/90 gap-3 rounded-2xl shadow-lg font-bold text-lg animate-pulse cursor-pointer pointer-events-auto">
                   <Video size={24} /> ভিডিও রিকন শুরু করুন
                 </Button>
-                <Button variant="ghost" onClick={() => { cleanupStreams(); setActiveSosId(null); }} className="w-full h-10 border border-white/5 rounded-xl text-[10px] uppercase font-bold text-muted-foreground hover:bg-white/5">
+                <Button variant="ghost" onClick={() => { cleanupStreams(); setActiveSosId(null); }} className="w-full h-10 border border-white/5 rounded-xl text-[10px] uppercase font-bold text-muted-foreground hover:bg-white/5 cursor-pointer pointer-events-auto">
                   নতুন সংকেত পাঠান (Reset)
                 </Button>
               </div>

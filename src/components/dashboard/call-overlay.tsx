@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, ShieldCheck, Loader2, User, Volume2, VolumeX, Activity, Zap, X, Maximize2, Smartphone, Speaker, RefreshCw } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogPortal, DialogOverlay as ShadOverlay } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { WebRTCManager } from '@/lib/webrtc-signaling'
@@ -54,41 +54,31 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     ringtoneIntervalRef.current = setInterval(playAlertSound, 2500)
   }, [playAlertSound, stopRingtone])
 
-  /**
-   * CRITICAL: Aggressive hardware resource release.
-   */
   const cleanupStreams = useCallback(() => {
     console.warn("[Imperial Purge] Initiating atomic hardware resource purge...");
     
-    // 1. Force video elements to detach from their source streams immediately
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = null;
-      localVideoRef.current.load(); // Forces UI reset
     }
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = null;
-      remoteVideoRef.current.load();
     }
 
-    // 2. Kill all local stream tracks if still lingering
     if (localStreamRef.current) {
       WebRTCManager.stopMediaStream(localStreamRef.current);
       localStreamRef.current = null;
     }
 
-    // 3. Dispose the WebRTC Manager which stops all tracked tracks and closes PeerConnection
     if (webrtcRef.current) {
       webrtcRef.current.dispose();
       webrtcRef.current = null;
     }
     
-    // 4. Reset timers and ringtones
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
     stopRingtone();
-    console.log("[Imperial Purge] Hardware resource release complete.");
   }, [stopRingtone])
 
   const handleEndCall = useCallback(async (shouldUpdateServer = true) => {
@@ -99,16 +89,13 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     stopRingtone();
     setStatus('ended');
 
-    // 1. EXECUTE AGGRESSIVE HARDWARE KILL IMMEDIATELY
     cleanupStreams();
 
-    // 2. Sync with the grid
     if (callData && shouldUpdateServer) {
       const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
       try {
         await updateDoc(sessionRef, { status: 'ended' });
         
-        // 3. Brief delay before deletion for grid stability
         setTimeout(async () => {
           try {
             const candidatesRef = collection(sessionRef, 'ice_candidates');
@@ -117,7 +104,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
               await deleteDoc(doc(candidatesRef, cDoc.id));
             }
             await deleteDoc(sessionRef);
-            console.log(`[Signal Hub] Grid cleanup success for ${callData.sessionId}`);
           } catch (e) {}
         }, 1000);
       } catch (err: any) {
@@ -125,7 +111,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       }
     }
 
-    // 4. Reset UI state and close dialog
     setTimeout(() => {
       onClose();
       isTerminatingRef.current = false;
@@ -134,8 +119,11 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     }, 500);
   }, [callData, cleanupStreams, onClose, stopRingtone])
 
-  const handleAccept = async () => {
+  const handleAccept = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (!callData) return;
+    
+    console.log("[Signal Hub] Accept button clicked.");
     stopRingtone(); 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -161,6 +149,12 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       console.error("Session acceptance failure", e);
       handleEndCall(true);
     }
+  }
+
+  const handleHangUp = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    console.log("[Signal Hub] Hang up button clicked.");
+    handleEndCall(true);
   }
 
   useEffect(() => {
@@ -234,7 +228,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
   return (
     <Dialog open={status !== 'idle'} onOpenChange={(open) => !open && handleEndCall(true)}>
-      <DialogContent className="max-w-[100vw] h-[100dvh] md:max-w-4xl md:h-auto md:aspect-video bg-[#05070a] border-none md:border md:border-primary/20 p-0 overflow-hidden md:rounded-[2.5rem] shadow-2xl z-[100]">
+      <DialogContent className="max-w-[100vw] h-[100dvh] md:max-w-4xl md:h-auto md:aspect-video bg-[#05070a] border-none md:border md:border-primary/20 p-0 overflow-hidden md:rounded-[2.5rem] shadow-2xl z-[200] pointer-events-auto">
         <DialogHeader className="sr-only">
           <DialogTitle>Sovereign Communication Hub</DialogTitle>
           <DialogDescription>Secure encrypted session active.</DialogDescription>
@@ -260,11 +254,17 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                  </Badge>
                </div>
                
-               <div className="flex items-center gap-8 md:gap-12 mt-4">
-                  <Button onClick={handleAccept} className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-[0_0_40px_rgba(34,197,94,0.4)] animate-sos-pulse border-4 border-background">
+               <div className="flex items-center gap-8 md:gap-12 mt-4 relative z-[210]">
+                  <Button 
+                    onClick={handleAccept} 
+                    className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-[0_0_40px_rgba(34,197,94,0.4)] animate-sos-pulse border-4 border-background cursor-pointer pointer-events-auto"
+                  >
                     <Phone size={32} />
                   </Button>
-                  <Button onClick={() => handleEndCall(true)} className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-[0_0_40px_rgba(239,68,68,0.4)] border-4 border-background">
+                  <Button 
+                    onClick={handleHangUp} 
+                    className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-[0_0_40px_rgba(239,68,68,0.4)] border-4 border-background cursor-pointer pointer-events-auto"
+                  >
                     <PhoneOff size={32} />
                   </Button>
                </div>
@@ -302,7 +302,11 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                   <h2 className="text-2xl font-bold text-white">{callData?.callerName}</h2>
                   <p className="text-xs font-mono text-primary uppercase tracking-[0.4em] animate-pulse">Establishing Signal...</p>
                 </div>
-                <Button onClick={() => handleEndCall(true)} variant="destructive" className="h-16 w-16 rounded-full border-4 border-background">
+                <Button 
+                  onClick={handleHangUp} 
+                  variant="destructive" 
+                  className="h-16 w-16 rounded-full border-4 border-background cursor-pointer pointer-events-auto"
+                >
                   <PhoneOff size={24} />
                 </Button>
              </div>
@@ -324,7 +328,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
           </div>
 
           {status === 'connected' && (
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-6 bg-black/40 backdrop-blur-3xl p-4 md:px-12 rounded-[2.5rem] border border-white/10 shadow-2xl">
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-6 bg-black/40 backdrop-blur-3xl p-4 md:px-12 rounded-[2.5rem] border border-white/10 shadow-2xl z-[220]">
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -337,12 +341,15 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                     }
                   }
                 }}
-                className={`h-12 w-12 rounded-full border border-white/5 ${isMicMuted ? 'bg-destructive/20 text-destructive' : 'text-white'}`}
+                className={`h-12 w-12 rounded-full border border-white/5 cursor-pointer pointer-events-auto ${isMicMuted ? 'bg-destructive/20 text-destructive' : 'text-white'}`}
               >
                 {isMicMuted ? <MicOff size={20} /> : <Mic size={20} />}
               </Button>
               
-              <Button onClick={() => handleEndCall(true)} className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-lg border-4 border-background">
+              <Button 
+                onClick={handleHangUp} 
+                className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-lg border-4 border-background cursor-pointer pointer-events-auto"
+              >
                 <PhoneOff size={32} />
               </Button>
 
@@ -350,7 +357,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                 variant="ghost" 
                 size="icon" 
                 onClick={() => setIsSpeakerOn(!isSpeakerOn)}
-                className={`h-12 w-12 rounded-full border border-white/5 ${isSpeakerOn ? 'text-accent' : 'text-white/40'}`}
+                className={`h-12 w-12 rounded-full border border-white/5 cursor-pointer pointer-events-auto ${isSpeakerOn ? 'text-accent' : 'text-white/40'}`}
               >
                 {isSpeakerOn ? <Volume2 size={20} /> : <VolumeX size={20} />}
               </Button>
