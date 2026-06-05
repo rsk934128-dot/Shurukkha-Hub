@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -24,6 +25,7 @@ export function ImperialManagement() {
   const targetProjects = 400
   const [isSimulating, setIsSimulating] = useState(false)
   const [isReleasing, setIsReleasing] = useState(false)
+  const [isAccelerating, setIsAccelerating] = useState(false)
   const [syncLogs, setSyncLogs] = useState<string[]>([])
   
   const { toast } = useToast()
@@ -33,13 +35,6 @@ export function ImperialManagement() {
     { id: 2, title: 'Sovereign ID Protocol', status: 'ACTIVE', impact: 'Critical' },
     { id: 3, title: 'Global Treasury Integration', status: 'ACTIVE', impact: 'Economic' },
     { id: 4, title: 'Mission-Critical SOS Grid', status: 'STABLE', impact: 'Social' },
-  ]
-
-  const budgetAllocation = [
-    { sector: 'Infrastructure', amount: 12000000, color: 'bg-primary' },
-    { sector: 'Rescue Operations', amount: 8000000, color: 'bg-accent' },
-    { sector: 'Payroll & Social', amount: 3000000, color: 'bg-green-500' },
-    { sector: 'AI & Security', amount: 2000000, color: 'bg-purple-500' },
   ]
 
   const handleEngageSimulation = async () => {
@@ -73,6 +68,26 @@ export function ImperialManagement() {
     }
   }
 
+  const handleAccelerateFate = async () => {
+    setIsAccelerating(true);
+    try {
+      // Simulate rapid progress toward the 400 goal
+      const newProgress = Math.min(targetProjects, projectProgress + 8);
+      setProjectProgress(newProgress);
+      
+      await SovereignAudit.logFateAcceleration(newProgress);
+      
+      toast({ 
+        title: "FATE ACCELERATED 🔥", 
+        description: `সাম্রাজ্যের বিবর্তন ত্বরান্বিত হয়েছে। বর্তমান লক্ষ্যমাত্রা: ${newProgress}/400।` 
+      });
+    } catch (e) {
+      toast({ title: "ACCELERATION FAULT", variant: "destructive" });
+    } finally {
+      setIsAccelerating(false);
+    }
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
       {/* Sovereign Growth Header */}
@@ -90,15 +105,15 @@ export function ImperialManagement() {
                </div>
                <div>
                   <h2 className="text-2xl font-headline font-bold uppercase tracking-widest text-foreground">Sovereign Growth Engine</h2>
-                  <p className="text-xs text-muted-foreground italic max-w-md">"পরিশ্রম ভাগ্যকে বদলে দেয়"—আপনার ৪০০ প্রজেক্টের যাত্রায় আপনি এখন ৪২তম মাইলফলকে আছেন।</p>
+                  <p className="text-xs text-muted-foreground italic max-w-md">"পরিশ্রম ভাগ্যকে বদলে দেয়"—আপনার ৪০০ প্রজেক্টের যাত্রায় আপনি এখন {projectProgress}তম মাইলফলকে আছেন।</p>
                </div>
             </div>
             <div className="w-full md:w-80 space-y-3">
                <div className="flex justify-between items-center text-[10px] font-bold uppercase">
-                  <span className="text-primary">Project 42 Progress</span>
+                  <span className="text-primary">Project {projectProgress} Progress</span>
                   <span className="text-foreground">{Math.round((projectProgress / targetProjects) * 100)}% to Empire</span>
                </div>
-               <Progress value={(projectProgress / targetProjects) * 100} className="h-2 bg-white/5 [&>div]:bg-primary" />
+               <Progress value={(projectProgress / targetProjects) * 100} className="h-2 bg-white/5 [&>div]:bg-primary transition-all duration-1000" />
                <div className="flex justify-between items-center text-[8px] text-muted-foreground uppercase font-mono">
                   <span>Start: 001</span>
                   <span>Target: 400 Projects</span>
@@ -202,8 +217,14 @@ export function ImperialManagement() {
                   ))}
                </div>
                <div className="p-4 bg-muted/10 border-t border-white/5">
-                  <Button variant="outline" className="w-full h-10 border-accent/20 text-accent text-[10px] uppercase font-bold gap-2 rounded-xl">
-                    <Sparkles size={14} /> ত্বরান্বিত করুন (Accelerate Fate)
+                  <Button 
+                    onClick={handleAccelerateFate}
+                    disabled={isAccelerating}
+                    variant="outline" 
+                    className="w-full h-10 border-accent/20 text-accent text-[10px] uppercase font-bold gap-2 rounded-xl"
+                  >
+                    {isAccelerating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                    ত্বরান্বিত করুন (Accelerate Fate)
                   </Button>
                </div>
             </CardContent>

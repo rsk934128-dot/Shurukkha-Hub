@@ -60,6 +60,28 @@ export const SovereignAudit = {
   },
 
   /**
+   * Records a Fate Acceleration event.
+   */
+  logFateAcceleration: async (newCount: number) => {
+    const details = {
+      accelerationType: 'FATE_ACCELERATION_PROTOCOL',
+      newProjectCount: newCount,
+      targetGoal: 400,
+      status: 'SUCCESS',
+      purity: 'VERIFIED_IMPERIAL',
+      timestamp: new Date().toISOString()
+    };
+
+    await addDoc(collection(db, "audit_trails"), {
+      action: 'FATE_ACCELERATED',
+      details,
+      signature: IntegrationBridge.generateSignature(details),
+      timestamp: serverTimestamp(),
+      performedBy: 'Fate_Changer_AI_v42'
+    });
+  },
+
+  /**
    * Generates and logs a comprehensive Success Report for completed phases.
    */
   logSuccessReport: async (phase: string, metrics: any) => {
