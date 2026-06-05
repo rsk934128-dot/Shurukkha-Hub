@@ -197,7 +197,7 @@ export function IntegrationPanel() {
 
         <TabsContent value="vault" className="flex-1 p-4 md:p-6 m-0 animate-in fade-in">
            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="bg-accent/5 border-accent/20 p-5 space-y-4">
+              <Card className="bg-accent/5 border-accent/30 p-5 space-y-4">
                  <div className="flex justify-between items-start">
                     <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center text-accent">
                        <HardDrive size={20} />

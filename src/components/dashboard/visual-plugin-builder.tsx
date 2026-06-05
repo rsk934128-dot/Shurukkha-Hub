@@ -141,7 +141,7 @@ export function VisualPluginBuilder() {
                   <span className="text-[10px] font-bold uppercase tracking-widest">Sovereign Protection</span>
                </div>
                <p className="text-[10px] text-muted-foreground italic leading-relaxed">
-                 আপনার প্লাগইনটি ৪২টি নোডে একীভূত হওয়ার সময় স্বয়ংক্রিয়ভাবে একটি রাজকীয় সিকিউরিটি টোকেন প্রাপ্ত হবে।
+                 আপনার প্লাগইনটি ৪২টি নোডে একীভূত হওয়ার সময় স্বয়ংক্রিয়ভাবে একটি রাজকীয় সিকিউরিটি টোকেন প্রাপ্ত হবে।
                </p>
             </div>
           </CardContent>

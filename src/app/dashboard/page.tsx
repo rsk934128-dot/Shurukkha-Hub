@@ -39,7 +39,7 @@ import { AuthGuard } from '@/lib/auth-guard'
 import { DeviceValidator } from '@/lib/device-fingerprint-validator'
 import { useRouter } from 'next/navigation'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
-import { AppSidebar } from '@/components/layout/app-sidebar'
+import { AppSidebar } from '@/layout/app-sidebar'
 import { AppLogo } from '@/components/ui/app-logo'
 import { CommunicationOrchestrator } from '@/lib/communication-orchestrator'
 import { NotificationManager } from '@/lib/notification-manager'
@@ -125,7 +125,6 @@ export default function ShurukkhaDashboard() {
       const online = navigator.onLine;
       setIsOffline(!online);
       
-      // Fixed: Ensure setConnectivity exists before calling to prevent Runtime TypeError
       CommunicationOrchestrator.getInstance().setConnectivity(online);
       
       if (!online) {
@@ -266,6 +265,7 @@ export default function ShurukkhaDashboard() {
                 <TabsContent value="integrations" className="space-y-6">
                   <SovereignNetworkMap />
                   <SovereignDomainManager />
+                  <IntegrationPanel />
                 </TabsContent>
                 <TabsContent value="treasury"><BankDirectory /></TabsContent>
                 <TabsContent value="partnerships"><PartnershipReviewBoard /></TabsContent>
