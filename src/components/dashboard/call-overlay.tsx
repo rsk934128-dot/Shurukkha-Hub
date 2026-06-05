@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { WebRTCManager } from '@/lib/webrtc-signaling'
 import { db } from '@/lib/firebase'
-import { doc, updateDoc, onSnapshot, deleteDoc, getDoc } from 'firebase/firestore'
+import { doc, updateDoc, onSnapshot, deleteDoc, getDoc, collection, getDocs } from 'firebase/firestore'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
@@ -61,7 +61,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const cleanupStreams = useCallback(() => {
     console.log("[Signal Hub] Termination Protocol: Stopping all hardware tracks...");
     
-    // Explicitly stop all local tracks to turn off camera/mic LED
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => {
         track.stop();
@@ -87,24 +86,31 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     if (isTerminatingRef.current) return;
     isTerminatingRef.current = true;
     
-    console.log(`[Signal Hub] Ending session: ${callData?.sessionId}`);
+    console.log(`[Signal Hub] Hanging up session: ${callData?.sessionId}`);
     stopRingtone();
     setStatus('ended');
 
-    // Immediate Hardware Stop
+    // Immediate Hardware Release
     cleanupStreams();
 
     if (callData && shouldUpdateServer) {
       const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
       try {
+        // Mark as ended to notify the other side
         await updateDoc(sessionRef, { status: 'ended' });
-        // Delete after a short grace period to allow remote sync
+        
+        // Comprehensive Grid Cleanup
         setTimeout(async () => {
           try {
-            const snap = await getDoc(sessionRef);
-            if (snap.exists()) await deleteDoc(sessionRef);
+            const candidatesRef = collection(sessionRef, 'ice_candidates');
+            const candidatesSnap = await getDocs(candidatesRef);
+            for (const cDoc of candidatesSnap.docs) {
+              await deleteDoc(doc(candidatesRef, cDoc.id));
+            }
+            await deleteDoc(sessionRef);
+            console.log("[Signal Hub] Session doc purged from grid.");
           } catch (e) {}
-        }, 5000);
+        }, 3000);
       } catch (err: any) {
         console.error("[Signal Hub] Failed to push end signal", err);
       }
@@ -155,8 +161,10 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
       const unsubscribe = onSnapshot(sessionRef, (snap) => {
         if (!snap.exists()) {
-          console.warn("[Signal Hub] Session doc deleted remotely.");
-          if (status !== 'idle' && status !== 'ended') handleEndCall(false);
+          if (status !== 'idle' && status !== 'ended') {
+            console.log("[Signal Hub] Session doc vanished. Cleaning up.");
+            handleEndCall(false);
+          }
           return;
         }
         const data = snap.data();
@@ -165,9 +173,8 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
           stopRingtone();
           if (!timerRef.current) timerRef.current = setInterval(() => setTimer(prev => prev + 1), 1000);
         }
-        // CRITICAL: Listen for 'ended' status from the other side
         if (data.status === 'ended' && status !== 'ended') {
-          console.log("[Signal Hub] Remote party terminated the call.");
+          console.log("[Signal Hub] Remote end detected.");
           handleEndCall(false);
         }
       });
@@ -190,7 +197,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
               }
             });
           } catch (e) { 
-            console.error("[Signal Hub] Outgoing call hardware failure", e);
+            console.error("[Signal Hub] Hardware initiation failure", e);
             handleEndCall(true); 
           }
         };
