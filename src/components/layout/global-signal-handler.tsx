@@ -36,7 +36,7 @@ export function GlobalSignalHandler() {
         const data = change.doc.data() as any;
         const sessionId = change.doc.id;
 
-        // 1. Identification
+        // 1. Identification: Am I the recipient or the caller?
         const isRecipient = data.recipientId === currentUser.uid;
         const isCaller = data.callerId === currentUser.uid;
         
@@ -45,31 +45,32 @@ export function GlobalSignalHandler() {
         // 2. Handle Terminations
         if (data.status === 'ended') {
           if (activeCall?.sessionId === sessionId) {
+            console.log(`[Signal Hub] Call Session Ended: ${sessionId}`);
             setActiveCall(null);
           }
           processedCallIds.current.add(sessionId);
           return;
         }
 
-        // 3. Forced Trigger for Ringing Calls
+        // 3. Trigger for Ringing Calls (New)
         if (data.status === 'ringing') {
-          // TIME GUARD: Prevent "Automatic Calls" from old sessions
-          // If the call timestamp is before our current session mount time, ignore it.
-          const callTimestamp = data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.timestamp?.seconds * 1000 || 0);
+          // If we already processed this session as ended, ignore it
+          if (processedCallIds.current.has(sessionId)) return;
+
+          // If this session is already active in our UI, don't re-trigger
+          if (activeCall && activeCall.sessionId === sessionId) return;
+
+          // Time Guard: Only accept calls created around or after mount time
+          const callTimestamp = data.timestamp?.toMillis ? data.timestamp.toMillis() : 0;
           
-          // Only accept calls created after this component mounted (with a 2-second buffer for safety)
-          if (callTimestamp > 0 && callTimestamp < (mountTime.current - 2000)) {
-            console.log(`[Signal Hub] Ignoring stale call session: ${sessionId}`);
+          // If timestamp is 0 (optimistic local update), it's brand new
+          // If timestamp exists, it must be recent (within 10 seconds of mount or after)
+          if (callTimestamp > 0 && callTimestamp < (mountTime.current - 10000)) {
+            console.log(`[Signal Hub] Stale session ignored: ${sessionId}`);
             return;
           }
 
-          // If we are already in this specific call, don't re-trigger
-          if (activeCall && activeCall.sessionId === sessionId) return;
-          
-          // If we already dismissed this call session, don't show it again automatically
-          if (processedCallIds.current.has(sessionId)) return;
-
-          console.warn(`[Signal Hub] CRITICAL: TRIGGERING CALL INTERFACE FOR: ${sessionId}`);
+          console.warn(`[Signal Hub] INCOMING COMMAND SIGNAL DETECTED: ${sessionId}`);
           
           const callPayload = {
             sessionId,
@@ -80,7 +81,7 @@ export function GlobalSignalHandler() {
             isIncoming: isRecipient
           };
 
-          // Immediately force the state to show the UI
+          // FORCE UI OPEN
           setActiveCall(callPayload);
           
           if (isRecipient) {
@@ -98,7 +99,7 @@ export function GlobalSignalHandler() {
     });
 
     return () => unsubscribeCalls();
-  }, [currentUser?.uid, firestore, activeCall, authLoading]);
+  }, [currentUser?.uid, firestore, authLoading, activeCall]);
 
   useEffect(() => {
     if (!activeCall) return;

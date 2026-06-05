@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
@@ -131,6 +132,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
   useEffect(() => {
     if (callData) {
+      console.log("[CallOverlay] Initializing Session:", callData.sessionId);
       setStatus('ringing');
       setTimer(0);
       isTerminatingRef.current = false;
@@ -153,6 +155,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       if (callData.isIncoming) {
         startRingtone();
       } else {
+        // I am the caller - initiate WebRTC
         const startOutgoing = async () => {
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -236,12 +239,19 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                     </Button>
                  </div>
                ) : (
-                 <Button 
-                   onClick={(e) => { e.stopPropagation(); handleEndCall(true); }} 
-                   className="h-20 w-20 rounded-full bg-destructive border-4 border-background flex items-center justify-center transition-transform active:scale-90 cursor-pointer pointer-events-auto"
-                 >
-                   <PhoneOff size={28} />
-                 </Button>
+                 <div className="space-y-8">
+                   <div className="flex justify-center gap-3">
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
+                   </div>
+                   <Button 
+                    onClick={(e) => { e.stopPropagation(); handleEndCall(true); }} 
+                    className="h-20 w-20 rounded-full bg-destructive border-4 border-background flex items-center justify-center transition-transform active:scale-90 cursor-pointer pointer-events-auto"
+                  >
+                    <PhoneOff size={28} />
+                  </Button>
+                 </div>
                )}
             </div>
           )}
