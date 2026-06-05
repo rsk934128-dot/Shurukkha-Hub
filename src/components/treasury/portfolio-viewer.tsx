@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { PortfolioEngine, Asset } from '@/lib/portfolio-engine'
 import { TrendingUp, TrendingDown, Wallet, Zap, BrainCircuit, ShieldCheck, ArrowUpRight, Activity, Globe, DollarSign } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 const COLORS = ['#7597FF', '#34D399', '#FBBF24', '#A855F7'];
 
