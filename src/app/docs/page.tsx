@@ -24,7 +24,10 @@ import {
   Star,
   Layers,
   Fingerprint,
-  Server
+  Server,
+  DollarSign,
+  TrendingUp,
+  Wallet
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -62,7 +65,7 @@ export default function DocumentationHub() {
       icon: Code2,
       items: [
         { title: 'Sovereign Gateway', id: 'gateway' },
-        { title: 'Financial Payouts', id: 'payouts' },
+        { title: 'Sovereign Pay Bridge', id: 'payouts' },
         { title: 'SOS Signal Hub', id: 'sos-api' }
       ]
     },
@@ -238,6 +241,79 @@ export default function DocumentationHub() {
 const data = await response.json();
 console.log(data.payload.status); // "OPTIMAL"`}</code>
                   </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      case 'payouts':
+        return (
+          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-5 duration-700">
+            <section className="space-y-6">
+              <Badge variant="outline" className="border-primary/40 text-primary py-1.5 px-4 bg-primary/5 text-[10px] font-bold tracking-widest uppercase">
+                Financial Protocol v3.0
+              </Badge>
+              <h2 className="text-4xl md:text-7xl font-headline font-bold tracking-tighter uppercase leading-[0.9]">
+                Sovereign <br/><span className="text-primary italic">Pay Bridge</span>
+              </h2>
+              <p className="max-w-3xl text-muted-foreground text-lg font-light leading-relaxed">
+                সভাৱেন পে ব্রিজ হলো সম্রাটের ফিনটেক সাম্রাজ্যের মেরুদণ্ড। এটি ১৫৫+ দেশের ব্যাংকিং নেটওয়ার্ক এবং PayPal/Wise-এর সমন্বিত গেটওয়ে যা ১ মিলি-সেকেন্ড ল্যাটেন্সিতে লেনদেন নিশ্চিত করে।
+              </p>
+            </section>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+               <div className="p-6 bg-card/40 border border-white/5 rounded-3xl space-y-3">
+                  <Globe className="text-accent" size={24} />
+                  <h4 className="font-bold text-sm uppercase">Global Coverage</h4>
+                  <p className="text-[10px] text-muted-foreground">১৫৫টিরও বেশি দেশে সরাসরি ব্যাংকিং নোড এবং ক্রিপ্টো সেটলমেন্ট সাপোর্ট।</p>
+               </div>
+               <div className="p-6 bg-card/40 border border-white/5 rounded-3xl space-y-3">
+                  <Zap className="text-primary" size={24} />
+                  <h4 className="font-bold text-sm uppercase">Atomic Settlement</h4>
+                  <p className="text-[10px] text-muted-foreground">জিরো-ল্যাটেন্সি ফান্ড ট্রান্সফার যা রিয়েল-টাইমে ট্রেজারি লেজারে আপডেট হয়।</p>
+               </div>
+               <div className="p-6 bg-card/40 border border-white/5 rounded-3xl space-y-3">
+                  <ShieldCheck className="text-accent" size={24} />
+                  <h4 className="font-bold text-sm uppercase">Fraud Shield</h4>
+                  <p className="text-[10px] text-muted-foreground">এআই-চালিত রিস্ক অ্যানালাইসিস যা প্রতিটি ট্রানজেকশনের ফরেনসিক ভেরিফিকেশন করে।</p>
+               </div>
+            </div>
+
+            <div className="space-y-8">
+              <div className="p-6 bg-muted/20 rounded-3xl border border-white/5 space-y-4">
+                <div className="flex items-center gap-3 text-accent">
+                  <Code2 size={20} />
+                  <h4 className="font-headline font-bold text-sm uppercase tracking-widest">Payout Intent Structure</h4>
+                </div>
+                <pre className="p-6 bg-black/40 rounded-2xl border border-accent/20 font-mono text-[10px] text-accent/80 overflow-x-auto">
+                  <code>{`{
+  "amount": 500.00,
+  "currency": "USD",
+  "destination": "WISE_SOVEREIGN_NODE",
+  "recipient_id": "user_4242",
+  "meta": {
+    "node_signature": "rsa_v2_sig_...",
+    "failover": "enabled"
+  }
+}`}</code>
+                </pre>
+              </div>
+
+              <div className="p-8 bg-accent/5 border border-accent/20 rounded-[2.5rem] space-y-6">
+                <h4 className="text-xl font-headline font-bold uppercase tracking-widest text-accent">Integration Blueprint</h4>
+                <div className="space-y-4">
+                   <div className="flex gap-4 items-start">
+                      <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent shrink-0 text-xs font-bold">1</div>
+                      <p className="text-sm text-muted-foreground">প্রথমে `Sovereign Gateway` থেকে একটি সেশন টোকেন সংগ্রহ করুন।</p>
+                   </div>
+                   <div className="flex gap-4 items-start">
+                      <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent shrink-0 text-xs font-bold">2</div>
+                      <p className="text-sm text-muted-foreground">`POST /api/v1/payouts` এন্ডপয়েন্টে আপনার লজিক ডিএনএ এবং ট্রানজেকশন ডাটা পাঠান।</p>
+                   </div>
+                   <div className="flex gap-4 items-start">
+                      <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent shrink-0 text-xs font-bold">3</div>
+                      <p className="text-sm text-muted-foreground">সিস্টেম স্বয়ংক্রিয়ভাবে ৪২টি নোড গ্রিডে লেনদেনের বিশুদ্ধতা যাচাই করে সেটলমেন্ট সম্পন্ন করবে।</p>
+                   </div>
                 </div>
               </div>
             </div>
