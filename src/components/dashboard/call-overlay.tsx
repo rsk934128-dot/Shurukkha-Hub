@@ -57,23 +57,19 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const cleanupHardware = useCallback(() => {
     console.warn("[Imperial Dead-Stop] Aggressive Hardware Purge Initiated...");
     
-    // 1. Unbind video elements
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
 
-    // 2. Kill local stream tracks
     if (localStreamRef.current) {
       WebRTCManager.stopMediaStream(localStreamRef.current);
       localStreamRef.current = null;
     }
 
-    // 3. Dispose signaling manager (kills all tracked tracks)
     if (webrtcRef.current) {
       webrtcRef.current.dispose();
       webrtcRef.current = null;
     }
     
-    // 4. Clear UI timers
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -94,7 +90,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
       try {
         await updateDoc(sessionRef, { status: 'ended' });
-        // Self-destruct session data after a short delay for sync
         setTimeout(async () => {
           try {
             const candidatesRef = collection(sessionRef, 'ice_candidates');
@@ -102,7 +97,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             for (const d of snap.docs) await deleteDoc(d.ref);
             await deleteDoc(sessionRef);
           } catch (e) {}
-        }, 3000);
+        }, 1500);
       } catch (err) {}
     }
 
@@ -118,7 +113,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     e.stopPropagation();
     if (!callData) return;
     
-    console.log("[Signal Hub] Imperial Acceptance.");
+    console.log("[Signal Hub] Imperial Acceptance Initiated.");
     stopRingtone(); 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -140,6 +135,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     } catch (e) {
       console.error("Acceptance failure:", e);
       handleEndCall(true);
+      toast({ title: "হার্ডওয়্যার এক্সেস ব্যর্থ", variant: "destructive" });
     }
   }
 
@@ -184,7 +180,10 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             await webrtcRef.current.createCall(stream, (remote) => {
               if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remote;
             });
-          } catch (e) { handleEndCall(true); }
+          } catch (e) { 
+            console.error("Outgoing failed", e);
+            handleEndCall(true); 
+          }
         };
         startOutgoing();
       }
@@ -237,7 +236,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                <div className="flex items-center gap-12 mt-4 relative z-[310] pointer-events-auto">
                   <Button 
                     onClick={handleAccept} 
-                    className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg border-4 border-background cursor-pointer pointer-events-auto flex items-center justify-center"
+                    className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg border-4 border-background cursor-pointer pointer-events-auto flex items-center justify-center neon-glow-accent"
                   >
                     <Phone size={32} />
                   </Button>
@@ -302,7 +301,8 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-8 bg-black/40 backdrop-blur-3xl p-6 rounded-[3rem] border border-white/10 shadow-2xl z-[330] pointer-events-auto">
               <Button 
                 variant="ghost" 
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
                   if (localStreamRef.current) {
                     const t = localStreamRef.current.getAudioTracks()[0];
                     if (t) { t.enabled = !t.enabled; setIsMicMuted(!t.enabled); }
@@ -322,7 +322,10 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
               <Button 
                 variant="ghost" 
-                onClick={() => setIsSpeakerOn(!isSpeakerOn)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsSpeakerOn(!isSpeakerOn);
+                }}
                 className={`h-12 w-12 rounded-full border border-white/10 cursor-pointer pointer-events-auto ${isSpeakerOn ? 'text-accent' : 'text-white/40'}`}
               >
                 {isSpeakerOn ? <Volume2 size={20} /> : <VolumeX size={20} />}

@@ -44,9 +44,8 @@ export function GlobalSignalHandler() {
         if (!isRecipient && !isCaller) return;
         if (processedCallIds.current.has(sessionId)) return;
 
-        // Time-Fence: Ignore old signals (10s buffer)
         const sessionTime = data.timestamp?.toMillis?.() || data.timestamp?.seconds * 1000 || Date.now();
-        if (sessionTime < appMountTime.current - 10000) return;
+        if (sessionTime < appMountTime.current - 15000) return; // 15s buffer
 
         if (!activeCall && isRecipient) {
           console.warn(`[Signal Hub] ALERT: Incoming Signal Detected! ID: ${sessionId}`);
@@ -60,7 +59,6 @@ export function GlobalSignalHandler() {
             isIncoming: true
           });
           
-          // Android Vibration Feedback
           MobileBridge.vibrate([500, 200, 500]);
           
           NotificationManager.sendCallNotification(
@@ -68,7 +66,7 @@ export function GlobalSignalHandler() {
             data.type === 'video' ? "ভিডিও কল দিচ্ছেন..." : "অডিও কল দিচ্ছেন...",
             sessionId
           );
-        } else if (!activeCall && isCaller) {
+        } else if (!activeCall && isCaller && !processedCallIds.current.has(sessionId)) {
           setActiveCall({
             sessionId,
             callerId: data.recipientId,

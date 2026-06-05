@@ -55,7 +55,10 @@ export function DispatcherConsole() {
     return () => unsubscribe();
   }, [selectedAlert, playAlertSound, toast]);
 
-  const handleCall = async () => {
+  const handleCall = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!selectedAlert || !user) {
         toast({ title: "তথ্য অপর্যাপ্ত", description: "নাগরিক শনাক্ত করা যায়নি।", variant: "destructive" });
         return;
@@ -68,7 +71,7 @@ export function DispatcherConsole() {
     }
 
     console.log(`[Command] Initiating call to: ${targetUserId}`);
-    const sessionId = `call_dispatch_${Date.now()}_${user.uid.substring(0, 5)}`;
+    const sessionId = `call_dispatch_${Date.now()}_${Math.random().toString(36).substring(0, 5)}`;
     const sessionRef = doc(db, 'webrtc_sessions', sessionId);
     
     try {
@@ -77,7 +80,7 @@ export function DispatcherConsole() {
         callerName: "Imperial Command",
         callerAvatar: user.photoURL || '',
         recipientId: targetUserId,
-        recipientName: selectedAlert.businessName || selectedAlert.location || 'Citizen',
+        recipientName: selectedAlert.location || 'Citizen',
         recipientAvatar: '',
         status: 'ringing',
         type: 'video',
@@ -197,7 +200,7 @@ export function DispatcherConsole() {
                              <h3 className="text-lg font-headline font-bold text-foreground uppercase">{selectedAlert.location}</h3>
                              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{selectedAlert.type}</p>
                           </div>
-                          <Button onClick={handleCall} className="w-full bg-accent text-background font-bold gap-2 rounded-xl h-10 text-xs shadow-lg pointer-events-auto">
+                          <Button onClick={handleCall} className="w-full bg-accent text-background font-bold gap-2 rounded-xl h-10 text-xs shadow-lg pointer-events-auto cursor-pointer">
                              <Phone size={14} /> Initiate Secure Link
                           </Button>
                           <div className="pt-4 border-t border-white/5">
@@ -213,7 +216,7 @@ export function DispatcherConsole() {
                                      <span className="text-[10px] font-bold uppercase tracking-widest">AI Strategy</span>
                                   </div>
                                   <p className="text-[11px] text-foreground/80 leading-relaxed italic">"{recommendation.reasoning}"</p>
-                                  <Button onClick={() => handleDispatch(recommendation.recommendedResponderId)} className="w-full bg-primary text-background font-bold text-xs h-9 rounded-xl pointer-events-auto">
+                                  <Button onClick={() => handleDispatch(recommendation.recommendedResponderId)} className="w-full bg-primary text-background font-bold text-xs h-9 rounded-xl pointer-events-auto cursor-pointer">
                                      AUTHORIZE DEPLOYMENT
                                   </Button>
                                </div>
@@ -223,7 +226,7 @@ export function DispatcherConsole() {
                                   <span className="text-[10px] font-bold uppercase tracking-widest">Responder Deployed</span>
                                 </div>
                              ) : (
-                               <Button onClick={() => handleAnalyze(selectedAlert)} className="w-full bg-muted/40 hover:bg-muted/60 text-white font-bold h-11 rounded-xl gap-2 text-xs pointer-events-auto">
+                               <Button onClick={() => handleAnalyze(selectedAlert)} className="w-full bg-muted/40 hover:bg-muted/60 text-white font-bold h-11 rounded-xl gap-2 text-xs pointer-events-auto cursor-pointer">
                                   <Zap size={14} className="text-accent" /> Run Tactical AI Analysis
                                </Button>
                              )}
