@@ -1,8 +1,10 @@
+
 'use client';
 
 /**
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
  * Optimized Phase 32.2: Locked-Identity Stream Protocol and Studio-Grade AV Sync.
+ * Updated: Hardened against InvalidStateError and race conditions in signaling.
  */
 
 import { db } from './firebase';
@@ -14,6 +16,9 @@ import {
   addDoc, 
   updateDoc, 
   getDoc,
+  deleteDoc,
+  query,
+  getDocs
 } from 'firebase/firestore';
 import { AVController } from './av-controller';
 import { AudioProcessor } from './audio-processor';
@@ -55,7 +60,6 @@ export class WebRTCManager {
   async createCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
     if (this.isDisposed) return;
 
-    // Phase 31.5: Optimize local stream before sending
     const optimizedStream = await AVController.optimizeStream(localStream);
     const isolatedStream = await this.audioProcessor.isolateVoice(optimizedStream);
 
@@ -81,7 +85,14 @@ export class WebRTCManager {
 
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate && !this.isDisposed) {
-        addDoc(candidatesCollection, { ...event.candidate.toJSON(), owner: 'caller' }).catch(() => {});
+        const candidateData = event.candidate.toJSON();
+        addDoc(candidatesCollection, { 
+          candidate: candidateData.candidate,
+          sdpMid: candidateData.sdpMid,
+          sdpMLineIndex: candidateData.sdpMLineIndex,
+          usernameFragment: candidateData.usernameFragment,
+          owner: 'caller' 
+        }).catch(() => {});
       }
     };
 
@@ -93,18 +104,22 @@ export class WebRTCManager {
     await this.peerConnection.setLocalDescription(offerDescription);
 
     const offer = { sdp: offerDescription.sdp, type: offerDescription.type };
-    await setDoc(sessionRef, { offer }, { merge: true });
+    // Clear stale answer and candidates from previous attempts to prevent state mismatch
+    await setDoc(sessionRef, { offer, answer: null, status: 'ringing' }, { merge: true });
 
     const unsubSession = onSnapshot(sessionRef, async (snapshot) => {
       if (this.isDisposed || !this.peerConnection) return;
       const data = snapshot.data();
       
-      if (data?.answer && !this.peerConnection.remoteDescription && this.peerConnection.signalingState === 'have-local-offer') {
+      // Strict state check: only process answer if we are in 'have-local-offer' state
+      if (data?.answer && !this.isProcessingRemoteDescription && this.peerConnection.signalingState === 'have-local-offer') {
         this.isProcessingRemoteDescription = true;
         try {
-          const answerDesc = new RTCSessionDescription(data.answer);
-          await this.peerConnection.setRemoteDescription(answerDesc);
-          await this.flushCandidates();
+          if (this.peerConnection.signalingState === 'have-local-offer') {
+            const answerDesc = new RTCSessionDescription(data.answer);
+            await this.peerConnection.setRemoteDescription(answerDesc);
+            await this.flushCandidates();
+          }
         } catch (e) {
           console.error("[WebRTC] Answer processing fault:", e);
         } finally {
@@ -119,9 +134,10 @@ export class WebRTCManager {
         if (change.type === 'added') {
           const data = change.doc.data();
           if (data.owner !== 'caller') {
-            // Filter out internal metadata before passing to RTCIceCandidate
             const { candidate, sdpMid, sdpMLineIndex, usernameFragment } = data;
-            this.addCandidate({ candidate, sdpMid, sdpMLineIndex, usernameFragment });
+            if (candidate) {
+              this.addCandidate({ candidate, sdpMid, sdpMLineIndex, usernameFragment });
+            }
           }
         }
       });
@@ -136,7 +152,6 @@ export class WebRTCManager {
   async answerCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
     if (this.isDisposed) return;
 
-    // Phase 31.5: Optimize local stream
     const optimizedStream = await AVController.optimizeStream(localStream);
     const isolatedStream = await this.audioProcessor.isolateVoice(optimizedStream);
 
@@ -162,28 +177,38 @@ export class WebRTCManager {
 
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate && !this.isDisposed) {
-        addDoc(candidatesCollection, { ...event.candidate.toJSON(), owner: 'recipient' }).catch(() => {});
+        const candidateData = event.candidate.toJSON();
+        addDoc(candidatesCollection, { 
+          candidate: candidateData.candidate,
+          sdpMid: candidateData.sdpMid,
+          sdpMLineIndex: candidateData.sdpMLineIndex,
+          usernameFragment: candidateData.usernameFragment,
+          owner: 'recipient' 
+        }).catch(() => {});
       }
     };
 
-    const sessionSnapshot = await getDoc(sessionRef);
-    const sessionData = sessionSnapshot.data();
-    
-    if (sessionData?.offer) {
-      try {
+    // Reactive offer processing
+    const unsubSession = onSnapshot(sessionRef, async (snapshot) => {
+      if (this.isDisposed || !this.peerConnection) return;
+      const data = snapshot.data();
+      
+      if (data?.offer && !this.isProcessingRemoteDescription && this.peerConnection.signalingState === 'stable') {
         this.isProcessingRemoteDescription = true;
-        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(sessionData.offer));
-        const answerDescription = await this.peerConnection.createAnswer();
-        await this.peerConnection.setLocalDescription(answerDescription);
+        try {
+          await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+          const answerDescription = await this.peerConnection.createAnswer();
+          await this.peerConnection.setLocalDescription(answerDescription);
 
-        await updateDoc(sessionRef, { answer: { type: answerDescription.type, sdp: answerDescription.sdp } });
-        this.isProcessingRemoteDescription = false;
-        await this.flushCandidates();
-      } catch (e) {
-        console.error("[WebRTC] Offer processing fault:", e);
-        this.isProcessingRemoteDescription = false;
+          await updateDoc(sessionRef, { answer: { type: answerDescription.type, sdp: answerDescription.sdp } });
+          await this.flushCandidates();
+        } catch (e) {
+          console.error("[WebRTC] Offer processing fault:", e);
+        } finally {
+          this.isProcessingRemoteDescription = false;
+        }
       }
-    }
+    });
 
     const unsubCandidates = onSnapshot(candidatesCollection, (snapshot) => {
       if (this.isDisposed) return;
@@ -192,13 +217,18 @@ export class WebRTCManager {
           const data = change.doc.data();
           if (data.owner !== 'recipient') {
             const { candidate, sdpMid, sdpMLineIndex, usernameFragment } = data;
-            this.addCandidate({ candidate, sdpMid, sdpMLineIndex, usernameFragment });
+            if (candidate) {
+              this.addCandidate({ candidate, sdpMid, sdpMLineIndex, usernameFragment });
+            }
           }
         }
       });
     });
 
-    return () => unsubCandidates();
+    return () => {
+      unsubSession();
+      unsubCandidates();
+    };
   }
 
   private async addCandidate(candidate: RTCIceCandidateInit) {
