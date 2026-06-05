@@ -14,8 +14,8 @@ import { MobileBridge } from '@/lib/mobile-bridge'
 
 /**
  * @fileOverview Global Signal Handler for Shurukkha Hub.
- * Manages real-time incoming and outgoing call detection with identity and missed call support.
- * Phase 35.8: Instant Call and Missed Call Logic.
+ * Manages real-time incoming and outgoing call detection.
+ * Updated: Added Initial Load Shield to prevent automatic calls from stale data.
  */
 
 export function GlobalSignalHandler() {
@@ -25,17 +25,28 @@ export function GlobalSignalHandler() {
   
   const processedCallIds = useRef<Set<string>>(new Set())
   const sensorLogged = useRef(false)
+  const isInitialLoad = useRef(true)
 
   useEffect(() => {
     if (!currentUser || !firestore || authLoading) return;
 
     console.log(`[Signal Hub] Sovereign Monitor ACTIVE for: ${currentUser.email}`);
 
-    // High-availability query for WebRTC sessions involving the current user
+    // Listen to collection changes
     const sessionsRef = collection(db, 'webrtc_sessions');
     
-    // Listen to collection changes
     const unsubscribeCalls = onSnapshot(sessionsRef, (snapshot) => {
+      // Logic: If it's the first time the listener runs, mark all existing 'ringing' docs as processed
+      // so they don't pop up automatically.
+      if (isInitialLoad.current) {
+        snapshot.docs.forEach(doc => {
+          processedCallIds.current.add(doc.id);
+        });
+        isInitialLoad.current = false;
+        console.log("[Signal Hub] Initial Stale Sessions Shielded.");
+        return;
+      }
+
       snapshot.docChanges().forEach((change) => {
         const data = change.doc.data() as any;
         const sessionId = change.doc.id;
@@ -63,12 +74,12 @@ export function GlobalSignalHandler() {
           return;
         }
 
-        // 3. Trigger for Ringing Calls
-        if (data.status === 'ringing') {
+        // 3. Trigger for Ringing Calls (Only for NEW additions)
+        if (data.status === 'ringing' && change.type === 'added') {
           if (processedCallIds.current.has(sessionId)) return;
           if (activeCall && activeCall.sessionId === sessionId) return;
 
-          console.warn(`[Signal Hub] COMMAND SIGNAL DETECTED: ${sessionId}`);
+          console.warn(`[Signal Hub] NEW COMMAND SIGNAL DETECTED: ${sessionId}`);
           
           const callPayload = {
             sessionId,
@@ -84,7 +95,6 @@ export function GlobalSignalHandler() {
           
           if (isRecipient) {
             MobileBridge.triggerHaptic('SOS');
-            // Background notification
             NotificationManager.sendCallNotification(
               data.callerName || "অজ্ঞাত নাগরিক",
               data.type === 'video' ? "ভিডিও কল দিচ্ছে..." : "অডিও কল দিচ্ছে...",
