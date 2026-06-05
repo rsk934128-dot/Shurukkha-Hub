@@ -1,10 +1,9 @@
-
 'use client';
 
 /**
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
- * Optimized Phase 32.2: Locked-Identity Stream Protocol and Studio-Grade AV Sync.
- * Updated: Improved cleanup logic for tracks and remote state synchronization.
+ * Optimized Phase 35.0: Locked-Identity Stream Protocol with Aggressive Resource Purge.
+ * Updated: Improved cleanup logic for tracks and remote state synchronization to release hardware immediately.
  */
 
 import { db } from './firebase';
@@ -32,7 +31,7 @@ export class WebRTCManager {
   private isDisposed = false;
   private audioProcessor: AudioProcessor = new AudioProcessor();
   private unsubscribers: (() => void)[] = [];
-  private localTracks: MediaStreamTrack[] = [];
+  private trackedTracks: Set<MediaStreamTrack> = new Set();
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
@@ -59,16 +58,24 @@ export class WebRTCManager {
     };
   }
 
+  private trackStream(stream: MediaStream) {
+    stream.getTracks().forEach(track => this.trackedTracks.add(track));
+  }
+
   private async getProcessedStream(originalStream: MediaStream): Promise<MediaStream> {
+    this.trackStream(originalStream);
     const optimizedStream = await AVController.optimizeStream(originalStream);
     const isolatedStream = await this.audioProcessor.isolateVoice(optimizedStream);
     
     const finalStream = new MediaStream();
-    isolatedStream.getAudioTracks().forEach(track => finalStream.addTrack(track));
-    originalStream.getVideoTracks().forEach(track => finalStream.addTrack(track));
-    
-    // Track these for cleanup
-    this.localTracks = finalStream.getTracks();
+    isolatedStream.getAudioTracks().forEach(track => {
+      finalStream.addTrack(track);
+      this.trackedTracks.add(track);
+    });
+    originalStream.getVideoTracks().forEach(track => {
+      finalStream.addTrack(track);
+      this.trackedTracks.add(track);
+    });
     
     return finalStream;
   }
@@ -84,6 +91,7 @@ export class WebRTCManager {
       event.streams[0].getTracks().forEach((track) => {
         if (!this.remoteStream.getTracks().find(t => t.id === track.id)) {
           this.remoteStream.addTrack(track);
+          this.trackedTracks.add(track);
         }
       });
       onRemoteStream(this.remoteStream);
@@ -166,6 +174,7 @@ export class WebRTCManager {
       event.streams[0].getTracks().forEach((track) => {
         if (!this.remoteStream.getTracks().find(t => t.id === track.id)) {
           this.remoteStream.addTrack(track);
+          this.trackedTracks.add(track);
         }
       });
       onRemoteStream(this.remoteStream);
@@ -270,20 +279,23 @@ export class WebRTCManager {
   }
 
   dispose() {
-    console.log("[WebRTC] Executing high-priority resource disposal...");
+    console.log("[WebRTC] Executing high-priority hardware purge protocol...");
     this.isDisposed = true;
+    
+    // Stop all tracked tracks (Hardware Release)
+    this.trackedTracks.forEach(track => {
+      try {
+        track.enabled = false;
+        track.stop();
+        console.log(`[Hardware] Track Purged: ${track.kind}`);
+      } catch (e) {}
+    });
+    this.trackedTracks.clear();
+
     this.audioProcessor.dispose();
     
-    // Clear all snapshot listeners
     this.unsubscribers.forEach(unsub => unsub());
     this.unsubscribers = [];
-
-    // Stop all local tracks associated with this manager
-    this.localTracks.forEach(track => {
-      track.stop();
-      console.log(`[WebRTC] Internal Track Stopped: ${track.kind}`);
-    });
-    this.localTracks = [];
 
     if (this.peerConnection) {
       this.peerConnection.onicecandidate = null;
@@ -291,11 +303,10 @@ export class WebRTCManager {
       this.peerConnection.onconnectionstatechange = null;
       this.peerConnection.onsignalingstatechange = null;
       
-      // Force stop all senders
       this.peerConnection.getSenders().forEach(sender => {
         if (sender.track) {
+          sender.track.enabled = false;
           sender.track.stop();
-          console.log(`[WebRTC] Sender Track Force Stopped: ${sender.track.kind}`);
         }
       });
 
@@ -303,8 +314,10 @@ export class WebRTCManager {
       this.peerConnection = null;
     }
 
-    // Stop remote stream tracks to release buffer
-    this.remoteStream.getTracks().forEach(track => track.stop());
+    this.remoteStream.getTracks().forEach(track => {
+      track.enabled = false;
+      track.stop();
+    });
     
     this.candidateQueue = [];
     this.remoteStream = new MediaStream();

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
@@ -56,12 +55,13 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   }, [playAlertSound, stopRingtone])
 
   const cleanupStreams = useCallback(() => {
-    console.log("[Imperial Cleanup] Executing hardware resource release...");
+    console.log("[Imperial Cleanup] Initiating global hardware resource purge...");
     
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => {
+        track.enabled = false;
         track.stop();
-        console.log(`[Hardware] Track Force-Stopped: ${track.kind}`);
+        console.log(`[Hardware] Local Track Force-Stopped: ${track.kind}`);
       });
       localStreamRef.current = null;
     }
@@ -85,7 +85,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     if (isTerminatingRef.current) return;
     isTerminatingRef.current = true;
     
-    console.log(`[Signal Hub] Closing session: ${callData?.sessionId}`);
+    console.log(`[Signal Hub] TERMINATING_SESSION: ${callData?.sessionId}`);
     stopRingtone();
     setStatus('ended');
 
@@ -96,7 +96,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       try {
         await updateDoc(sessionRef, { status: 'ended' });
         
-        // Immediate cleanup of signaling data to prevent ghost calls
         setTimeout(async () => {
           try {
             const candidatesRef = collection(sessionRef, 'ice_candidates');
@@ -105,7 +104,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
               await deleteDoc(doc(candidatesRef, cDoc.id));
             }
             await deleteDoc(sessionRef);
-            console.log(`[Signal Hub] GRID_CLEANUP_SUCCESS for ${callData.sessionId}`);
+            console.log(`[Signal Hub] GRID_CLEANUP_SUCCESS: ${callData.sessionId}`);
           } catch (e) {}
         }, 1000);
       } catch (err: any) {

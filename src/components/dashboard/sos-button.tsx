@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react'
@@ -6,7 +5,7 @@ import { ShieldAlert, Loader2, Video, VideoOff, PhoneOff, CheckCircle2, User } f
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { db } from '@/lib/firebase'
-import { collection, addDoc, serverTimestamp, doc, setDoc, onSnapshot, deleteDoc } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, doc, setDoc, onSnapshot, deleteDoc, updateDoc } from 'firebase/firestore'
 import { DisasterStorage } from '@/lib/disaster-storage'
 import { WebRTCManager } from '@/lib/webrtc-signaling'
 import { Badge } from '@/components/ui/badge'
@@ -24,14 +23,21 @@ export function SOSButton() {
   const { toast } = useToast()
 
   const cleanupStreams = () => {
+    console.log("[SOS Grid] Purging hardware resources...");
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current.getTracks().forEach(track => {
+        track.enabled = false;
+        track.stop();
+      });
       localStreamRef.current = null;
     }
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-    webrtcRef.current?.dispose();
-    webrtcRef.current = null;
+    
+    if (webrtcRef.current) {
+      webrtcRef.current.dispose();
+      webrtcRef.current = null;
+    }
     setIsCalling(false);
   }
 
