@@ -6,12 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { db } from '@/lib/firebase'
-import { collection, onSnapshot, query, orderBy, updateDoc, doc, arrayUnion, serverTimestamp, addDoc, getDoc, setDoc } from 'firebase/firestore'
+import { collection, onSnapshot, query, orderBy, updateDoc, doc, arrayUnion, serverTimestamp, setDoc } from 'firebase/firestore'
 import { suggestResponder, type SuggestResponderOutput } from '@/ai/flows/suggest-responder-flow'
 import { IntegrationBridge } from '@/lib/integration-bridge'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { WebRTCManager } from '@/lib/webrtc-signaling'
 import { ResourceMap } from './resource-map'
 import { CommunicationConsole } from './communication-console'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -62,14 +61,14 @@ export function DispatcherConsole() {
         return;
     }
     
-    // Use the reporter's actual ID from the SOS alert
     const targetUserId = selectedAlert.reporterId;
     if (!targetUserId || targetUserId === 'anonymous_citizen') {
         toast({ title: "কল সম্ভব নয়", description: "নাগরিকের পরিচয় পাওয়া যায়নি।", variant: "destructive" });
         return;
     }
 
-    const sessionId = `call_recon_${Date.now()}_${user.uid.substring(0, 5)}`;
+    console.log(`[Command] Initiating call to: ${targetUserId}`);
+    const sessionId = `call_dispatch_${Date.now()}_${user.uid.substring(0, 5)}`;
     const sessionRef = doc(db, 'webrtc_sessions', sessionId);
     
     try {
@@ -78,18 +77,15 @@ export function DispatcherConsole() {
         callerName: "Imperial Command",
         callerAvatar: user.photoURL || '',
         recipientId: targetUserId,
-        recipientName: selectedAlert.location || 'Citizen',
+        recipientName: selectedAlert.businessName || selectedAlert.location || 'Citizen',
         recipientAvatar: '',
         status: 'ringing',
         type: 'video',
-        timestamp: serverTimestamp(),
-        offer: null,
-        answer: null
+        timestamp: serverTimestamp()
       });
-      console.warn(`[Command] Signal Dispatched to: ${targetUserId}`);
-      toast({ title: "ইম্পেরিয়াল সিগন্যাল পাঠানো হচ্ছে..." });
+      toast({ title: "সিগন্যাল পাঠানো হচ্ছে..." });
     } catch (e) {
-      toast({ title: "Signal Link Failure", variant: "destructive" });
+      toast({ title: "সেশন ত্রুটি", variant: "destructive" });
     }
   }
 
@@ -135,8 +131,6 @@ export function DispatcherConsole() {
   return (
     <div className="h-full flex flex-col gap-4">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-0">
-        
-        {/* Left: Alerts */}
         <div className="lg:col-span-3 flex flex-col min-h-0 order-2 lg:order-1">
            <Card className="bg-card/40 border-primary/20 flex flex-col flex-1 overflow-hidden neon-glow-primary">
               <CardHeader className="bg-primary/10 border-b border-white/5 py-3">
@@ -166,7 +160,6 @@ export function DispatcherConsole() {
            </Card>
         </div>
 
-        {/* Center: Map/Comms */}
         <div className="lg:col-span-6 flex flex-col min-h-0 order-1 lg:order-2">
           <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-2">
@@ -184,7 +177,6 @@ export function DispatcherConsole() {
           </Tabs>
         </div>
 
-        {/* Right: Tactical */}
         <div className="lg:col-span-3 flex flex-col gap-6 min-h-0 order-3">
           <Card className="bg-card/40 border-accent/20 flex-1 flex flex-col overflow-hidden relative neon-glow-accent">
              <CardHeader className="bg-accent/10 border-b border-white/5 py-4">
@@ -205,7 +197,7 @@ export function DispatcherConsole() {
                              <h3 className="text-lg font-headline font-bold text-foreground uppercase">{selectedAlert.location}</h3>
                              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{selectedAlert.type}</p>
                           </div>
-                          <Button onClick={handleCall} className="w-full bg-accent text-background font-bold gap-2 rounded-xl h-10 text-xs">
+                          <Button onClick={handleCall} className="w-full bg-accent text-background font-bold gap-2 rounded-xl h-10 text-xs shadow-lg pointer-events-auto">
                              <Phone size={14} /> Initiate Secure Link
                           </Button>
                           <div className="pt-4 border-t border-white/5">
@@ -220,8 +212,8 @@ export function DispatcherConsole() {
                                      <BrainCircuit size={16} />
                                      <span className="text-[10px] font-bold uppercase tracking-widest">AI Strategy</span>
                                   </div>
-                                  <p className="text-11px] text-foreground/80 leading-relaxed italic">"{recommendation.reasoning}"</p>
-                                  <Button onClick={() => handleDispatch(recommendation.recommendedResponderId)} className="w-full bg-primary text-background font-bold text-xs h-9 rounded-xl">
+                                  <p className="text-[11px] text-foreground/80 leading-relaxed italic">"{recommendation.reasoning}"</p>
+                                  <Button onClick={() => handleDispatch(recommendation.recommendedResponderId)} className="w-full bg-primary text-background font-bold text-xs h-9 rounded-xl pointer-events-auto">
                                      AUTHORIZE DEPLOYMENT
                                   </Button>
                                </div>
@@ -231,7 +223,7 @@ export function DispatcherConsole() {
                                   <span className="text-[10px] font-bold uppercase tracking-widest">Responder Deployed</span>
                                 </div>
                              ) : (
-                               <Button onClick={() => handleAnalyze(selectedAlert)} className="w-full bg-muted/40 hover:bg-muted/60 text-white font-bold h-11 rounded-xl gap-2 text-xs">
+                               <Button onClick={() => handleAnalyze(selectedAlert)} className="w-full bg-muted/40 hover:bg-muted/60 text-white font-bold h-11 rounded-xl gap-2 text-xs pointer-events-auto">
                                   <Zap size={14} className="text-accent" /> Run Tactical AI Analysis
                                </Button>
                              )}
