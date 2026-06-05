@@ -1,9 +1,10 @@
+
 'use client';
 
 /**
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
  * Optimized Phase 32.2: Locked-Identity Stream Protocol and Studio-Grade AV Sync.
- * Updated: Fixed track merging issue where video was lost during audio processing.
+ * Updated: Improved cleanup logic for tracks and remote state synchronization.
  */
 
 import { db } from './firebase';
@@ -30,6 +31,7 @@ export class WebRTCManager {
   private remoteStream: MediaStream = new MediaStream();
   private isDisposed = false;
   private audioProcessor: AudioProcessor = new AudioProcessor();
+  private unsubscribers: (() => void)[] = [];
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
@@ -56,19 +58,12 @@ export class WebRTCManager {
     };
   }
 
-  /**
-   * Merges processed audio tracks with original video tracks.
-   */
   private async getProcessedStream(originalStream: MediaStream): Promise<MediaStream> {
     const optimizedStream = await AVController.optimizeStream(originalStream);
     const isolatedStream = await this.audioProcessor.isolateVoice(optimizedStream);
     
     const finalStream = new MediaStream();
-    
-    // Add processed audio tracks
     isolatedStream.getAudioTracks().forEach(track => finalStream.addTrack(track));
-    
-    // Add original video tracks (if any)
     originalStream.getVideoTracks().forEach(track => finalStream.addTrack(track));
     
     return finalStream;
@@ -82,7 +77,6 @@ export class WebRTCManager {
     
     this.peerConnection.ontrack = (event) => {
       if (this.isDisposed) return;
-      console.log("[WebRTC] Remote signal locked.");
       event.streams[0].getTracks().forEach((track) => {
         if (!this.remoteStream.getTracks().find(t => t.id === track.id)) {
           this.remoteStream.addTrack(track);
@@ -154,10 +148,7 @@ export class WebRTCManager {
       });
     });
 
-    return () => {
-      unsubSession();
-      unsubCandidates();
-    };
+    this.unsubscribers.push(unsubSession, unsubCandidates);
   }
 
   async answerCall(localStream: MediaStream, onRemoteStream: (stream: MediaStream) => void) {
@@ -168,7 +159,6 @@ export class WebRTCManager {
 
     this.peerConnection.ontrack = (event) => {
       if (this.isDisposed) return;
-      console.log("[WebRTC] Inbound stream recognized.");
       event.streams[0].getTracks().forEach((track) => {
         if (!this.remoteStream.getTracks().find(t => t.id === track.id)) {
           this.remoteStream.addTrack(track);
@@ -233,17 +223,20 @@ export class WebRTCManager {
       });
     });
 
-    return () => {
-      unsubSession();
-      unsubCandidates();
-    };
+    this.unsubscribers.push(unsubSession, unsubCandidates);
   }
 
   private async addCandidate(candidate: RTCIceCandidateInit) {
     if (!this.peerConnection || this.isDisposed) return;
     if (this.peerConnection.remoteDescription && !this.isProcessingRemoteDescription) {
       try {
-        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        const candidateObj = new RTCIceCandidate({
+          candidate: candidate.candidate,
+          sdpMid: candidate.sdpMid,
+          sdpMLineIndex: candidate.sdpMLineIndex,
+          usernameFragment: candidate.usernameFragment
+        });
+        await this.peerConnection.addIceCandidate(candidateObj);
       } catch (e) {
         console.warn("[WebRTC] Candidate addition skipped:", e);
       }
@@ -258,7 +251,13 @@ export class WebRTCManager {
       const candidate = this.candidateQueue.shift();
       if (candidate) {
         try {
-          await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          const candidateObj = new RTCIceCandidate({
+            candidate: candidate.candidate,
+            sdpMid: candidate.sdpMid,
+            sdpMLineIndex: candidate.sdpMLineIndex,
+            usernameFragment: candidate.usernameFragment
+          });
+          await this.peerConnection.addIceCandidate(candidateObj);
         } catch (e) {
           console.warn("[WebRTC] Queued candidate addition fault:", e);
         }
@@ -267,14 +266,32 @@ export class WebRTCManager {
   }
 
   dispose() {
+    console.log("[WebRTC] Disposing session resources...");
     this.isDisposed = true;
     this.audioProcessor.dispose();
+    
+    // Clear listeners
+    this.unsubscribers.forEach(unsub => unsub());
+    this.unsubscribers = [];
+
     if (this.peerConnection) {
       this.peerConnection.onicecandidate = null;
       this.peerConnection.ontrack = null;
+      this.peerConnection.onconnectionstatechange = null;
+      this.peerConnection.onsignalingstatechange = null;
+      
+      // Stop all tracks being sent to the remote
+      this.peerConnection.getSenders().forEach(sender => {
+        if (sender.track) sender.track.stop();
+      });
+
       this.peerConnection.close();
       this.peerConnection = null;
     }
+
+    // Stop remote stream tracks
+    this.remoteStream.getTracks().forEach(track => track.stop());
+    
     this.candidateQueue = [];
     this.remoteStream = new MediaStream();
   }

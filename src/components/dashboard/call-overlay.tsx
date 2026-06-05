@@ -54,17 +54,22 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
   const startRingtone = useCallback(() => {
     stopRingtone()
-    // Play immediately
     playAlertSound()
-    // Loop every 2.5 seconds for a persistent ring
     ringtoneIntervalRef.current = setInterval(playAlertSound, 2500)
   }, [playAlertSound, stopRingtone])
 
   const cleanupStreams = useCallback(() => {
+    console.log("[Signal Hub] Termination Protocol: Stopping all hardware tracks...");
+    
+    // Explicitly stop all local tracks to turn off camera/mic LED
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log(`[Signal Hub] Track Stopped: ${track.kind}`);
+      });
       localStreamRef.current = null;
     }
+    
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     
@@ -82,28 +87,30 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     if (isTerminatingRef.current) return;
     isTerminatingRef.current = true;
     
+    console.log(`[Signal Hub] Ending session: ${callData?.sessionId}`);
     stopRingtone();
     setStatus('ended');
+
+    // Immediate Hardware Stop
+    cleanupStreams();
 
     if (callData && shouldUpdateServer) {
       const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
       try {
         await updateDoc(sessionRef, { status: 'ended' });
+        // Delete after a short grace period to allow remote sync
         setTimeout(async () => {
-          try { await deleteDoc(sessionRef); } catch (e) {}
-        }, 3000);
+          try {
+            const snap = await getDoc(sessionRef);
+            if (snap.exists()) await deleteDoc(sessionRef);
+          } catch (e) {}
+        }, 5000);
       } catch (err: any) {
-        if (err.code === 'permission-denied') {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: sessionRef.path,
-            operation: 'write'
-          }));
-        }
+        console.error("[Signal Hub] Failed to push end signal", err);
       }
     }
 
     setTimeout(() => {
-      cleanupStreams();
       onClose();
       isTerminatingRef.current = false;
       setStatus('idle');
@@ -148,6 +155,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
       const unsubscribe = onSnapshot(sessionRef, (snap) => {
         if (!snap.exists()) {
+          console.warn("[Signal Hub] Session doc deleted remotely.");
           if (status !== 'idle' && status !== 'ended') handleEndCall(false);
           return;
         }
@@ -157,7 +165,11 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
           stopRingtone();
           if (!timerRef.current) timerRef.current = setInterval(() => setTimer(prev => prev + 1), 1000);
         }
-        if (data.status === 'ended' && status !== 'ended') handleEndCall(false);
+        // CRITICAL: Listen for 'ended' status from the other side
+        if (data.status === 'ended' && status !== 'ended') {
+          console.log("[Signal Hub] Remote party terminated the call.");
+          handleEndCall(false);
+        }
       });
 
       if (callData.isIncoming) {
@@ -177,7 +189,10 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                 remoteVideoRef.current.srcObject = remote;
               }
             });
-          } catch (e) { handleEndCall(true); }
+          } catch (e) { 
+            console.error("[Signal Hub] Outgoing call hardware failure", e);
+            handleEndCall(true); 
+          }
         };
         startOutgoing();
       }
@@ -257,7 +272,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
              )}
           </div>
 
-          {status === 'ringing' && !callData?.isIncoming && (
+          {(status === 'ringing' && !callData?.isIncoming) && (
              <div className="flex flex-col items-center gap-6 z-10 text-center">
                 <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-primary/40">
                   <AvatarImage src={callData?.callerAvatar || undefined} />
@@ -271,6 +286,16 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                   <PhoneOff size={24} />
                 </Button>
              </div>
+          )}
+
+          {status === 'ended' && (
+            <div className="absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center gap-4">
+               <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center text-destructive">
+                  <PhoneOff size={32} />
+               </div>
+               <p className="text-xl font-headline font-bold text-white uppercase tracking-widest">Call Terminated</p>
+               <p className="text-xs text-muted-foreground">Encryption session closed.</p>
+            </div>
           )}
 
           <div className={`absolute bottom-32 right-4 md:top-6 md:right-6 w-32 md:w-48 aspect-video bg-black rounded-2xl border border-white/20 shadow-2xl overflow-hidden z-20 ${status === 'connected' && callData?.type === 'video' ? 'block' : 'hidden'}`}>

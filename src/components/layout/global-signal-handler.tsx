@@ -23,7 +23,6 @@ export function GlobalSignalHandler() {
   const lastProcessedCallId = useRef<string | null>(null)
   const sensorLogged = useRef(false);
 
-  // Phase 31.5: Sensor-Aware Calling Logic
   useEffect(() => {
     if (!activeCall) return;
 
@@ -52,12 +51,11 @@ export function GlobalSignalHandler() {
   useEffect(() => {
     if (!user || !firestore) return;
 
-    // 1. Message Listener
     const messagesRef = collection(db, "messages");
     const msgQuery = query(
       messagesRef,
       where("recipientId", "==", user.uid),
-      limit(10) // Increased for better initial sync
+      limit(10)
     );
 
     const unsubscribeMsgs = onSnapshot(msgQuery, (snapshot) => {
@@ -83,50 +81,51 @@ export function GlobalSignalHandler() {
       }
     });
 
-    // 2. Call Listener - Enhanced Signaling Bridge
     const sessionsRef = collection(db, 'webrtc_sessions');
-    // Listen for any session where I am a participant and it's ringing
     const callsQ = query(
       sessionsRef,
-      where('status', '==', 'ringing')
+      where('status', 'in', ['ringing', 'connected', 'ended'])
     );
 
     const unsubscribeCalls = onSnapshot(callsQ, (snapshot) => {
       snapshot.docs.forEach((doc) => {
         const data = doc.data();
-        
         const isRecipient = data.recipientId === user.uid;
         const isCaller = data.callerId === user.uid;
         
-        // If I'm part of this call and not already in a call UI session
-        if ((isRecipient || isCaller) && !activeCall && lastProcessedCallId.current !== doc.id) {
-          console.log(`[Signal Bridge] Call Detected: ${doc.id} | Incoming: ${isRecipient}`);
-          
-          setActiveCall({
-            sessionId: doc.id,
-            callerId: data.callerId,
-            callerName: isRecipient ? data.callerName : data.recipientName,
-            callerAvatar: isRecipient ? data.callerAvatar : data.recipientAvatar,
-            type: data.type,
-            isIncoming: isRecipient
-          });
-          
-          if (isRecipient) {
-            NotificationManager.sendCallNotification(
-              data.callerName || "অজ্ঞাত নাগরিক",
-              data.type === 'video' ? "ভিডিও কল দিচ্ছেন..." : "অডিও কল দিচ্ছেন...",
-              doc.id
-            );
+        if ((isRecipient || isCaller)) {
+          if (data.status === 'ringing' && !activeCall && lastProcessedCallId.current !== doc.id) {
+            console.log(`[Signal Bridge] Call Detected: ${doc.id} | Incoming: ${isRecipient}`);
+            
+            setActiveCall({
+              sessionId: doc.id,
+              callerId: data.callerId,
+              callerName: isRecipient ? data.callerName : data.recipientName,
+              callerAvatar: isRecipient ? data.callerAvatar : data.recipientAvatar,
+              type: data.type,
+              isIncoming: isRecipient
+            });
+            
+            if (isRecipient) {
+              NotificationManager.sendCallNotification(
+                data.callerName || "অজ্ঞাত নাগরিক",
+                data.type === 'video' ? "ভিডিও কল দিচ্ছেন..." : "অডিও কল দিচ্ছেন...",
+                doc.id
+              );
+            }
+            lastProcessedCallId.current = doc.id;
+          } else if (data.status === 'ended' && activeCall?.sessionId === doc.id) {
+            console.log("[Signal Bridge] Call was ended remotely.");
+            setActiveCall(null);
+            lastProcessedCallId.current = null;
           }
-          
-          lastProcessedCallId.current = doc.id;
         }
       });
 
-      // Cleanup if the active session document is removed or ended
+      // If active call doc is missing, clear state
       if (activeCall) {
         const activeDoc = snapshot.docs.find(d => d.id === activeCall.sessionId);
-        if (!activeDoc || activeDoc.data().status === 'ended') {
+        if (!activeDoc) {
           setActiveCall(null);
           lastProcessedCallId.current = null;
         }
