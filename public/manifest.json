@@ -1,0 +1,36 @@
+{
+  "name": "Shurukkha Hub | সিরাজগঞ্জ সুরক্ষা",
+  "short_name": "Shurukkha",
+  "description": "Sovereign Emergency & Financial Grid for Sirajganj",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#05070a",
+  "theme_color": "#7597FF",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/42/192/192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://picsum.photos/seed/42/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["productivity", "utilities", "finance"],
+  "shortcuts": [
+    {
+      "name": "SOS Trigger",
+      "url": "/dashboard",
+      "icons": [{ "src": "https://picsum.photos/seed/sos/96/96", "sizes": "96x96" }]
+    },
+    {
+      "name": "Messages",
+      "url": "/dashboard",
+      "icons": [{ "src": "https://picsum.photos/seed/msg/96/96", "sizes": "96x96" }]
+    }
+  ]
+}

@@ -10,6 +10,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { AlertCenter } from '@/components/dashboard/alert-center'
 import { AVController } from '@/lib/av-controller'
 import { SovereignAudit } from '@/lib/sovereign-audit'
+import { MobileBridge } from '@/lib/mobile-bridge'
 
 export function GlobalSignalHandler() {
   const { user: currentUser, loading: authLoading } = useUser()
@@ -37,18 +38,15 @@ export function GlobalSignalHandler() {
         const data = doc.data();
         const sessionId = doc.id;
         
-        // Identity Matching: Must be the recipient or the caller
         const isRecipient = data.recipientId === currentUser.uid;
         const isCaller = data.callerId === currentUser.uid;
         
         if (!isRecipient && !isCaller) return;
-
-        // Skip if already processed or terminated
         if (processedCallIds.current.has(sessionId)) return;
 
-        // Time-Fence: Ignore sessions created 20 seconds before page load to prevent "Ghost Calls"
+        // Time-Fence: Ignore old signals (10s buffer)
         const sessionTime = data.timestamp?.toMillis?.() || data.timestamp?.seconds * 1000 || Date.now();
-        if (sessionTime < appMountTime.current - 20000) return;
+        if (sessionTime < appMountTime.current - 10000) return;
 
         if (!activeCall && isRecipient) {
           console.warn(`[Signal Hub] ALERT: Incoming Signal Detected! ID: ${sessionId}`);
@@ -62,13 +60,15 @@ export function GlobalSignalHandler() {
             isIncoming: true
           });
           
+          // Android Vibration Feedback
+          MobileBridge.vibrate([500, 200, 500]);
+          
           NotificationManager.sendCallNotification(
             data.callerName || "অজ্ঞাত নাগরিক",
             data.type === 'video' ? "ভিডিও কল দিচ্ছেন..." : "অডিও কল দিচ্ছেন...",
             sessionId
           );
-        } else if (!activeCall && isCaller && !processedCallIds.current.has(sessionId)) {
-          // Outgoing call display setup
+        } else if (!activeCall && isCaller) {
           setActiveCall({
             sessionId,
             callerId: data.recipientId,
@@ -80,16 +80,11 @@ export function GlobalSignalHandler() {
         }
       });
 
-      // Remote termination tracking
       if (activeCall) {
         const currentDoc = snapshot.docs.find(d => d.id === activeCall.sessionId);
         if (currentDoc && currentDoc.data().status === 'ended') {
-          console.log("[Signal Hub] Termination signal synced from remote.");
           processedCallIds.current.add(activeCall.sessionId);
           setActiveCall(null);
-        } else if (!currentDoc && !snapshot.metadata.fromCache) {
-          // If document is missing and we are online, it means it was purged
-          // We don't immediately nullify to avoid UI flickering during minor sync delays
         }
       }
     });
@@ -97,7 +92,6 @@ export function GlobalSignalHandler() {
     return () => unsubscribeCalls();
   }, [currentUser, firestore, activeCall, authLoading]);
 
-  // Audio Routing Sensor for call privacy
   useEffect(() => {
     if (!activeCall) return;
 
@@ -113,7 +107,7 @@ export function GlobalSignalHandler() {
     if (typeof window !== 'undefined' && 'DeviceMotionEvent' in window) {
       window.addEventListener('devicemotion', handleDeviceMotion);
       if (!sensorLogged.current) {
-        SovereignAudit.logMilestone('PHASE_35.0_CALLING', 'Locked-Identity Protocol engaged.');
+        SovereignAudit.logMilestone('PHASE_35.5_CALLING', 'Locked-Identity Protocol engaged with Mobile Bridge.');
         sensorLogged.current = true;
       }
     }
