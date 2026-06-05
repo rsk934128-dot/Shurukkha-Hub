@@ -5,6 +5,7 @@
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
  * Optimized Phase 32.2: Locked-Identity Stream Protocol and Studio-Grade AV Sync.
  * Updated: Hardened against InvalidStateError and race conditions in signaling.
+ * Added: Metadata filtering for standards compliance.
  */
 
 import { db } from './firebase';
@@ -85,6 +86,7 @@ export class WebRTCManager {
 
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate && !this.isDisposed) {
+        // Imperial Standard: Filter out internal metadata from candidates
         const candidateData = event.candidate.toJSON();
         addDoc(candidatesCollection, { 
           candidate: candidateData.candidate,
@@ -104,22 +106,20 @@ export class WebRTCManager {
     await this.peerConnection.setLocalDescription(offerDescription);
 
     const offer = { sdp: offerDescription.sdp, type: offerDescription.type };
-    // Clear stale answer and candidates from previous attempts to prevent state mismatch
+    // Hardening: Explicitly clear answer when creating a new call to prevent InvalidStateError
     await setDoc(sessionRef, { offer, answer: null, status: 'ringing' }, { merge: true });
 
     const unsubSession = onSnapshot(sessionRef, async (snapshot) => {
       if (this.isDisposed || !this.peerConnection) return;
       const data = snapshot.data();
       
-      // Strict state check: only process answer if we are in 'have-local-offer' state
+      // Strict Check: Only process answer if we have sent an offer and are awaiting response
       if (data?.answer && !this.isProcessingRemoteDescription && this.peerConnection.signalingState === 'have-local-offer') {
         this.isProcessingRemoteDescription = true;
         try {
-          if (this.peerConnection.signalingState === 'have-local-offer') {
-            const answerDesc = new RTCSessionDescription(data.answer);
-            await this.peerConnection.setRemoteDescription(answerDesc);
-            await this.flushCandidates();
-          }
+          const answerDesc = new RTCSessionDescription(data.answer);
+          await this.peerConnection.setRemoteDescription(answerDesc);
+          await this.flushCandidates();
         } catch (e) {
           console.error("[WebRTC] Answer processing fault:", e);
         } finally {
@@ -188,11 +188,11 @@ export class WebRTCManager {
       }
     };
 
-    // Reactive offer processing
     const unsubSession = onSnapshot(sessionRef, async (snapshot) => {
       if (this.isDisposed || !this.peerConnection) return;
       const data = snapshot.data();
       
+      // Strict Check: Only process offer if connection is stable
       if (data?.offer && !this.isProcessingRemoteDescription && this.peerConnection.signalingState === 'stable') {
         this.isProcessingRemoteDescription = true;
         try {

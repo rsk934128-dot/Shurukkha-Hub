@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { db } from '@/lib/firebase'
-import { collection, onSnapshot, query, orderBy, updateDoc, doc, arrayUnion, serverTimestamp, addDoc, getDoc } from 'firebase/firestore'
+import { collection, onSnapshot, query, orderBy, updateDoc, doc, arrayUnion, serverTimestamp, addDoc, getDoc, setDoc } from 'firebase/firestore'
 import { suggestResponder, type SuggestResponderOutput } from '@/ai/flows/suggest-responder-flow'
 import { IntegrationBridge } from '@/lib/integration-bridge'
 import { useToast } from '@/hooks/use-toast'
@@ -20,6 +20,7 @@ import { MediaControls } from './media-controls'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
+import { useUser } from '@/firebase'
 
 const MOCK_RESPONDERS = [
   { id: 'r1', name: "সদর থানা টিম এ", type: "Police", location: "সিরাজগঞ্জ বাজার", status: "available" },
@@ -28,19 +29,14 @@ const MOCK_RESPONDERS = [
 ]
 
 export function DispatcherConsole() {
+  const { user } = useUser()
   const [alerts, setAlerts] = useState<any[]>([])
   const [selectedAlert, setSelectedAlert] = useState<any>(null)
   const [recommendation, setRecommendation] = useState<SuggestResponderOutput | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
-  const [isCalling, setIsCalling] = useState(false)
   const [activeTab, setActiveTab] = useState<'map' | 'comm'>('map')
   
-  const remoteVideoRef = useRef<HTMLVideoElement>(null)
-  const localVideoRef = useRef<HTMLVideoElement>(null)
-  const webrtcRef = useRef<WebRTCManager | null>(null)
-  const localStreamRef = useRef<MediaStream | null>(null)
   const lastAlertId = useRef<string | null>(null)
-  
   const { toast } = useToast()
   const { playAlertSound } = useAudioEngine()
 
@@ -61,49 +57,35 @@ export function DispatcherConsole() {
         if (updated) setSelectedAlert(updated);
       }
     });
-    return () => {
-      unsubscribe();
-      endCall();
-    };
-  }, [selectedAlert]);
+    return () => unsubscribe();
+  }, [selectedAlert, playAlertSound, toast]);
 
   const handleCall = async () => {
-    if (!selectedAlert) return;
-    setIsCalling(true);
+    if (!selectedAlert || !user) return;
+    
+    // We initiate the call by creating/updating the session doc.
+    // The GlobalSignalHandler will see the status 'ringing' and open the CallOverlay.
+    const sessionId = selectedAlert.id; // Using alert ID as session ID for direct link
+    const sessionRef = doc(db, 'webrtc_sessions', sessionId);
+    
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
-        audio: WebRTCManager.getAudioConstraints() 
+      await setDoc(sessionRef, {
+        callerId: user.uid,
+        callerName: "Command Center",
+        callerAvatar: user.photoURL || '',
+        recipientId: selectedAlert.reporterId || 'unknown_citizen',
+        recipientName: selectedAlert.location || 'Citizen',
+        recipientAvatar: '',
+        status: 'ringing',
+        type: 'video',
+        timestamp: serverTimestamp(),
+        offer: null,
+        answer: null
       });
-      localStreamRef.current = stream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-
-      webrtcRef.current = new WebRTCManager(selectedAlert.id);
-      await webrtcRef.current.answerCall(stream, (remote) => {
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remote;
-      });
-      
-      await updateDoc(doc(db, 'webrtc_sessions', selectedAlert.id), { status: 'connected' });
+      toast({ title: "ইম্পেরিয়াল সিগন্যাল পাঠানো হচ্ছে..." });
     } catch (e) {
-      setIsCalling(false);
       toast({ title: "Signal Link Failure", variant: "destructive" });
     }
-  }
-
-  const endCall = async () => {
-    if (selectedAlert) {
-      try {
-        await updateDoc(doc(db, 'webrtc_sessions', selectedAlert.id), { status: 'ended' });
-      } catch (e) {}
-    }
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
-      localStreamRef.current = null;
-    }
-    if (localVideoRef.current) localVideoRef.current.srcObject = null;
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-    webrtcRef.current?.dispose();
-    setIsCalling(false);
   }
 
   const handleAnalyze = async (alert: any) => {
@@ -146,7 +128,7 @@ export function DispatcherConsole() {
   }
 
   return (
-    <div className={`h-full flex flex-col gap-4 transition-all duration-700 ${isCalling ? 'call-active-glow' : ''}`}>
+    <div className="h-full flex flex-col gap-4">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-0">
         
         {/* Left: Alerts */}
@@ -192,20 +174,6 @@ export function DispatcherConsole() {
             
             <TabsContent value="map" className="flex-1 mt-0 relative min-h-0 rounded-2xl overflow-hidden border border-white/5">
                <ResourceMap />
-               {isCalling && (
-                 <div className="absolute inset-0 z-50 bg-slate-950/40 backdrop-blur-sm animate-in fade-in">
-                    <div className="absolute top-4 right-4 w-64 md:w-80 aspect-video bg-black rounded-3xl border-2 border-accent shadow-2xl overflow-hidden group">
-                       <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                       <div className="absolute bottom-2 right-2 w-16 md:w-24 aspect-video bg-black border border-white/20 rounded-lg overflow-hidden">
-                          <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-                       </div>
-                       <Badge className="absolute top-2 left-2 bg-red-600 animate-pulse text-[7px] border-none px-2 h-4">SECURE_RECON</Badge>
-                    </div>
-                    <div className="absolute inset-x-0 bottom-8 flex justify-center px-4">
-                      <MediaControls onHangUp={endCall} className="w-full max-w-xs" />
-                    </div>
-                 </div>
-               )}
             </TabsContent>
             <TabsContent value="comm" className="flex-1 mt-0 min-h-0"><CommunicationConsole /></TabsContent>
           </Tabs>
@@ -223,8 +191,8 @@ export function DispatcherConsole() {
                 {selectedAlert ? (
                   <div className="flex-1 flex flex-col min-h-0">
                     <div className="aspect-video bg-black/60 relative m-4 rounded-3xl border border-white/5 overflow-hidden flex flex-col items-center justify-center space-y-2">
-                       {isCalling ? <Volume2 className="text-accent animate-bounce" size={24} /> : <Video className="text-white/10" size={24} />}
-                       <p className="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">{isCalling ? 'LINK_ACTIVE' : 'NO_SIGNAL'}</p>
+                       <Video className="text-white/10" size={24} />
+                       <p className="text-[9px] font-mono text-white/20 uppercase tracking-[0.3em]">SECURE_FEED</p>
                     </div>
                     <ScrollArea className="flex-1 px-4">
                        <div className="space-y-4 pb-4">
@@ -232,8 +200,8 @@ export function DispatcherConsole() {
                              <h3 className="text-lg font-headline font-bold text-foreground uppercase">{selectedAlert.location}</h3>
                              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{selectedAlert.type}</p>
                           </div>
-                          <Button onClick={handleCall} disabled={isCalling} className="w-full bg-accent text-background font-bold gap-2 rounded-xl h-10 text-xs">
-                             <Phone size={14} /> {isCalling ? 'SESSION ACTIVE' : 'Initiate Secure Link'}
+                          <Button onClick={handleCall} className="w-full bg-accent text-background font-bold gap-2 rounded-xl h-10 text-xs">
+                             <Phone size={14} /> Initiate Secure Link
                           </Button>
                           <div className="pt-4 border-t border-white/5">
                              {analyzing ? (
@@ -247,7 +215,7 @@ export function DispatcherConsole() {
                                      <BrainCircuit size={16} />
                                      <span className="text-[10px] font-bold uppercase tracking-widest">AI Strategy</span>
                                   </div>
-                                  <p className="text-11px text-foreground/80 leading-relaxed italic">"{recommendation.reasoning}"</p>
+                                  <p className="text-[11px] text-foreground/80 leading-relaxed italic">"{recommendation.reasoning}"</p>
                                   <Button onClick={() => handleDispatch(recommendation.recommendedResponderId)} className="w-full bg-primary text-background font-bold text-xs h-9 rounded-xl">
                                      AUTHORIZE DEPLOYMENT
                                   </Button>

@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useFirestore, useUser } from '@/firebase'
-import { collection, query, where, onSnapshot, limit } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, limit, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { NotificationManager } from '@/lib/notification-manager'
 import { CallOverlay } from '@/components/dashboard/call-overlay'
@@ -18,7 +18,6 @@ import { SovereignAudit } from '@/lib/sovereign-audit'
 export function GlobalSignalHandler() {
   const { user } = useUser()
   const firestore = useFirestore()
-  const pathname = usePathname()
   const [activeCall, setActiveCall] = useState<any>(null)
   const lastProcessedMsgId = useRef<string | null>(null)
   const lastProcessedCallId = useRef<string | null>(null)
@@ -29,7 +28,6 @@ export function GlobalSignalHandler() {
     if (!activeCall) return;
 
     const handleDeviceMotion = (event: DeviceMotionEvent) => {
-      // Basic heuristic for phone raised to ear
       const accel = event.accelerationIncludingGravity;
       if (accel && accel.z && accel.z > 8) {
         AVController.setAudioRoute('earpiece');
@@ -59,7 +57,7 @@ export function GlobalSignalHandler() {
     const msgQuery = query(
       messagesRef,
       where("recipientId", "==", user.uid),
-      limit(1)
+      limit(10) // Increased for better initial sync
     );
 
     const unsubscribeMsgs = onSnapshot(msgQuery, (snapshot) => {
@@ -85,26 +83,27 @@ export function GlobalSignalHandler() {
       }
     });
 
-    // 2. Call Listener (Enhanced for both Caller and Recipient)
+    // 2. Call Listener - Enhanced Signaling Bridge
     const sessionsRef = collection(db, 'webrtc_sessions');
+    // Listen for any session where I am a participant and it's ringing
     const callsQ = query(
       sessionsRef,
       where('status', '==', 'ringing')
     );
 
     const unsubscribeCalls = onSnapshot(callsQ, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added' && !activeCall) {
-          const data = change.doc.data();
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        
+        const isRecipient = data.recipientId === user.uid;
+        const isCaller = data.callerId === user.uid;
+        
+        // If I'm part of this call and not already in a call UI session
+        if ((isRecipient || isCaller) && !activeCall && lastProcessedCallId.current !== doc.id) {
+          console.log(`[Signal Bridge] Call Detected: ${doc.id} | Incoming: ${isRecipient}`);
           
-          const isRecipient = data.recipientId === user.uid;
-          const isCaller = data.callerId === user.uid;
-          
-          if (!isRecipient && !isCaller) return;
-          if (lastProcessedCallId.current === change.doc.id) return;
-
           setActiveCall({
-            sessionId: change.doc.id,
+            sessionId: doc.id,
             callerId: data.callerId,
             callerName: isRecipient ? data.callerName : data.recipientName,
             callerAvatar: isRecipient ? data.callerAvatar : data.recipientAvatar,
@@ -116,13 +115,22 @@ export function GlobalSignalHandler() {
             NotificationManager.sendCallNotification(
               data.callerName || "অজ্ঞাত নাগরিক",
               data.type === 'video' ? "ভিডিও কল দিচ্ছেন..." : "অডিও কল দিচ্ছেন...",
-              change.doc.id
+              doc.id
             );
           }
           
-          lastProcessedCallId.current = change.doc.id;
+          lastProcessedCallId.current = doc.id;
         }
       });
+
+      // Cleanup if the active session document is removed or ended
+      if (activeCall) {
+        const activeDoc = snapshot.docs.find(d => d.id === activeCall.sessionId);
+        if (!activeDoc || activeDoc.data().status === 'ended') {
+          setActiveCall(null);
+          lastProcessedCallId.current = null;
+        }
+      }
     }, async (err) => {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
