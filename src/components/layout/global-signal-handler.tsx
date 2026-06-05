@@ -19,6 +19,8 @@ export function GlobalSignalHandler() {
   
   const processedCallIds = useRef<Set<string>>(new Set())
   const sensorLogged = useRef(false)
+  // Record the time when the handler was mounted to filter out old calls
+  const mountTime = useRef<number>(Date.now())
 
   useEffect(() => {
     if (!currentUser || !firestore || authLoading) return;
@@ -42,12 +44,23 @@ export function GlobalSignalHandler() {
       docs.forEach((data) => {
         const sessionId = data.id;
         
-        // Aggressive status check
+        // 1. If the call is already marked as ended, just clean up if it's currently showing
         if (data.status === 'ended') {
           if (activeCall?.sessionId === sessionId) {
              console.log(`[Signal Hub] Terminating UI for Session: ${sessionId}`);
              setActiveCall(null);
           }
+          processedCallIds.current.add(sessionId);
+          return;
+        }
+
+        // 2. Security Check: Only process calls that were created AFTER the app was opened
+        // This prevents old "ringing" sessions from 1 hour ago from popping up automatically.
+        const callTime = data.timestamp?.toMillis?.() || data.timestamp?.seconds * 1000 || 0;
+        // If the callTime is 0 or significantly before mountTime, ignore it.
+        // We allow a 5-second buffer for server-client clock sync drift.
+        if (callTime > 0 && callTime < mountTime.current - 5000) {
+          processedCallIds.current.add(sessionId);
           return;
         }
         
@@ -57,10 +70,10 @@ export function GlobalSignalHandler() {
         if (!isRecipient && !isCaller) return;
         if (processedCallIds.current.has(sessionId)) return;
 
-        // If a new "ringing" signal is detected, trigger the Sovereign HUD
+        // 3. Trigger Call HUD if status is strictly 'ringing'
         if (data.status === 'ringing') {
           if (!activeCall) {
-            console.warn(`[Signal Hub] SOVEREIGN SIGNAL DETECTED: ${sessionId} | Role: ${isRecipient ? 'RECIPIENT' : 'CALLER'}`);
+            console.warn(`[Signal Hub] NEW SOVEREIGN SIGNAL DETECTED: ${sessionId}`);
             
             const callPayload = {
               sessionId,
