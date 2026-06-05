@@ -1,7 +1,7 @@
 /**
- * @fileOverview Sovereign Mobile Bridge.
- * Synchronizes web events with Native Android Wrapper (WebView).
- * Phase 35.5: Added BackPress and Lifecycle hooks.
+ * @fileOverview Sovereign Mobile Bridge v2.0.
+ * Synchronizes web events with Native Android/iOS Wrappers (WebView).
+ * Phase 37.0: Added Deep Linking, Lifecycle Intelligence, and Advanced Haptics.
  */
 
 export const MobileBridge = {
@@ -11,34 +11,67 @@ export const MobileBridge = {
   init() {
     if (typeof window === 'undefined') return;
 
-    console.log("[Mobile Bridge] Initializing Imperial Handshake...");
+    console.log("[Mobile Bridge] Establishing Imperial Handshake v2.0...");
 
     // 1. Android Back Button Logic
     window.addEventListener('popstate', (event) => {
       console.log("[Mobile Bridge] Back Navigation Detected.");
-      // We can notify the Android Wrapper here if a bridge object exists
       if ((window as any).AndroidInterface) {
         (window as any).AndroidInterface.onBackPress();
       }
     });
 
-    // 2. Prevent Pull-to-Refresh in Standalone mode
-    document.addEventListener('touchmove', (e) => {
-      if ((window as any).navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
-        if (window.scrollY === 0 && (e as any).touches[0].screenY > (window as any).lastTouchY) {
-          // Pulling down at top
-          // e.preventDefault(); // Uncomment if pull-to-refresh is annoying
+    // 2. Deep Linking / External URL Handler
+    window.addEventListener('message', (event) => {
+      try {
+        const data = event.data;
+        if (data && data.type === 'SOVEREIGN_DEEP_LINK') {
+          this.handleDeepLink(data.path);
         }
-      }
-      (window as any).lastTouchY = (e as any).touches[0].screenY;
-    }, { passive: false });
+      } catch (e) {}
+    });
 
-    // 3. Status Bar Sync
-    this.updateStatusBar();
+    // 3. Lifecycle Visibility Tracker
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.onAppForeground();
+      } else {
+        this.onAppBackground();
+      }
+    });
+
+    // 4. Initial Hardware Sync
+    this.syncHardwareDNA();
   },
 
   /**
-   * Notifies the native wrapper about critical UI changes.
+   * Navigates the app based on external deep link signals.
+   */
+  handleDeepLink(path: string) {
+    console.log(`[Mobile Bridge] Deep Link Routing: ${path}`);
+    if (path.startsWith('/')) {
+      window.location.assign(path);
+    }
+  },
+
+  /**
+   * Executed when app returns to foreground.
+   */
+  onAppForeground() {
+    console.log("[Mobile Bridge] App Foregrounded. Re-validating Grid Sync...");
+    // Trigger any global refresh logic if needed
+    window.dispatchEvent(new CustomEvent('sovereign-foreground-sync'));
+  },
+
+  /**
+   * Executed when app goes to background.
+   */
+  onAppBackground() {
+    console.log("[Mobile Bridge] App Backgrounded. Securing Session...");
+  },
+
+  /**
+   * Updates the native status bar color.
    */
   updateStatusBar(color: string = '#05070a') {
     if ((window as any).AndroidInterface) {
@@ -47,11 +80,39 @@ export const MobileBridge = {
   },
 
   /**
-   * Triggers a native vibration pulse for SOS or Alerts.
+   * Triggers native haptic patterns for critical actions.
    */
-  vibrate(pattern: number[] = [100, 50, 100]) {
-    if (navigator.vibrate) {
-      navigator.vibrate(pattern);
+  triggerHaptic(type: 'SUCCESS' | 'WARNING' | 'ERROR' | 'SOS') {
+    if (!navigator.vibrate) return;
+
+    const patterns = {
+      SUCCESS: [50, 30, 50],
+      WARNING: [100, 50, 100],
+      ERROR: [200, 100, 200],
+      SOS: [500, 200, 500, 200, 500]
+    };
+
+    navigator.vibrate(patterns[type]);
+    
+    // Notify Native Interface
+    if ((window as any).AndroidInterface) {
+      (window as any).AndroidInterface.triggerHaptic(type);
     }
+  },
+
+  /**
+   * Syncs hardware-level metadata to the identity registry.
+   */
+  syncHardwareDNA() {
+    const metadata = {
+      userAgent: navigator.userAgent,
+      platform: (navigator as any).platform,
+      memory: (navigator as any).deviceMemory,
+      cores: navigator.hardwareConcurrency,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log("[Mobile Bridge] Hardware DNA Synced:", metadata);
+    localStorage.setItem('sovereign_hardware_dna', JSON.stringify(metadata));
   }
 };

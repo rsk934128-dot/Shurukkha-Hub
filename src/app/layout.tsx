@@ -25,7 +25,7 @@ export default function RootLayout({
       });
     }
 
-    // Initialize Android BackPress / Home Bridge
+    // Initialize Mobile Bridge v2.0
     MobileBridge.init();
   }, []);
 

@@ -10,6 +10,7 @@ import { DisasterStorage } from '@/lib/disaster-storage'
 import { WebRTCManager } from '@/lib/webrtc-signaling'
 import { Badge } from '@/components/ui/badge'
 import { useUser } from '@/firebase'
+import { MobileBridge } from '@/lib/mobile-bridge'
 
 export function SOSButton() {
   const { user } = useUser()
@@ -19,7 +20,7 @@ export function SOSButton() {
   
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
-  const webrtcRef = useRef<WebRTCManager | null>(null)
+  const webrtcRef = useRef<RTCPeerConnection | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
   
   const { toast } = useToast()
@@ -29,11 +30,11 @@ export function SOSButton() {
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     if (localStreamRef.current) {
-      WebRTCManager.stopMediaStream(localStreamRef.current);
+      localStreamRef.current.getTracks().forEach(t => t.stop());
       localStreamRef.current = null;
     }
     if (webrtcRef.current) {
-      webrtcRef.current.dispose();
+      webrtcRef.current.close();
       webrtcRef.current = null;
     }
     setIsCalling(false);
@@ -56,7 +57,11 @@ export function SOSButton() {
 
   const handleSOS = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setIsActivating(true)
+    setIsActivating(true);
+    
+    // Trigger Mobile Haptic for Crisis
+    MobileBridge.triggerHaptic('SOS');
+    
     let userLocation = null;
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -92,21 +97,14 @@ export function SOSButton() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: true, 
-        audio: WebRTCManager.getAudioConstraints() 
+        audio: true
       });
       localStreamRef.current = stream;
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      
-      webrtcRef.current = new WebRTCManager(activeSosId);
-      await webrtcRef.current.createCall(stream, (remote) => {
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = remote;
-        }
-      });
       toast({ title: "লাইভ ভিডিও HUD সক্রিয়" });
     } catch (e) {
       setIsCalling(false);
-      toast({ title: "ক্যামেরা ত্রুটি", variant: "destructive" });
+      toast({ title: "ক্যামেরা ত্রুটি", description: "হার্ডওয়্যার এক্সেস সম্ভব হয়নি।", variant: "destructive" });
     }
   }
 
