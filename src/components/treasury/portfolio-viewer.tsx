@@ -171,7 +171,7 @@ export function PortfolioViewer() {
                 <ScrollArea className="h-full">
                    {simLogs.map((log, i) => (
                      <p key={i} className="animate-in slide-in-from-left-1 mb-1">
-                       <span className="text-muted-foreground mr-1">></span> {log}
+                       <span className="text-muted-foreground mr-1">&gt;</span> {log}
                      </p>
                    ))}
                 </ScrollArea>
