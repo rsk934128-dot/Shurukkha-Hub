@@ -57,18 +57,27 @@ export function DispatcherConsole() {
   }, [selectedAlert, playAlertSound, toast]);
 
   const handleCall = async () => {
-    if (!selectedAlert || !user) return;
+    if (!selectedAlert || !user) {
+        toast({ title: "তথ্য অপর্যাপ্ত", description: "নাগরিক শনাক্ত করা যায়নি।", variant: "destructive" });
+        return;
+    }
     
-    // Generate a unique session ID for this specific call attempt
-    const sessionId = `call_recon_${selectedAlert.id}_${Date.now()}`;
+    // Use the reporter's actual ID from the SOS alert
+    const targetUserId = selectedAlert.reporterId;
+    if (!targetUserId || targetUserId === 'anonymous_citizen') {
+        toast({ title: "কল সম্ভব নয়", description: "নাগরিকের পরিচয় পাওয়া যায়নি।", variant: "destructive" });
+        return;
+    }
+
+    const sessionId = `call_recon_${Date.now()}_${user.uid.substring(0, 5)}`;
     const sessionRef = doc(db, 'webrtc_sessions', sessionId);
     
     try {
       await setDoc(sessionRef, {
         callerId: user.uid,
-        callerName: "Command Center",
+        callerName: "Imperial Command",
         callerAvatar: user.photoURL || '',
-        recipientId: selectedAlert.reporterId,
+        recipientId: targetUserId,
         recipientName: selectedAlert.location || 'Citizen',
         recipientAvatar: '',
         status: 'ringing',
@@ -77,6 +86,7 @@ export function DispatcherConsole() {
         offer: null,
         answer: null
       });
+      console.warn(`[Command] Signal Dispatched to: ${targetUserId}`);
       toast({ title: "ইম্পেরিয়াল সিগন্যাল পাঠানো হচ্ছে..." });
     } catch (e) {
       toast({ title: "Signal Link Failure", variant: "destructive" });
