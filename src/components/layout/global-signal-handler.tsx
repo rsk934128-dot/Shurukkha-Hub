@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -15,8 +14,8 @@ import { MobileBridge } from '@/lib/mobile-bridge'
 
 /**
  * @fileOverview Global Signal Handler for Shurukkha Hub.
- * Manages real-time incoming and outgoing call detection across the sovereign grid.
- * Phase 35.5: Enhanced Signal Sensitivity and Z-Index Dominance.
+ * Manages real-time incoming and outgoing call detection with identity and missed call support.
+ * Phase 35.8: Instant Call and Missed Call Logic.
  */
 
 export function GlobalSignalHandler() {
@@ -26,33 +25,39 @@ export function GlobalSignalHandler() {
   
   const processedCallIds = useRef<Set<string>>(new Set())
   const sensorLogged = useRef(false)
-  const mountTime = useRef(Date.now())
 
   useEffect(() => {
     if (!currentUser || !firestore || authLoading) return;
 
     console.log(`[Signal Hub] Sovereign Monitor ACTIVE for: ${currentUser.email}`);
 
-    // High-availability query for WebRTC sessions
+    // High-availability query for WebRTC sessions involving the current user
     const sessionsRef = collection(db, 'webrtc_sessions');
     
-    // Listen to collection changes.
+    // Listen to collection changes
     const unsubscribeCalls = onSnapshot(sessionsRef, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         const data = change.doc.data() as any;
         const sessionId = change.doc.id;
 
-        // 1. Identification: Am I the recipient or the caller?
+        // 1. Am I the recipient or the caller?
         const isRecipient = data.recipientId === currentUser.uid;
         const isCaller = data.callerId === currentUser.uid;
         
         if (!isRecipient && !isCaller) return;
 
-        // 2. Handle Terminations
+        // 2. Handle Terminations & Missed Calls
         if (data.status === 'ended') {
           if (activeCall?.sessionId === sessionId) {
             console.log(`[Signal Hub] Call Session Terminated: ${sessionId}`);
             setActiveCall(null);
+          } else if (isRecipient && !processedCallIds.current.has(sessionId)) {
+            // Log as missed call if we haven't processed this session yet
+            NotificationManager.sendNotification(
+              `মিসড কল: ${data.callerName || "অজ্ঞাত"}`,
+              `${data.type === 'video' ? 'ভিডিও কল' : 'অডিও কল'} মিস করেছেন।`,
+              `missed-${sessionId}`
+            );
           }
           processedCallIds.current.add(sessionId);
           return;
@@ -60,21 +65,10 @@ export function GlobalSignalHandler() {
 
         // 3. Trigger for Ringing Calls
         if (data.status === 'ringing') {
-          // If we already processed this session as ended, ignore it
           if (processedCallIds.current.has(sessionId)) return;
-
-          // If this session is already active in our UI, don't re-trigger
           if (activeCall && activeCall.sessionId === sessionId) return;
 
-          // Force identify as "new" if it has no timestamp yet (optimistic) 
-          // or if it's within the last 5 minutes (to avoid stale bombardment)
-          const callTimestamp = data.timestamp?.toMillis ? data.timestamp.toMillis() : Date.now();
-          if (Math.abs(Date.now() - callTimestamp) > 300000) {
-            console.log(`[Signal Hub] Stale session ignored (>5m): ${sessionId}`);
-            return;
-          }
-
-          console.warn(`[Signal Hub] COMMAND SIGNAL DETECTED: ${sessionId} for ${isRecipient ? 'INCOMING' : 'OUTGOING'}`);
+          console.warn(`[Signal Hub] COMMAND SIGNAL DETECTED: ${sessionId}`);
           
           const callPayload = {
             sessionId,
@@ -85,11 +79,12 @@ export function GlobalSignalHandler() {
             isIncoming: isRecipient
           };
 
-          // FORCE UI OPEN - High priority state update
+          // FORCE UI OPEN
           setActiveCall(callPayload);
           
           if (isRecipient) {
             MobileBridge.triggerHaptic('SOS');
+            // Background notification
             NotificationManager.sendCallNotification(
               data.callerName || "অজ্ঞাত নাগরিক",
               data.type === 'video' ? "ভিডিও কল দিচ্ছে..." : "অডিও কল দিচ্ছে...",
