@@ -32,6 +32,7 @@ export class WebRTCManager {
   private isDisposed = false;
   private audioProcessor: AudioProcessor = new AudioProcessor();
   private unsubscribers: (() => void)[] = [];
+  private localTracks: MediaStreamTrack[] = [];
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
@@ -65,6 +66,9 @@ export class WebRTCManager {
     const finalStream = new MediaStream();
     isolatedStream.getAudioTracks().forEach(track => finalStream.addTrack(track));
     originalStream.getVideoTracks().forEach(track => finalStream.addTrack(track));
+    
+    // Track these for cleanup
+    this.localTracks = finalStream.getTracks();
     
     return finalStream;
   }
@@ -266,13 +270,20 @@ export class WebRTCManager {
   }
 
   dispose() {
-    console.log("[WebRTC] Disposing session resources...");
+    console.log("[WebRTC] Executing high-priority resource disposal...");
     this.isDisposed = true;
     this.audioProcessor.dispose();
     
-    // Clear listeners
+    // Clear all snapshot listeners
     this.unsubscribers.forEach(unsub => unsub());
     this.unsubscribers = [];
+
+    // Stop all local tracks associated with this manager
+    this.localTracks.forEach(track => {
+      track.stop();
+      console.log(`[WebRTC] Internal Track Stopped: ${track.kind}`);
+    });
+    this.localTracks = [];
 
     if (this.peerConnection) {
       this.peerConnection.onicecandidate = null;
@@ -280,16 +291,19 @@ export class WebRTCManager {
       this.peerConnection.onconnectionstatechange = null;
       this.peerConnection.onsignalingstatechange = null;
       
-      // Stop all tracks being sent to the remote
+      // Force stop all senders
       this.peerConnection.getSenders().forEach(sender => {
-        if (sender.track) sender.track.stop();
+        if (sender.track) {
+          sender.track.stop();
+          console.log(`[WebRTC] Sender Track Force Stopped: ${sender.track.kind}`);
+        }
       });
 
       this.peerConnection.close();
       this.peerConnection = null;
     }
 
-    // Stop remote stream tracks
+    // Stop remote stream tracks to release buffer
     this.remoteStream.getTracks().forEach(track => track.stop());
     
     this.candidateQueue = [];

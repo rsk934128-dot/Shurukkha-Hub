@@ -12,8 +12,6 @@ import { doc, updateDoc, onSnapshot, deleteDoc, getDoc, collection, getDocs } fr
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
-import { errorEmitter } from '@/firebase/error-emitter'
-import { FirestorePermissionError } from '@/firebase/errors'
 
 interface CallOverlayProps {
   callData: {
@@ -31,7 +29,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const [status, setStatus] = useState<'ringing' | 'connected' | 'ended' | 'idle'>('idle')
   const [isMicMuted, setIsMicMuted] = useState(false)
   const [isSpeakerOn, setIsSpeakerOn] = useState(true)
-  const [isCamOff, setIsCamOff] = useState(false)
   const [timer, setTimer] = useState(0)
   
   const localVideoRef = useRef<HTMLVideoElement>(null)
@@ -59,12 +56,13 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   }, [playAlertSound, stopRingtone])
 
   const cleanupStreams = useCallback(() => {
-    console.log("[Signal Hub] Termination Protocol: Stopping all hardware tracks...");
+    console.log("[Imperial Cleanup] Releasing all hardware resources...");
     
+    // Stop all local tracks (Camera/Mic)
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => {
         track.stop();
-        console.log(`[Signal Hub] Track Stopped: ${track.kind}`);
+        console.log(`[Hardware] Track Stopped: ${track.kind}`);
       });
       localStreamRef.current = null;
     }
@@ -72,8 +70,11 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     
-    webrtcRef.current?.dispose();
-    webrtcRef.current = null;
+    // Dispose WebRTC Peer Connection
+    if (webrtcRef.current) {
+      webrtcRef.current.dispose();
+      webrtcRef.current = null;
+    }
     
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -86,7 +87,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     if (isTerminatingRef.current) return;
     isTerminatingRef.current = true;
     
-    console.log(`[Signal Hub] Hanging up session: ${callData?.sessionId}`);
+    console.log(`[Signal Hub] Terminating session: ${callData?.sessionId}`);
     stopRingtone();
     setStatus('ended');
 
@@ -96,10 +97,9 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     if (callData && shouldUpdateServer) {
       const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
       try {
-        // Mark as ended to notify the other side
         await updateDoc(sessionRef, { status: 'ended' });
         
-        // Comprehensive Grid Cleanup
+        // Comprehensive Grid Cleanup after a delay
         setTimeout(async () => {
           try {
             const candidatesRef = collection(sessionRef, 'ice_candidates');
@@ -108,11 +108,10 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
               await deleteDoc(doc(candidatesRef, cDoc.id));
             }
             await deleteDoc(sessionRef);
-            console.log("[Signal Hub] Session doc purged from grid.");
           } catch (e) {}
         }, 3000);
       } catch (err: any) {
-        console.error("[Signal Hub] Failed to push end signal", err);
+        console.error("[Signal Hub] Termination sync failed", err);
       }
     }
 
@@ -147,10 +146,18 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       setStatus('connected');
       timerRef.current = setInterval(() => setTimer(prev => prev + 1), 1000);
     } catch (e) {
-      console.error("Acceptance failure", e);
+      console.error("Call acceptance fault", e);
       handleEndCall(true);
     }
   }
+
+  // Ensure component cleanup on unmount
+  useEffect(() => {
+    return () => {
+      console.log("[Imperial Cleanup] Component Unmounting - Finalizing Release...");
+      cleanupStreams();
+    }
+  }, [cleanupStreams]);
 
   useEffect(() => {
     if (callData) {
@@ -162,7 +169,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       const unsubscribe = onSnapshot(sessionRef, (snap) => {
         if (!snap.exists()) {
           if (status !== 'idle' && status !== 'ended') {
-            console.log("[Signal Hub] Session doc vanished. Cleaning up.");
             handleEndCall(false);
           }
           return;
@@ -174,7 +180,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
           if (!timerRef.current) timerRef.current = setInterval(() => setTimer(prev => prev + 1), 1000);
         }
         if (data.status === 'ended' && status !== 'ended') {
-          console.log("[Signal Hub] Remote end detected.");
           handleEndCall(false);
         }
       });
@@ -197,7 +202,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
               }
             });
           } catch (e) { 
-            console.error("[Signal Hub] Hardware initiation failure", e);
             handleEndCall(true); 
           }
         };
@@ -206,10 +210,9 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
       return () => {
         unsubscribe();
-        cleanupStreams();
       };
     }
-  }, [callData?.sessionId, status, callData?.isIncoming, startRingtone, cleanupStreams, handleEndCall, stopRingtone]);
+  }, [callData?.sessionId, status, callData?.isIncoming, startRingtone, handleEndCall, stopRingtone]);
 
   const formatTime = (s: number) => {
     const mins = Math.floor(s / 60);
@@ -308,17 +311,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
           <div className={`absolute bottom-32 right-4 md:top-6 md:right-6 w-32 md:w-48 aspect-video bg-black rounded-2xl border border-white/20 shadow-2xl overflow-hidden z-20 ${status === 'connected' && callData?.type === 'video' ? 'block' : 'hidden'}`}>
              <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
              <Badge className="absolute top-2 left-2 bg-black/40 text-[7px] uppercase">You</Badge>
-          </div>
-
-          <div className="absolute top-6 left-6 flex flex-col gap-2 z-30">
-            <Badge variant="outline" className="border-accent/40 text-accent bg-black/60 text-[8px] uppercase tracking-widest gap-2">
-              <Activity size={10} className="animate-pulse" /> SOVEREIGN_V2
-            </Badge>
-            {status === 'connected' && (
-              <div className="bg-black/40 px-2 py-1 rounded text-[8px] text-white/40 flex items-center gap-2">
-                <ShieldCheck size={8} className="text-primary" /> RSA_V2_ENCRYPTED
-              </div>
-            )}
           </div>
 
           {status === 'connected' && (

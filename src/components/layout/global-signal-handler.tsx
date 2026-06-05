@@ -52,7 +52,7 @@ export function GlobalSignalHandler() {
   useEffect(() => {
     if (!user || !firestore) return;
 
-    // Messaging Listener
+    // Messaging Listener - Filtered for User
     const messagesRef = collection(db, "messages");
     const msgQuery = query(
       messagesRef,
@@ -83,11 +83,12 @@ export function GlobalSignalHandler() {
       }
     });
 
-    // WebRTC Signaling Listener
+    // WebRTC Signaling Listener - Improved Filtering and State Locking
     const sessionsRef = collection(db, 'webrtc_sessions');
     const callsQ = query(
       sessionsRef,
-      where('status', 'in', ['ringing', 'connected', 'ended'])
+      where('status', 'in', ['ringing', 'connected', 'ended']),
+      limit(50)
     );
 
     const unsubscribeCalls = onSnapshot(callsQ, (snapshot) => {
@@ -96,13 +97,15 @@ export function GlobalSignalHandler() {
         const isRecipient = data.recipientId === user.uid;
         const isCaller = data.callerId === user.uid;
         
-        if ((isRecipient || isCaller)) {
-          // If the call is ringing and we haven't processed this specific ID yet, and it's not in the terminated list
-          if (data.status === 'ringing' && !activeCall && lastProcessedCallId.current !== doc.id && !terminatedCallIds.current.has(doc.id)) {
-            console.log(`[Signal Bridge] Call Detected: ${doc.id} | Incoming: ${isRecipient}`);
+        if (isRecipient || isCaller) {
+          const sessionId = doc.id;
+
+          // Critical Protection: Prevent multiple overlays for the same active or terminated session
+          if (data.status === 'ringing' && !activeCall && lastProcessedCallId.current !== sessionId && !terminatedCallIds.current.has(sessionId)) {
+            console.log(`[Signal Bridge] Call Detected: ${sessionId} | Role: ${isRecipient ? 'Recipient' : 'Caller'}`);
             
             setActiveCall({
-              sessionId: doc.id,
+              sessionId,
               callerId: data.callerId,
               callerName: isRecipient ? data.callerName : data.recipientName,
               callerAvatar: isRecipient ? data.callerAvatar : data.recipientAvatar,
@@ -114,28 +117,28 @@ export function GlobalSignalHandler() {
               NotificationManager.sendCallNotification(
                 data.callerName || "অজ্ঞাত নাগরিক",
                 data.type === 'video' ? "ভিডিও কল দিচ্ছেন..." : "অডিও কল দিচ্ছেন...",
-                doc.id
+                sessionId
               );
             }
-            lastProcessedCallId.current = doc.id;
+            lastProcessedCallId.current = sessionId;
           } 
-          // If the call was ended remotely, cleanup and mark as terminated to prevent re-ring
-          else if (data.status === 'ended' && (activeCall?.sessionId === doc.id || lastProcessedCallId.current === doc.id)) {
-            if (activeCall) {
-              console.log("[Signal Bridge] Session termination signal received.");
-              terminatedCallIds.current.add(doc.id);
+          
+          // Remote termination logic
+          else if (data.status === 'ended' && (activeCall?.sessionId === sessionId || lastProcessedCallId.current === sessionId)) {
+            if (!terminatedCallIds.current.has(sessionId)) {
+              console.log(`[Signal Bridge] Remote termination signal for ${sessionId}.`);
+              terminatedCallIds.current.add(sessionId);
               setActiveCall(null);
-              // Do NOT reset lastProcessedCallId to null here, as the doc might still linger in Firestore
             }
           }
         }
       });
 
-      // Cleanup local state if the doc is removed from Firestore
+      // Cleanup local state if doc is purged from grid
       if (activeCall) {
         const activeDoc = snapshot.docs.find(d => d.id === activeCall.sessionId);
-        if (!activeDoc) {
-          console.log("[Signal Bridge] Active session doc removed from grid.");
+        if (!activeDoc && !terminatedCallIds.current.has(activeCall.sessionId)) {
+          console.log("[Signal Bridge] Active session doc purged from grid.");
           terminatedCallIds.current.add(activeCall.sessionId);
           setActiveCall(null);
         }
@@ -160,8 +163,10 @@ export function GlobalSignalHandler() {
       <CallOverlay 
         callData={activeCall} 
         onClose={() => {
-          if (activeCall) terminatedCallIds.current.add(activeCall.sessionId);
-          setActiveCall(null);
+          if (activeCall) {
+            terminatedCallIds.current.add(activeCall.sessionId);
+            setActiveCall(null);
+          }
         }} 
       />
       <AlertCenter />
