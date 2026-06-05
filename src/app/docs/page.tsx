@@ -115,7 +115,7 @@ export default function DocumentationHub() {
                 placeholder="Search Docs..." 
                 className="pl-10 h-11 bg-background/50 border-white/10 rounded-xl text-xs"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
               />
             </div>
 
@@ -236,9 +236,11 @@ export default function DocumentationHub() {
                   </div>
                   <h4 className="text-xl font-headline font-bold uppercase tracking-tight">Anycast Routing</h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">আপনার রিকোয়েস্ট স্বয়ংক্রিয়ভাবে নিকটতম ৪২টি নোডের একটিতে পৌঁছে যায়, যা ১ মিলি-সেকেন্ডের কম ল্যাটেন্সি নিশ্চিত করে।</p>
-                  <Button variant="link" className="p-0 text-accent text-[10px] uppercase font-bold tracking-widest gap-2">
-                    Node Network Map <ChevronRight size={14} />
-                  </Button>
+                  <Link href="/docs/network-map">
+                    <Button variant="link" className="p-0 text-accent text-[10px] uppercase font-bold tracking-widest gap-2">
+                      Node Network Map <ChevronRight size={14} />
+                    </Button>
+                  </Link>
                </Card>
             </section>
 
