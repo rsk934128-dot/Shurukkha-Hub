@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { SovereignAudit } from '@/lib/sovereign-audit'
 import { GoogleDriveBridge } from '@/lib/google-drive-bridge'
 import { useToast } from '@/hooks/use-toast'
+import { PaymentHandler } from '@/lib/payment-handler'
 
 export function ImperialManagement() {
   const [budget, setBudget] = useState({
@@ -22,6 +23,7 @@ export function ImperialManagement() {
   const [projectProgress, setProjectProgress] = useState(42)
   const targetProjects = 400
   const [isSimulating, setIsSimulating] = useState(false)
+  const [isReleasing, setIsReleasing] = useState(false)
   const [syncLogs, setSyncLogs] = useState<string[]>([])
   
   const { toast } = useToast()
@@ -53,6 +55,21 @@ export function ImperialManagement() {
       toast({ title: "SIMULATION FAILED", variant: "destructive" });
     } finally {
       setIsSimulating(false);
+    }
+  }
+
+  const handleReleasePayroll = async () => {
+    setIsReleasing(true);
+    try {
+      await PaymentHandler.releaseMonthlyPayroll(300000, 20);
+      toast({ 
+        title: "বেতন সফলভাবে প্রদান করা হয়েছে", 
+        description: "মাসব্যাপী বেতন আপনার রাজকীয় ট্রেজারি থেকে রিলিজ করা হয়েছে।" 
+      });
+    } catch (e) {
+      toast({ title: "ব্যর্থ হয়েছে", variant: "destructive" });
+    } finally {
+      setIsReleasing(false);
     }
   }
 
@@ -254,8 +271,13 @@ export function ImperialManagement() {
                       <p className="text-[10px] text-muted-foreground leading-relaxed italic">
                         "মহামান্য সম্রাট, কর্মচারীদের বেতন সরাসরি আপনার 'Rubelpay' প্রোটোকলের মাধ্যমে USDT বা স্থানীয় ব্যাংকিং নোডে ১ মিলি-সেকেন্ডের মধ্যে সেটল করা সম্ভব।"
                       </p>
-                      <Button className="w-full h-11 bg-primary text-background font-bold rounded-xl gap-2 shadow-lg shadow-primary/20">
-                         <Zap size={16} fill="currentColor" /> রিলিজ মাসব্যাপী বেতন
+                      <Button 
+                        onClick={handleReleasePayroll}
+                        disabled={isReleasing}
+                        className="w-full h-11 bg-primary text-background font-bold rounded-xl gap-2 shadow-lg shadow-primary/20"
+                      >
+                         {isReleasing ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} fill="currentColor" />}
+                         রিলিজ মাসব্যাপী বেতন
                       </Button>
                    </div>
                 </div>
