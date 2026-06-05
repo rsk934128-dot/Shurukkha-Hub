@@ -64,9 +64,11 @@ export class WebRTCManager {
   static stopMediaStream(stream: MediaStream | null) {
     if (!stream) return;
     stream.getTracks().forEach(track => {
-      track.enabled = false;
-      track.stop();
-      console.log(`[Hardware Purge] Static Stop: ${track.kind}`);
+      try {
+        track.enabled = false;
+        track.stop();
+        console.log(`[Imperial Purge] Static Hardware Kill: ${track.kind}`);
+      } catch (e) {}
     });
   }
 
@@ -291,29 +293,39 @@ export class WebRTCManager {
   }
 
   dispose() {
-    console.warn("[WebRTC] Executing high-priority hardware purge protocol...");
+    console.warn("[Imperial Dead-Stop] Executing total hardware and signaling purge...");
     this.isDisposed = true;
     
-    // 1. Force-stop all registered tracks
+    // 1. Force-stop all registered tracks from the trackedTracks Set
     this.trackedTracks.forEach(track => {
       try {
         track.enabled = false;
         track.stop();
-        console.log(`[Hardware] Track Terminated: ${track.kind}`);
+        console.log(`[Purge Engine] Track Terminated: ${track.kind}`);
       } catch (e) {}
     });
     this.trackedTracks.clear();
 
-    // 2. Dispose processors
+    // 2. Dispose processors and cleanup streams
     this.audioProcessor.dispose();
     
-    // 3. Cleanup Firebase subscriptions
+    // 3. Stop the remote stream tracks explicitly
+    if (this.remoteStream) {
+      this.remoteStream.getTracks().forEach(track => {
+        try {
+          track.enabled = false;
+          track.stop();
+        } catch (e) {}
+      });
+    }
+
+    // 4. Cleanup Firebase subscriptions
     this.unsubscribers.forEach(unsub => {
       try { unsub(); } catch(e) {}
     });
     this.unsubscribers = [];
 
-    // 4. Close Peer Connection and stop senders
+    // 5. Close Peer Connection and stop all associated senders/receivers
     if (this.peerConnection) {
       try {
         this.peerConnection.getSenders().forEach(sender => {
@@ -322,18 +334,19 @@ export class WebRTCManager {
             sender.track.stop();
           }
         });
+        this.peerConnection.getReceivers().forEach(receiver => {
+          if (receiver.track) {
+            receiver.track.enabled = false;
+            receiver.track.stop();
+          }
+        });
         this.peerConnection.close();
       } catch(e) {}
       this.peerConnection = null;
     }
 
-    // 5. Hard stop the remote stream tracks
-    this.remoteStream.getTracks().forEach(track => {
-      track.enabled = false;
-      track.stop();
-    });
-    
     this.candidateQueue = [];
     this.remoteStream = new MediaStream();
+    console.log("[Imperial Dead-Stop] Cleanup cycle complete. All hardware released.");
   }
 }

@@ -23,29 +23,29 @@ export function SOSButton() {
   const { toast } = useToast()
 
   /**
-   * AGGRESSIVE HARDWARE PURGE
+   * CRITICAL: Aggressive hardware purge for SOS grid.
    */
   const cleanupStreams = () => {
     console.warn("[SOS Grid] Executing high-priority hardware resource purge...");
     
+    // 1. Reset video UI
+    if (localVideoRef.current) localVideoRef.current.srcObject = null;
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+
+    // 2. Kill local tracks
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => {
-        track.enabled = false;
-        track.stop();
-        console.log(`[SOS Hardware] Track Force-Stopped: ${track.kind}`);
-      });
+      WebRTCManager.stopMediaStream(localStreamRef.current);
       localStreamRef.current = null;
     }
     
-    if (localVideoRef.current) localVideoRef.current.srcObject = null;
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-    
+    // 3. Dispose manager
     if (webrtcRef.current) {
       webrtcRef.current.dispose();
       webrtcRef.current = null;
     }
     
     setIsCalling(false);
+    console.log("[SOS Grid] Purge success.");
   }
 
   useEffect(() => {

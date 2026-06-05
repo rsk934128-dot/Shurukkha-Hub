@@ -58,23 +58,25 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
    * CRITICAL: Aggressive hardware resource release.
    */
   const cleanupStreams = useCallback(() => {
-    console.warn("[Imperial Cleanup] Initiating global hardware resource purge...");
+    console.warn("[Imperial Purge] Initiating atomic hardware resource purge...");
     
-    // 1. Stop all tracks in the local stream explicitly
+    // 1. Force video elements to detach from their source streams immediately
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+      localVideoRef.current.load(); // Forces UI reset
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+      remoteVideoRef.current.load();
+    }
+
+    // 2. Kill all local stream tracks if still lingering
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => {
-        track.enabled = false;
-        track.stop();
-        console.log(`[Hardware] Local Track Force-Stopped: ${track.kind}`);
-      });
+      WebRTCManager.stopMediaStream(localStreamRef.current);
       localStreamRef.current = null;
     }
 
-    // 2. Clear video source elements
-    if (localVideoRef.current) localVideoRef.current.srcObject = null;
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-    
-    // 3. Dispose the WebRTC Manager which stops all tracked tracks
+    // 3. Dispose the WebRTC Manager which stops all tracked tracks and closes PeerConnection
     if (webrtcRef.current) {
       webrtcRef.current.dispose();
       webrtcRef.current = null;
@@ -86,25 +88,27 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       timerRef.current = null;
     }
     stopRingtone();
+    console.log("[Imperial Purge] Hardware resource release complete.");
   }, [stopRingtone])
 
   const handleEndCall = useCallback(async (shouldUpdateServer = true) => {
     if (isTerminatingRef.current) return;
     isTerminatingRef.current = true;
     
-    console.warn(`[Signal Hub] TERMINATING_SESSION: ${callData?.sessionId}`);
+    console.warn(`[Termination] Terminating session: ${callData?.sessionId}`);
     stopRingtone();
     setStatus('ended');
 
-    // FORCE CLEANUP IMMEDIATELY
+    // 1. EXECUTE AGGRESSIVE HARDWARE KILL IMMEDIATELY
     cleanupStreams();
 
+    // 2. Sync with the grid
     if (callData && shouldUpdateServer) {
       const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
       try {
         await updateDoc(sessionRef, { status: 'ended' });
         
-        // Brief delay before deleting to allow remote side to detect 'ended'
+        // 3. Brief delay before deletion for grid stability
         setTimeout(async () => {
           try {
             const candidatesRef = collection(sessionRef, 'ice_candidates');
@@ -113,19 +117,20 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
               await deleteDoc(doc(candidatesRef, cDoc.id));
             }
             await deleteDoc(sessionRef);
-            console.log(`[Signal Hub] GRID_CLEANUP_SUCCESS: ${callData.sessionId}`);
+            console.log(`[Signal Hub] Grid cleanup success for ${callData.sessionId}`);
           } catch (e) {}
-        }, 1500);
+        }, 1000);
       } catch (err: any) {
         console.error("[Signal Hub] Sync fault during termination", err);
       }
     }
 
-    // Close UI
+    // 4. Reset UI state and close dialog
     setTimeout(() => {
       onClose();
       isTerminatingRef.current = false;
       setStatus('idle');
+      setTimer(0);
     }, 500);
   }, [callData, cleanupStreams, onClose, stopRingtone])
 
