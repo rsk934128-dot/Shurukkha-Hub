@@ -2,6 +2,7 @@
  * @fileOverview Sovereign Open Banking Adapter.
  * Implements FAPI (Financial-grade API) standards and Consent Management.
  * Part of Phase 33.5: The Financial Interoperability Layer.
+ * Updated: Added ISO 20022 message formatting.
  */
 
 import { IntegrationBridge } from './integration-bridge';
@@ -44,18 +45,31 @@ export const OpenBankingAdapter = {
 
   /**
    * Maps local transaction data to Open Banking Standard (ISO 20022 style).
+   * pain.001.001.03 style structure
    */
-  formatTransaction: (data: any) => {
+  formatISO20022Message: (data: { txnId: string, amount: number, currency: string, recipient: string }) => {
     return {
-      MsgId: `MSG-${Date.now()}`,
-      CreDtTm: new Date().toISOString(),
-      InstgAgt: 'SHURUKKHA_HUB_CENTRAL',
-      TxId: data.txnId,
-      Amt: {
-        InstdAmt: data.amount,
-        Ccy: data.currency || 'USD'
+      GrpHdr: {
+        MsgId: `MSG-${Date.now()}`,
+        CreDtTm: new Date().toISOString(),
+        NbOfTxs: 1,
+        CtrlSum: data.amount,
+        InitgPty: { Nm: 'SHURUKKHA_HUB_CENTRAL' }
       },
-      Purity: 'VERIFIED_IMPERIAL'
+      PmtInf: {
+        PmtInfId: data.txnId,
+        PmtMtd: 'TRF',
+        PmtTpInf: { SvcLvl: { Cd: 'SEPA' } },
+        Dbtr: { Nm: 'Imperial Treasury Vault' },
+        Cdtr: { Nm: data.recipient },
+        Amt: {
+          InstdAmt: {
+            _value: data.amount,
+            _currency: data.currency
+          }
+        },
+        Purity: 'VERIFIED_IMPERIAL'
+      }
     };
   }
 };

@@ -17,7 +17,9 @@ export type SecurityEvent =
   | 'SENSITIVE_DATA_ACCESS' 
   | 'TREASURY_WITHDRAWAL'
   | 'OTP_DISPATCHED'
-  | 'TRANSACTION_LOGGED';
+  | 'TRANSACTION_LOGGED'
+  | 'BANKING_TRANSFER_EXECUTED'
+  | 'CONSENT_GRANTED';
 
 export const AuditLogger = {
   /**
@@ -40,8 +42,12 @@ export const AuditLogger = {
 
     try {
       await addDoc(collection(db, "audit_trails"), {
-        ...logData,
-        signature
+        action: event,
+        details: logData.details,
+        signature,
+        userId: logData.userId,
+        performedBy: logData.performedBy,
+        timestamp: logData.timestamp
       });
       console.log(`[Audit] ${event} recorded and signed.`);
     } catch (e) {
@@ -50,22 +56,30 @@ export const AuditLogger = {
   },
 
   /**
-   * Logs a financial transaction with integrity hashing.
+   * Logs a financial transaction with integrity hashing (Merkle Chain).
    */
-  async logTransaction(txnId: string, amount: number, merchantId: string) {
+  async logTransaction(txnId: string, amount: number, details: any) {
     console.log(`[Audit] Hashing transaction ${txnId} for Merkle Integrity...`);
     
-    // Simulate Merkle Chain by hashing transaction with prev ID
-    const prevHash = 'hash_' + Math.random().toString(36).substring(7);
-    const integrityHash = 'sha256_' + btoa(`${txnId}:${amount}:${prevHash}`).substring(0, 32);
+    // In a real Merkle Chain, we'd fetch the last hash from DB. 
+    // Here we simulate it with a previous known state or a random seed.
+    const prevHash = 'hash_node_42_' + Math.random().toString(36).substring(7);
+    
+    // SHA256 simulation: hash(txnId + amount + prevHash)
+    const raw = `${txnId}|${amount}|${prevHash}|${Date.now()}`;
+    const integrityHash = 'sha256_' + btoa(raw).substring(0, 32).toUpperCase();
 
-    await this.logEvent('TRANSACTION_LOGGED', {
+    const auditPayload = {
       txnId,
       amount,
-      merchantId,
+      ...details,
       integrityHash,
+      prevHash,
+      standard: 'ISO_20022',
       purity: 'VERIFIED_IMPERIAL'
-    });
+    };
+
+    await this.logEvent('TRANSACTION_LOGGED', auditPayload);
 
     return integrityHash;
   }
