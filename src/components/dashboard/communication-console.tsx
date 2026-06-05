@@ -78,7 +78,6 @@ export function CommunicationConsole() {
 
     const currentChatId = CommunicationOrchestrator.getChatId(user.uid, selectedContact.id);
 
-    // Filter by chatId - index not required for simple where if small collection
     const q = query(
       collection(db, "messages"),
       where("chatId", "==", currentChatId),
@@ -86,7 +85,6 @@ export function CommunicationConsole() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      // Robust client-side sorting that handles serverTimestamp() null state (pending)
       const chatMsgs = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() } as Message))
         .sort((a, b) => {
@@ -270,7 +268,7 @@ export function CommunicationConsole() {
           {selectedContact ? (
             <>
               <ScrollArea ref={scrollRef} className="flex-1 p-4 md:p-6">
-                <div className="space-y-6">
+                <div className="flex flex-col gap-4">
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/30 animate-pulse">
                       <Signal size={64} className="mb-4" />
@@ -280,18 +278,18 @@ export function CommunicationConsole() {
                     messages.map((msg, i) => {
                       const isMe = msg.senderId === user?.uid;
                       return (
-                        <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}>
-                          <div className={`max-w-[85%] md:max-w-[75%] flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-1`}>
-                            <div className={`p-3 rounded-2xl border text-[12px] md:text-[13px] shadow-lg ${isMe ? 'bg-primary text-background border-primary/20 rounded-tr-none' : 'bg-muted/80 backdrop-blur-md border-white/10 rounded-tl-none'}`}>
+                        <div key={msg.id || i} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}>
+                          <div className={`max-w-[85%] md:max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-1.5`}>
+                            <div className={`p-3.5 px-4 rounded-[1.5rem] border text-[13px] md:text-[14px] shadow-sm leading-relaxed ${isMe ? 'bg-primary text-background border-primary/20 rounded-br-none' : 'bg-muted/80 backdrop-blur-md border-white/10 rounded-tl-none'}`}>
                               {msg.type === 'file' ? (
                                 <div className="flex items-center gap-3">
                                   <FileText size={18} className={isMe ? "text-background" : "text-accent"} />
-                                  <a href={msg.fileUrl} target="_blank" className="hover:underline font-bold text-[9px] md:text-[10px] uppercase">Download File</a>
+                                  <a href={msg.fileUrl} target="_blank" className="hover:underline font-bold text-[10px] md:text-[11px] uppercase tracking-wide">Download File</a>
                                 </div>
                               ) : msg.content}
                             </div>
-                            <span className="text-[7px] md:text-[8px] font-mono text-muted-foreground opacity-50 px-1">
-                              {msg.timestamp?.toMillis ? new Date(msg.timestamp.toMillis()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending...'}
+                            <span className="text-[8px] font-mono text-muted-foreground opacity-60 px-1 uppercase tracking-tighter">
+                              {msg.timestamp?.toMillis ? new Date(msg.timestamp.toMillis()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Encrypting...'}
                             </span>
                           </div>
                         </div>
@@ -318,7 +316,7 @@ export function CommunicationConsole() {
                     disabled={isSending}
                     className="flex-1 bg-transparent border-none focus-visible:ring-0 text-[12px] md:text-[13px] h-8 md:h-10"
                   />
-                  <Button onClick={handleSend} disabled={!input.trim() || isSending} className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-primary text-background shadow-lg">
+                  <Button onClick={handleSend} disabled={!input.trim() || isSending} className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-primary text-background shadow-lg transition-transform active:scale-95">
                     {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                   </Button>
                 </div>
