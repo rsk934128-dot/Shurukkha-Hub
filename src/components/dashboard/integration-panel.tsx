@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Globe, Key, Cpu, Zap, Database, Code2, ShieldAlert, Activity, RefreshCw, Trophy, BrainCircuit, Network, HardDrive, Server, TerminalSquare, Code, Webhook, Box, ArrowRightLeft, ShieldCheck, Landmark, LayoutGrid, LayoutTemplate, ShieldCheckIcon } from 'lucide-react'
+import { Globe, Key, Cpu, Zap, Database, Code2, ShieldAlert, Activity, RefreshCw, Trophy, BrainCircuit, Network, HardDrive, Server, TerminalSquare, Code, Webhook, Box, ArrowRightLeft, ShieldCheck, Landmark, LayoutGrid, LayoutTemplate, ShieldCheckIcon, UserPlus } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +20,7 @@ import { PredictiveForecasting } from './predictive-forecasting'
 import { JudiciaryPanel } from './judiciary-panel'
 import { ImperialVictoryPanel } from './imperial-victory-panel'
 import { VisualPluginBuilder } from './visual-plugin-builder'
+import { DeveloperInvitation } from './developer-invitation'
 import { Progress } from '@/components/ui/progress'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
@@ -82,7 +83,7 @@ export function IntegrationPanel() {
               SOVEREIGN API COMMAND
             </CardTitle>
             <CardDescription className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.3em] font-bold text-primary/60">
-              API Interceptor • Unified Aggregator • v34.0
+              API Interceptor • Unified Aggregator • v35.0
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -97,10 +98,10 @@ export function IntegrationPanel() {
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
             <TabsTrigger value="visual-builder" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap"><LayoutGrid size={12}/> ভিজ্যুয়াল বিল্ডার</TabsTrigger>
+            <TabsTrigger value="ecosystem" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><UserPlus size={12}/> ইকোসিস্টেম</TabsTrigger>
             <TabsTrigger value="war-room" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap">ওয়ার-রুম</TabsTrigger>
             <TabsTrigger value="global-api" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap">Global API</TabsTrigger>
             <TabsTrigger value="webhooks" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><Webhook size={12}/> ওয়েবহুকস</TabsTrigger>
-            <TabsTrigger value="vault" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap">ভল্ট</TabsTrigger>
             <TabsTrigger value="judiciary" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap">বিচার বিভাগ</TabsTrigger>
             <TabsTrigger value="apps" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap">প্লাগিনস</TabsTrigger>
           </TabsList>
@@ -108,6 +109,10 @@ export function IntegrationPanel() {
 
         <TabsContent value="visual-builder" className="flex-1 p-4 md:p-6 m-0">
           <VisualPluginBuilder />
+        </TabsContent>
+
+        <TabsContent value="ecosystem" className="flex-1 p-4 md:p-6 m-0">
+          <DeveloperInvitation />
         </TabsContent>
 
         <TabsContent value="war-room" className="flex-1 p-4 md:p-6 m-0 space-y-6">
@@ -149,8 +154,8 @@ export function IntegrationPanel() {
                     <TerminalSquare size={16} /> Quick Start SDK
                  </h4>
                  <div className="p-4 bg-slate-950 rounded-xl font-mono text-[10px] text-accent/80 overflow-x-auto">
-                    import {`{`} SheikhHub {`}`} from '@sheikh/sdk';<br /><br />
-                    const hub = new SheikhHub({`{`} key: '{devKey || 'GKEY_XXXX'}' {`}`});<br />
+                    import &#123; SheikhHub &#125; from '@sheikh/sdk';<br /><br />
+                    const hub = new SheikhHub(&#123; key: '{devKey || 'GKEY_XXXX'}' &#125;);<br />
                     const vault = await hub.vault.getStats();
                  </div>
               </Card>
@@ -192,44 +197,6 @@ export function IntegrationPanel() {
                     </ScrollArea>
                  </Card>
               </div>
-           </div>
-        </TabsContent>
-
-        <TabsContent value="vault" className="flex-1 p-4 md:p-6 m-0 animate-in fade-in">
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="bg-accent/5 border-accent/30 p-5 space-y-4">
-                 <div className="flex justify-between items-start">
-                    <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center text-accent">
-                       <HardDrive size={20} />
-                    </div>
-                    <Badge className="bg-accent text-background text-[7px] uppercase font-bold">Scaling Enabled</Badge>
-                 </div>
-                 <div>
-                    <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Drive Infrastructure</p>
-                    <h3 className="text-xl font-headline font-bold text-foreground">{vaultStats.usedSpace} / {vaultStats.totalSpace}</h3>
-                    <Progress value={2.8} className="h-1 bg-white/5 mt-2" />
-                 </div>
-              </Card>
-              <Card className="bg-primary/5 border-primary/20 p-5 space-y-4">
-                 <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
-                    <Database size={20} />
-                 </div>
-                 <div>
-                    <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Firestore Offload</p>
-                    <h3 className="text-xl font-headline font-bold text-foreground">{vaultStats.offloadEfficiency}% Efficiency</h3>
-                    <p className="text-[8px] text-primary/60 font-mono mt-1">PRIMARY_DB_LIGHT_OK</p>
-                 </div>
-              </Card>
-              <Card className="bg-muted/20 border-white/10 p-5 space-y-4">
-                 <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center text-accent">
-                    <Zap size={20} />
-                 </div>
-                 <div>
-                    <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Exchange Volume</p>
-                    <h3 className="text-xl font-headline font-bold text-foreground">{vaultStats.exchangeVolume}</h3>
-                    <p className="text-[8px] text-muted-foreground mt-1">SINCE_PHASE_32_SYNC</p>
-                 </div>
-              </Card>
            </div>
         </TabsContent>
 
