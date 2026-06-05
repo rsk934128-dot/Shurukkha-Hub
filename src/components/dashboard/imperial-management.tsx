@@ -1,8 +1,7 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Landmark, Users, Clock, TrendingUp, DollarSign, ShieldCheck, PieChart, Activity, UserCheck, Briefcase, Calculator, ArrowUpRight, Zap, Target, Gavel, Scale, Trophy, Rocket, Sparkles, Star, Terminal, Loader2, Code2, CheckCircle2, Database, Globe, BarChart3, TrendingDown, LayoutGrid } from 'lucide-react'
+import { Landmark, Users, Clock, TrendingUp, DollarSign, ShieldCheck, PieChart, Activity, UserCheck, Briefcase, Calculator, ArrowUpRight, Zap, Target, Gavel, Scale, Trophy, Rocket, Sparkles, Star, Terminal, Loader2, Code2, CheckCircle2, Database, Globe, BarChart3, TrendingDown, LayoutGrid, FileText, Printer, Download } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -16,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EconomicEngine, FinancialSnapshot } from '@/lib/economic-engine'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 
 export function ImperialManagement() {
   const [budget, setBudget] = useState({
@@ -30,13 +30,17 @@ export function ImperialManagement() {
   const [isSimulating, setIsSimulating] = useState(false)
   const [isReleasing, setIsReleasing] = useState(false)
   const [isAccelerating, setIsAccelerating] = useState(false)
+  const [isGeneratingDecree, setIsGeneratingDecree] = useState(false)
+  const [showDecree, setShowDecree] = useState(false)
+  const [decreeText, setDecreeText] = useState('')
   const [syncLogs, setSyncLogs] = useState<string[]>([])
   
   const { toast } = useToast()
 
   // Calculate simulated monthly financials (Revenue is monthly estimate here)
-  const financialSnapshot = EconomicEngine.calculateFinancials(12500); 
-  const projectionData = EconomicEngine.getProjectionData(12500);
+  const currentMonthlyRevenue = 12500;
+  const financialSnapshot = EconomicEngine.calculateFinancials(currentMonthlyRevenue); 
+  const projectionData = EconomicEngine.getProjectionData(currentMonthlyRevenue);
 
   const milestones = [
     { id: 1, title: 'Sheikh Code Exchange (42nd)', status: 'COMPLETED', impact: 'High' },
@@ -58,6 +62,22 @@ export function ImperialManagement() {
       toast({ title: "SIMULATION FAILED", variant: "destructive" });
     } finally {
       setIsSimulating(false);
+    }
+  }
+
+  const handleGenerateDecree = async () => {
+    setIsGeneratingDecree(true);
+    try {
+      const decree = EconomicEngine.generateMonthlyDecree(currentMonthlyRevenue);
+      setDecreeText(decree);
+      await new Promise(r => setTimeout(r, 1500)); // Simulate thinking
+      setShowDecree(true);
+      await SovereignAudit.logMilestone('FINANCIAL_DECREE_v1.0', 'Monthly Budget Decree generated and signed.');
+      toast({ title: "DECREE GENERATED", description: "The Imperial Budget Decree is ready for review." });
+    } catch (e) {
+      toast({ title: "GENERATION FAILED", variant: "destructive" });
+    } finally {
+      setIsGeneratingDecree(false);
     }
   }
 
@@ -253,6 +273,21 @@ export function ImperialManagement() {
         </TabsContent>
 
         <TabsContent value="financials" className="m-0 space-y-6">
+          <div className="flex justify-between items-center">
+            <div className="space-y-1">
+              <h3 className="text-lg font-headline font-bold uppercase tracking-widest text-foreground">Imperial Wealth HUD</h3>
+              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.3em]">Economic Purity: 100.0%</p>
+            </div>
+            <Button 
+              onClick={handleGenerateDecree} 
+              disabled={isGeneratingDecree}
+              className="bg-accent text-background font-bold h-10 px-6 rounded-xl gap-2 shadow-lg shadow-accent/20"
+            >
+              {isGeneratingDecree ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+              GENERATE BUDGET DECREE
+            </Button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="bg-card/40 border-accent/20 p-5 space-y-2">
               <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Monthly Est. Revenue</p>
@@ -350,6 +385,36 @@ export function ImperialManagement() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Imperial Decree Modal */}
+      <Dialog open={showDecree} onOpenChange={setShowDecree}>
+        <DialogContent className="max-w-2xl bg-slate-950 border-primary/20 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+          <DialogHeader className="p-8 bg-primary/5 border-b border-white/5">
+            <div className="flex items-center gap-4">
+              <AppLogo size={48} />
+              <div>
+                <DialogTitle className="text-xl font-headline font-bold tracking-widest text-primary uppercase">Imperial Budget Decree</DialogTitle>
+                <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground/60 tracking-[0.2em]">Verified Sovereign Reporting v1.0</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="p-8">
+            <div className="bg-black/40 border border-white/5 rounded-[1.5rem] p-6 font-mono text-[11px] leading-relaxed text-primary/80 whitespace-pre-wrap overflow-y-auto max-h-[400px] no-scrollbar">
+              {decreeText}
+            </div>
+          </div>
+
+          <DialogFooter className="p-6 bg-muted/20 border-t border-white/5 flex gap-4">
+             <Button variant="outline" className="flex-1 border-white/10 text-white font-bold h-12 rounded-xl gap-2 hover:bg-white/5">
+                <Download size={18} /> DOWNLOAD RAW
+             </Button>
+             <Button onClick={() => window.print()} className="flex-1 bg-primary text-background font-bold h-12 rounded-xl gap-2 shadow-lg shadow-primary/20">
+                <Printer size={18} /> PRINT DECREE
+             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
