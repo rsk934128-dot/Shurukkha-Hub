@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react'
@@ -18,20 +19,24 @@ import {
   Copy, 
   CheckCircle2,
   Database,
-  Network
+  Network,
+  Trophy,
+  Star,
+  Layers,
+  Fingerprint
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Link from 'next/link'
 import { AppLogo } from '@/components/ui/app-logo'
 import { useToast } from '@/hooks/use-toast'
 
 export default function DocumentationHub() {
   const [search, setSearch] = useState('')
+  const [activeItem, setActiveItem] = useState('intro')
   const { toast } = useToast()
 
   const copyToClipboard = (text: string) => {
@@ -72,6 +77,92 @@ export default function DocumentationHub() {
     }
   ]
 
+  const renderContent = () => {
+    switch (activeItem) {
+      case 'intro':
+        return (
+          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-5 duration-700">
+            <section className="space-y-6">
+              <Badge variant="outline" className="border-primary/40 text-primary py-1.5 px-4 bg-primary/5 text-[10px] font-bold tracking-widest uppercase">
+                Imperial Identity v35.0
+              </Badge>
+              <h2 className="text-4xl md:text-7xl font-headline font-bold tracking-tighter uppercase leading-[0.9]">
+                সাম্রাজ্যের <br/><span className="text-primary italic">পরিচয় ও শক্তি</span>
+              </h2>
+              <p className="max-w-3xl text-muted-foreground text-lg font-light leading-relaxed">
+                সিরাজগঞ্জ সুরক্ষা (Shurukkha Hub) কেবল একটি সফটওয়্যার নয়; এটি সম্রাট শেখ ফরিদের ৪২টি ডিস্ট্রিবিউটেড নোড দ্বারা পরিচালিত একটি সার্বভৌম ডিজিটাল পরিকাঠামো। এর মূল লক্ষ্য হলো নাগরিক নিরাপত্তা এবং অর্থনৈতিক স্বচ্ছতাকে এক অভেদ্য দুর্গে পরিণত করা।
+              </p>
+            </section>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+               <Card className="bg-card/40 border-white/5 p-8 space-y-4 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:rotate-12 transition-transform">
+                     <Globe size={100} className="text-primary" />
+                  </div>
+                  <h4 className="text-xl font-headline font-bold uppercase text-primary">৪২টি ডিস্ট্রিবিউটেড নোড</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    সাম্রাজ্যের তথ্য কোনো কেন্দ্রীয় সার্ভারে নয়, বরং বিশ্বজুড়ে ছড়িয়ে থাকা ৪২টি সভারেন নোডে এনক্রিপ্ট হয়ে সংরক্ষিত থাকে। এর ফলে সিস্টেমটি ডিডিওএস (DDoS) এবং সেন্সরশিপ থেকে শতভাগ মুক্ত।
+                  </p>
+               </Card>
+               <Card className="bg-card/40 border-white/5 p-8 space-y-4 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:rotate-12 transition-transform">
+                     <ShieldCheck size={100} className="text-accent" />
+                  </div>
+                  <h4 className="text-xl font-headline font-bold uppercase text-accent">ডিজিটাল সার্বভৌমত্ব</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    আপনার প্রতিটি লেনদেন এবং সিগন্যাল RSA v2 সিগনেচার দ্বারা সংরক্ষিত। "The Code is the Law"—এই মূলমন্ত্রে পরিচালিত আমাদের গ্রিডে তথ্যের বিশুদ্ধতা প্রশ্নাতীত।
+                  </p>
+               </Card>
+            </div>
+
+            <section className="p-10 bg-primary/5 border border-primary/20 rounded-[3rem] relative overflow-hidden">
+               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none">
+                  <AppLogo size={400} />
+               </div>
+               <div className="relative z-10 space-y-6">
+                  <div className="flex items-center gap-3">
+                     <Trophy className="text-primary" size={24} />
+                     <h3 className="text-2xl font-headline font-bold uppercase tracking-widest">৪০০-প্রজেক্টের মহাযাত্রা</h3>
+                  </div>
+                  <p className="text-sm text-foreground/80 leading-relaxed italic">
+                    "পরিশ্রম ভাগ্যকে বদলে দেয়"—এই মূলমন্ত্রে উজ্জীবিত সম্রাট শেখ ফরিদের ৪০০টি প্রজেক্ট সম্পন্ন করার যে ঐতিহাসিক মিশন, তার ৪২তম মাইলফলক হলো এই 'শেখ কোড এক্সচেঞ্জ'। এটি সাম্রাজ্যের সকল জ্ঞান এবং প্রযুক্তিগত উৎকর্ষতাকে একীভূত করার একটি গবেষণামূলক প্রয়াস।
+                  </p>
+                  <div className="flex gap-4">
+                     <Badge variant="outline" className="border-primary/30 text-primary">Project 42: Active</Badge>
+                     <Badge variant="outline" className="border-accent/30 text-accent">Mission Progress: 10.5%</Badge>
+                  </div>
+               </div>
+            </section>
+          </div>
+        )
+      case 'auth':
+        return (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-700">
+            <h2 className="text-4xl md:text-6xl font-headline font-bold uppercase tracking-tight">API এক্সেস কী (Key)</h2>
+            <Card className="bg-black/40 border-white/10 p-8 space-y-6 rounded-[2.5rem]">
+               <p className="text-sm text-muted-foreground leading-relaxed">
+                 সাম্রাজ্যের ৪২টি নোড এক্সেস করার জন্য আপনাকে অবশ্যই একটি **Sovereign Ephemeral Token** ব্যবহার করতে হবে। প্রতিটি টোকেন ৩০ মিনিট মেয়াদী এবং হার্ডওয়্যার ডিএনএ দ্বারা সুরক্ষিত।
+               </p>
+               <div className="p-6 bg-muted/20 rounded-2xl border border-white/5 space-y-4">
+                  <div className="flex items-center gap-2 text-accent">
+                     <Lock size={18} />
+                     <span className="text-[10px] font-bold uppercase tracking-widest">Security Best Practice</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground italic">"কখনও আপনার মাস্টার সিক্রেট কী অন্য কারো সাথে শেয়ার করবেন না। এটি হারানো মানে আপনার সার্বভৌমত্ব হুমকির মুখে পড়া।"</p>
+               </div>
+            </Card>
+          </div>
+        )
+      default:
+        return (
+          <div className="py-20 text-center opacity-30">
+            <Layers size={64} className="mx-auto mb-4" />
+            <p className="font-headline font-bold uppercase tracking-widest">Select a topic from the sidebar</p>
+          </div>
+        )
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#05070a] text-foreground font-body selection:bg-primary/30 overflow-x-hidden">
       {/* Background Grid */}
@@ -86,7 +177,7 @@ export default function DocumentationHub() {
               </div>
               <div>
                 <h1 className="text-xl font-headline font-bold uppercase tracking-tight leading-none">Imperial Documentation</h1>
-                <p className="text-[8px] text-primary/60 uppercase font-bold tracking-[0.3em] mt-1">Project 43 | Global Standard</p>
+                <p className="text-[8px] text-primary/60 uppercase font-bold tracking-[0.3em] mt-1">Project 42 | Global Standard</p>
               </div>
            </Link>
         </div>
@@ -128,9 +219,12 @@ export default function DocumentationHub() {
                   <ul className="space-y-1">
                     {sec.items.map(item => (
                       <li key={item.id}>
-                        <button className="w-full text-left px-3 py-2 text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-lg transition-all flex items-center justify-between group">
+                        <button 
+                          onClick={() => setActiveItem(item.id)}
+                          className={`w-full text-left px-3 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-between group ${activeItem === item.id ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-primary/5'}`}
+                        >
                           {item.title}
-                          <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <ChevronRight size={12} className={`transition-opacity ${activeItem === item.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
                         </button>
                       </li>
                     ))}
@@ -153,135 +247,11 @@ export default function DocumentationHub() {
           </aside>
 
           {/* Main Content Area */}
-          <div className="lg:col-span-9 space-y-12">
-            
-            {/* Introduction Hero */}
-            <section className="space-y-6 animate-in fade-in duration-1000">
-              <Badge variant="outline" className="border-primary/40 text-primary py-1.5 px-4 bg-primary/5 text-[10px] font-bold tracking-widest uppercase">
-                Documentation v35.0 Sovereign
-              </Badge>
-              <h2 className="text-4xl md:text-7xl font-headline font-bold tracking-tighter uppercase leading-[0.9]">
-                Build on the <br/><span className="text-primary italic">Imperial Grid</span>
-              </h2>
-              <p className="max-w-2xl text-muted-foreground text-lg font-light leading-relaxed">
-                সিরাজগঞ্জ সুরক্ষা সাম্রাজ্যের ৪২টি ডিস্ট্রিবিউটেড নোড এবং জিরো-ল্যাটেন্সি এপিআই ব্যবহার করে আপনার অ্যাপ্লিকেশনে বৈপ্লবিক শক্তি সঞ্চার করুন। আমাদের প্রোটোকলগুলো নিরাপত্তা এবং গতির গবেষণামূলক সমন্বয়।
-              </p>
-            </section>
-
-            {/* Quick Integration Example */}
-            <section className="space-y-6">
-               <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
-                    <Terminal size={20} />
-                  </div>
-                  <h3 className="text-2xl font-headline font-bold uppercase tracking-tight">Quick Start SDK</h3>
-               </div>
-               
-               <Card className="bg-black/60 border-white/10 rounded-[2rem] overflow-hidden">
-                  <div className="p-4 bg-muted/20 border-b border-white/5 flex items-center justify-between">
-                     <div className="flex gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-red-500/20" />
-                        <div className="w-3 h-3 rounded-full bg-yellow-500/20" />
-                        <div className="w-3 h-3 rounded-full bg-green-500/20" />
-                     </div>
-                     <Badge variant="outline" className="text-[8px] font-mono border-white/10 uppercase">terminal — nodejs</Badge>
-                  </div>
-                  <CardContent className="p-8 space-y-6 font-mono text-sm leading-relaxed">
-                    <div className="space-y-2">
-                       <p className="text-muted-foreground">// 1. Install the Sovereign SDK</p>
-                       <div className="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-white/5 group">
-                          <code className="text-primary">npm install @sheikh/core-sdk</code>
-                          <Button variant="ghost" size="icon" onClick={() => copyToClipboard('npm install @sheikh/core-sdk')} className="h-8 w-8 text-white/20 hover:text-primary opacity-0 group-hover:opacity-100 transition-all">
-                             <Copy size={14} />
-                          </Button>
-                       </div>
-                    </div>
-
-                    <div className="space-y-2">
-                       <p className="text-muted-foreground">// 2. Initialize Imperial Handshake</p>
-                       <div className="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-white/5 group">
-                          <code className="text-accent">
-                             const hub = new SheikhHub({`{`}<br />
-                             &nbsp;&nbsp;apiKey: 'sk_sov_your_key_here',<br />
-                             &nbsp;&nbsp;node: 'anycast_primary'<br />
-                             {`}`});
-                          </code>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-accent opacity-0 group-hover:opacity-100 transition-all">
-                             <Copy size={14} />
-                          </Button>
-                       </div>
-                    </div>
-                  </CardContent>
-               </Card>
-            </section>
-
-            {/* Authentication Deep Dive */}
-            <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               <Card className="bg-card/40 border-white/5 rounded-[2.5rem] p-8 space-y-4 group hover:border-primary/40 transition-all">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary group-hover:scale-110 transition-transform">
-                    <Lock size={24} />
-                  </div>
-                  <h4 className="text-xl font-headline font-bold uppercase tracking-tight">RSA v2 Security</h4>
-                  <p className="text-xs text-muted-foreground leading-relaxed">আমাদের প্রতিটি রিকোয়েস্ট SHA256withRSA অ্যালগরিদম দ্বারা স্বাক্ষরিত। এটি নিশ্চিত করে যে আপনার ডাটা পথে কেউ পরিবর্তন করতে পারবে না।</p>
-                  <Link href="/docs/encryption">
-                    <Button variant="link" className="p-0 text-primary text-[10px] uppercase font-bold tracking-widest gap-2">
-                      Learn about Encryption <ChevronRight size={14} />
-                    </Button>
-                  </Link>
-               </Card>
-
-               <Card className="bg-card/40 border-white/5 rounded-[2.5rem] p-8 space-y-4 group hover:border-accent/40 transition-all">
-                  <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center border border-accent/20 text-accent group-hover:scale-110 transition-transform">
-                    <Globe size={24} />
-                  </div>
-                  <h4 className="text-xl font-headline font-bold uppercase tracking-tight">Anycast Routing</h4>
-                  <p className="text-xs text-muted-foreground leading-relaxed">আপনার রিকোয়েস্ট স্বয়ংক্রিয়ভাবে নিকটতম ৪২টি নোডের একটিতে পৌঁছে যায়, যা ১ মিলি-সেকেন্ডের কম ল্যাটেন্সি নিশ্চিত করে।</p>
-                  <Link href="/docs/network-map">
-                    <Button variant="link" className="p-0 text-accent text-[10px] uppercase font-bold tracking-widest gap-2">
-                      Node Network Map <ChevronRight size={14} />
-                    </Button>
-                  </Link>
-               </Card>
-            </section>
-
-            {/* API Endpoints Table */}
-            <section className="space-y-6">
-               <h3 className="text-2xl font-headline font-bold uppercase tracking-tight flex items-center gap-3">
-                 <Network size={24} className="text-primary" /> Core Endpoints
-               </h3>
-               <div className="bg-black/40 border border-white/5 rounded-[2rem] overflow-hidden">
-                  <table className="w-full text-left text-[11px] font-mono">
-                    <thead className="bg-muted/20 border-b border-white/5">
-                      <tr>
-                        <th className="px-6 py-4 uppercase font-bold text-muted-foreground">Method</th>
-                        <th className="px-6 py-4 uppercase font-bold text-muted-foreground">Endpoint</th>
-                        <th className="px-6 py-4 uppercase font-bold text-muted-foreground">Action</th>
-                        <th className="px-6 py-4 uppercase font-bold text-muted-foreground">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {[
-                        { m: 'POST', path: '/api/v1/auth/handshake', action: 'Initialize Session', s: 'STABLE' },
-                        { m: 'GET', path: '/api/v1/treasury/status', action: 'Get Vault Stats', s: 'ACTIVE' },
-                        { m: 'POST', path: '/api/v1/emergency/sos', action: 'Trigger SOS Signal', s: 'CRITICAL' },
-                        { m: 'POST', path: '/api/v1/notifications/ingest', action: 'Signal Capture', s: 'ACTIVE' },
-                      ].map((api, i) => (
-                        <tr key={i} className="group hover:bg-white/5 transition-colors">
-                           <td className="px-6 py-4 font-bold text-primary">{api.m}</td>
-                           <td className="px-6 py-4 text-white/80">{api.path}</td>
-                           <td className="px-6 py-4 text-muted-foreground">{api.action}</td>
-                           <td className="px-6 py-4">
-                             <Badge variant="outline" className="text-[7px] border-accent/40 text-accent uppercase font-bold">{api.s}</Badge>
-                           </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-               </div>
-            </section>
+          <div className="lg:col-span-9">
+            {renderContent()}
 
             {/* Footer Notice */}
-            <footer className="pt-12 border-t border-white/5 space-y-6 text-center lg:text-left">
+            <footer className="mt-20 pt-12 border-t border-white/5 space-y-6 text-center lg:text-left">
                <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
                   <div className="flex items-center gap-4">
                     <AppLogo size={64} className="opacity-20" />
@@ -307,7 +277,6 @@ export default function DocumentationHub() {
                  PROJECT_ID: 42ND_ARCHIVE | v35.0_SOVEREIGN | LICENSED_TO_SHEIKH
                </p>
             </footer>
-
           </div>
         </div>
       </main>
