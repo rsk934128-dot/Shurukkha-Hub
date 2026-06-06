@@ -33,7 +33,7 @@ import { LiveShield } from '@/components/security/live-shield'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFirestore, useUser, useAuth } from '@/firebase'
-import { doc, setDoc, getDoc } from 'firebase/firestore'
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
 import { signOut } from 'firebase/auth'
 import { AuthGuard } from '@/lib/auth-guard'
@@ -105,6 +105,8 @@ export default function ShurukkhaDashboard() {
             photoURL: user.photoURL,
             role: currentRole,
             lastLogin: new Date().toISOString(),
+            status: 'online',
+            lastActive: new Date().toISOString(),
             deviceFingerprint: DeviceValidator.generateFingerprint()
           }, { merge: true });
 
@@ -118,6 +120,20 @@ export default function ShurukkhaDashboard() {
       };
 
       fetchRole();
+
+      // Presence Cleanup
+      const handleUnload = () => {
+        updateDoc(userRef, { 
+          status: 'offline',
+          lastActive: new Date().toISOString()
+        });
+      };
+
+      window.addEventListener('beforeunload', handleUnload);
+      return () => {
+        window.removeEventListener('beforeunload', handleUnload);
+        handleUnload();
+      };
     }
   }, [user?.uid, firestore])
 
@@ -147,8 +163,10 @@ export default function ShurukkhaDashboard() {
   }, [toast])
 
   const handleLogout = async () => {
-    if (auth) {
+    if (auth && user && firestore) {
       try {
+        const userRef = doc(firestore, "users", user.uid);
+        await updateDoc(userRef, { status: 'offline' });
         AuthGuard.clearSession();
         NotificationManager.deactivateSovereignSignal();
         await signOut(auth)

@@ -16,6 +16,8 @@
         },
         "phoneNumber": { "type": "string" },
         "lastLogin": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["online", "offline"], "default": "offline" },
+        "lastActive": { "type": "string", "format": "date-time" },
         "twoFactorEnabled": { "type": "boolean", "default": false },
         "twoFactorSecret": { "type": "string", "description": "Encrypted TOTP Secret" },
         "recoveryCodes": { "type": "array", "items": { "type": "string" } },

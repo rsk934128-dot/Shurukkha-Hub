@@ -38,29 +38,28 @@ export function CommunicationConsole() {
   useEffect(() => {
     if (!user) return;
 
-    const fetchUsers = async () => {
-      try {
-        const q = query(collection(db, "users"), limit(100));
-        const snap = await getDocs(q);
-        const otherUsers = snap.docs
-          .map(doc => ({ 
-            id: doc.id, 
-            name: doc.data().displayName || "Anonymous User", 
-            role: doc.data().role || "citizen",
-            avatar: doc.data().photoURL || '',
-            email: doc.data().email || ''
-          }))
-          .filter(u => u.id !== user.uid);
-        
-        setContacts([COMMAND_CENTER_CONTACT, ...otherUsers]);
-      } catch (e) {
-        console.warn("[Comm] Contact load failed.");
-      } finally {
-        setLoading(false);
-      }
-    }
+    // Real-time listener for users to track online/offline status
+    const usersQuery = query(collection(db, "users"), limit(100));
+    const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+      const otherUsers = snapshot.docs
+        .map(doc => ({ 
+          id: doc.id, 
+          name: doc.data().displayName || "Anonymous User", 
+          role: doc.data().role || "citizen",
+          avatar: doc.data().photoURL || '',
+          email: doc.data().email || '',
+          status: doc.data().status || 'offline',
+          lastActive: doc.data().lastActive
+        }))
+        .filter(u => u.id !== user.uid);
+      
+      setContacts([COMMAND_CENTER_CONTACT, ...otherUsers]);
+      setLoading(false);
+    }, (err) => {
+      console.warn("[Comm] Contact sync failed.");
+    });
 
-    fetchUsers();
+    return () => unsubscribeUsers();
   }, [user])
 
   const filteredContacts = useMemo(() => {
@@ -78,7 +77,6 @@ export function CommunicationConsole() {
     const localMsgs = DisasterStorage.getLocalMessages().filter(m => m.chatId === currentChatId);
     
     const combined = [...serverMessages];
-    // Add local messages if they aren't already in the server list (deduplicate by content/time if ID is missing)
     localMsgs.forEach(lm => {
       if (!combined.find(sm => sm.content === lm.content && Math.abs((sm.timestamp?.toMillis?.() || sm.timestamp) - lm.timestamp) < 5000)) {
         combined.push(lm);
@@ -195,17 +193,22 @@ export function CommunicationConsole() {
           )}
           {selectedContact && !showMobileList ? (
             <div className="flex items-center gap-2 md:gap-3">
-              <Avatar className="h-8 w-8 md:h-10 md:w-10 border border-primary/40">
-                <AvatarImage src={selectedContact.avatar || undefined} />
-                <AvatarFallback className="bg-primary/10 text-primary text-[10px] md:text-xs font-bold">
-                  {selectedContact.name?.substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="h-8 w-8 md:h-10 md:w-10 border border-primary/40">
+                  <AvatarImage src={selectedContact.avatar || undefined} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-[10px] md:text-xs font-bold">
+                    {selectedContact.name?.substring(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-card ${selectedContact.status === 'online' ? 'bg-green-500 animate-pulse' : 'bg-muted'}`} />
+              </div>
               <div>
                 <CardTitle className="text-[11px] md:text-sm font-headline font-bold uppercase tracking-widest truncate max-w-[100px] md:max-w-none">
                   {selectedContact.name}
                 </CardTitle>
-                <p className="text-[7px] md:text-[9px] text-muted-foreground font-mono uppercase tracking-tighter">SECURE_CHANNEL</p>
+                <p className="text-[7px] md:text-[9px] text-muted-foreground font-mono uppercase tracking-tighter">
+                  {selectedContact.status === 'online' ? 'SIGNAL_ACTIVE' : 'SIGNAL_IDLE'}
+                </p>
               </div>
             </div>
           ) : (
@@ -250,13 +253,19 @@ export function CommunicationConsole() {
                   onClick={() => handleSelectContact(res)}
                   className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${selectedContact?.id === res.id ? 'bg-primary/20 border border-primary/30' : 'hover:bg-white/5 border border-transparent'}`}
                 >
-                  <Avatar className="h-9 w-9 border border-white/10">
-                    <AvatarImage src={res.avatar || undefined} />
-                    <AvatarFallback className="text-[10px] font-bold">{res.name[0]}</AvatarFallback>
-                  </Avatar>
+                  <div className="relative">
+                    <Avatar className="h-9 w-9 border border-white/10">
+                      <AvatarImage src={res.avatar || undefined} />
+                      <AvatarFallback className="text-[10px] font-bold">{res.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-card ${res.status === 'online' ? 'bg-green-500 animate-pulse' : 'bg-muted'}`} />
+                  </div>
                   <div className="overflow-hidden flex-1">
                     <p className="text-[11px] font-bold truncate text-foreground">{res.name}</p>
-                    <p className="text-[8px] text-muted-foreground uppercase tracking-tight">{res.role}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[8px] text-muted-foreground uppercase tracking-tight">{res.role}</p>
+                      {res.status === 'online' && <span className="text-[7px] font-bold text-green-500 uppercase tracking-widest">Online</span>}
+                    </div>
                   </div>
                 </div>
               ))}
