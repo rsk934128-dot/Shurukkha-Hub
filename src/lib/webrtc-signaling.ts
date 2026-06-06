@@ -3,7 +3,7 @@
 /**
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
  * Restored Phase 36.6: Enhanced Universal Hardware Nuclear Purge with total reset.
- * Phase 36.8: Aggressive Track tracking and hardware-level closure enforcement.
+ * Phase 37.5: Sovereign Nuclear Kill-Switch with Global Track Registry.
  */
 
 import { db } from './firebase';
@@ -28,7 +28,9 @@ export class WebRTCManager {
   private isDisposed = false;
   private audioProcessor: AudioProcessor = new AudioProcessor();
   private unsubscribers: (() => void)[] = [];
-  private trackedTracks: Set<MediaStreamTrack> = new Set();
+  
+  // Imperial Global Registry: Ensures no track ever escapes termination
+  private static globalTrackRegistry: Set<MediaStreamTrack> = new Set();
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
@@ -53,38 +55,66 @@ export class WebRTCManager {
   }
 
   /**
-   * Aggressively stops all tracks in a stream and ensures device release.
+   * Registers a track into the Imperial Sovereign Registry.
+   */
+  static registerTrack(track: MediaStreamTrack) {
+    this.globalTrackRegistry.add(track);
+    console.log(`[Imperial Registry] Track Registered: ${track.kind} (${track.id})`);
+    
+    track.onended = () => {
+      this.globalTrackRegistry.delete(track);
+    };
+  }
+
+  /**
+   * SOVEREIGN NUCLEAR PURGE: 
+   * Aggressively stops ALL tracks registered in the global registry and clears them.
+   */
+  static nuclearHardwarePurge() {
+    console.warn(`[Sovereign Purge] Initiating GLOBAL HARDWARE KILL-SWITCH...`);
+    
+    this.globalTrackRegistry.forEach(track => {
+      try {
+        track.enabled = false;
+        track.stop();
+        console.log(`[Nuclear Purge] SHUTDOWN SUCCESS: ${track.kind} (${track.id})`);
+      } catch (e) {
+        console.error(`[Nuclear Purge] Shutdown Failed for track: ${track.id}`, e);
+      }
+    });
+
+    this.globalTrackRegistry.clear();
+    console.log(`[Sovereign Purge] Hardware Registry CLEARED. All devices released.`);
+  }
+
+  /**
+   * Legacy method for individual stream stopping.
    */
   static stopMediaStream(stream: MediaStream | null) {
     if (!stream) return;
     stream.getTracks().forEach(track => {
-      try {
-        track.enabled = false;
-        track.stop();
-        console.log(`[Imperial Purge] Hardware Forcefully Released: ${track.kind}`);
-      } catch (e) {}
-    });
-  }
-
-  private trackTracks(stream: MediaStream) {
-    stream.getTracks().forEach(track => {
-      this.trackedTracks.add(track);
+      track.enabled = false;
+      track.stop();
     });
   }
 
   private async getProcessedStream(originalStream: MediaStream): Promise<MediaStream> {
-    this.trackTracks(originalStream);
+    // Register incoming tracks
+    originalStream.getTracks().forEach(t => WebRTCManager.registerTrack(t));
+    
     const optimizedStream = await AVController.optimizeStream(originalStream);
     const isolatedStream = await this.audioProcessor.isolateVoice(optimizedStream);
     
     const finalStream = new MediaStream();
+    
     isolatedStream.getAudioTracks().forEach(track => {
       finalStream.addTrack(track);
-      this.trackedTracks.add(track);
+      WebRTCManager.registerTrack(track); // Register isolated tracks
     });
+    
     originalStream.getVideoTracks().forEach(track => {
       finalStream.addTrack(track);
-      this.trackedTracks.add(track);
+      // Already registered in originalStream loop
     });
     
     return finalStream;
@@ -101,7 +131,7 @@ export class WebRTCManager {
       event.streams[0].getTracks().forEach((track) => {
         if (!this.remoteStream.getTracks().find(t => t.id === track.id)) {
           this.remoteStream.addTrack(track);
-          this.trackedTracks.add(track);
+          WebRTCManager.registerTrack(track); // Register remote tracks
         }
       });
       onRemoteStream(this.remoteStream);
@@ -163,7 +193,7 @@ export class WebRTCManager {
       event.streams[0].getTracks().forEach((track) => {
         if (!this.remoteStream.getTracks().find(t => t.id === track.id)) {
           this.remoteStream.addTrack(track);
-          this.trackedTracks.add(track);
+          WebRTCManager.registerTrack(track); // Register remote tracks
         }
       });
       onRemoteStream(this.remoteStream);
@@ -226,35 +256,16 @@ export class WebRTCManager {
   }
 
   dispose() {
-    console.warn("[Imperial Purge] Executing Universal Hardware Shutdown...");
+    console.warn("[Imperial Purge] Disposing WebRTC Manager Instance...");
     this.isDisposed = true;
     
-    // Kill all tracked tracks (Local and Processed)
-    this.trackedTracks.forEach(track => {
-      try {
-        track.enabled = false;
-        track.stop();
-        console.log(`[Dispose] Stopped Track: ${track.kind}`);
-      } catch (e) {}
-    });
-    this.trackedTracks.clear();
+    // Static purge is the definitive kill
+    WebRTCManager.nuclearHardwarePurge();
 
     if (this.peerConnection) {
-      this.peerConnection.getSenders().forEach(s => {
-        if (s.track) {
-          s.track.enabled = false;
-          s.track.stop();
-        }
-      });
       this.peerConnection.close();
       this.peerConnection = null;
     }
-
-    // Completely clear the remote stream tracks
-    this.remoteStream.getTracks().forEach(track => {
-      track.stop();
-      this.remoteStream.removeTrack(track);
-    });
 
     this.audioProcessor.dispose();
     this.unsubscribers.forEach(unsub => unsub());

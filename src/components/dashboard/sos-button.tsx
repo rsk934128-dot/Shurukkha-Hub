@@ -20,7 +20,6 @@ export function SOSButton() {
   
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
-  const webrtcRef = useRef<RTCPeerConnection | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
   
   const { toast } = useToast()
@@ -29,14 +28,11 @@ export function SOSButton() {
     console.warn("[SOS Grid] Executing high-priority hardware resource purge...");
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(t => t.stop());
-      localStreamRef.current = null;
-    }
-    if (webrtcRef.current) {
-      webrtcRef.current.close();
-      webrtcRef.current = null;
-    }
+
+    // Use Universal Sovereign Purge
+    WebRTCManager.nuclearHardwarePurge();
+    
+    localStreamRef.current = null;
     setIsCalling(false);
   }
 
@@ -100,6 +96,10 @@ export function SOSButton() {
         audio: true
       });
       localStreamRef.current = stream;
+      
+      // Register tracks globally
+      stream.getTracks().forEach(t => WebRTCManager.registerTrack(t));
+      
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       toast({ title: "লাইভ ভিডিও HUD সক্রিয়" });
     } catch (e) {

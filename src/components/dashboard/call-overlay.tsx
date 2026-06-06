@@ -26,7 +26,7 @@ interface CallOverlayProps {
 
 /**
  * @fileOverview Call Interface for Shurukkha Hub.
- * Updated Phase 36.9: Forced Universal Kill-Switch with useEffect unmount safety.
+ * Updated Phase 37.5: Sovereign Nuclear Kill-Switch Integration.
  */
 
 export function CallOverlay({ callData, onClose }: CallOverlayProps) {
@@ -72,25 +72,25 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   }, [playAlertSound, stopRingtone])
 
   const cleanupHardware = useCallback(() => {
-    console.warn("[Imperial Purge] Executing Universal Hardware Shutdown...");
+    console.warn("[Imperial Purge] Executing Sovereign Nuclear Kill-Switch...");
     
-    // 1. Detach srcObject before stopping tracks
+    // 1. Detach UI elements
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
 
-    // 2. Stop Local Stream Tracks
-    if (localStreamRef.current) {
-      WebRTCManager.stopMediaStream(localStreamRef.current);
-      localStreamRef.current = null;
-    }
+    // 2. Global Sovereign Purge (Kills ALL registered tracks)
+    WebRTCManager.nuclearHardwarePurge();
 
-    // 3. Dispose WebRTC Manager (Kills internal tracks)
+    // 3. Instance cleanup
     if (webrtcRef.current) {
       webrtcRef.current.dispose();
       webrtcRef.current = null;
     }
     
-    // 4. Stop Intervals
+    // 4. Local Stream nullification
+    localStreamRef.current = null;
+
+    // 5. Logic cleanup
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = null;
@@ -98,7 +98,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     stopRingtone();
   }, [stopRingtone])
 
-  // ULTIMATE SAFETY NET: Component unmount ensures hardware closure
   useEffect(() => {
     return () => {
       cleanupHardware();
