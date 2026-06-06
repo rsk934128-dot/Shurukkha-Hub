@@ -3,7 +3,7 @@
 /**
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
  * Restored Phase 36.6: Enhanced Universal Hardware Nuclear Purge with total reset.
- * Phase 36.7: Aggressive Track tracking and hardware-level closure enforcement.
+ * Phase 36.8: Aggressive Track tracking and hardware-level closure enforcement.
  */
 
 import { db } from './firebase';

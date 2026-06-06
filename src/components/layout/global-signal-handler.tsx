@@ -15,7 +15,7 @@ import { MobileBridge } from '@/lib/mobile-bridge'
 /**
  * @fileOverview Global Signal Handler for Shurukkha Hub.
  * Manages real-time incoming and outgoing call detection.
- * Updated: Added Initial Load Shield to prevent automatic calls from stale data.
+ * Updated Phase 36.9: Improved Termination cleanup for hardware release.
  */
 
 export function GlobalSignalHandler() {
@@ -60,7 +60,7 @@ export function GlobalSignalHandler() {
         // 2. Handle Terminations & Missed Calls
         if (data.status === 'ended') {
           if (activeCall?.sessionId === sessionId) {
-            console.log(`[Signal Hub] Call Session Terminated: ${sessionId}`);
+            console.warn(`[Signal Hub] Call Session Terminated by Signal: ${sessionId}`);
             setActiveCall(null);
           } else if (isRecipient && !processedCallIds.current.has(sessionId)) {
             // Log as missed call if we haven't processed this session yet

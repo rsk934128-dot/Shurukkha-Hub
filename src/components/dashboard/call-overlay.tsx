@@ -26,7 +26,7 @@ interface CallOverlayProps {
 
 /**
  * @fileOverview Call Interface for Shurukkha Hub.
- * Updated Phase 36.8: Forced Universal Kill-Switch with useEffect unmount safety.
+ * Updated Phase 36.9: Forced Universal Kill-Switch with useEffect unmount safety.
  */
 
 export function CallOverlay({ callData, onClose }: CallOverlayProps) {
