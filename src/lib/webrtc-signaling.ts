@@ -2,7 +2,7 @@
 
 /**
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
- * Restored Phase 36.3: Universal Hardware Nuclear Purge for all connected parties.
+ * Restored Phase 36.6: Enhanced Universal Hardware Nuclear Purge with total reset.
  */
 
 import { db } from './firebase';
@@ -160,8 +160,10 @@ export class WebRTCManager {
     this.peerConnection.ontrack = (event) => {
       if (this.isDisposed) return;
       event.streams[0].getTracks().forEach((track) => {
-        this.remoteStream.addTrack(track);
-        this.trackedTracks.add(track);
+        if (!this.remoteStream.getTracks().find(t => t.id === track.id)) {
+          this.remoteStream.addTrack(track);
+          this.trackedTracks.add(track);
+        }
       });
       onRemoteStream(this.remoteStream);
     };
@@ -244,6 +246,12 @@ export class WebRTCManager {
       this.peerConnection.close();
       this.peerConnection = null;
     }
+
+    // Completely clear the remote stream tracks
+    this.remoteStream.getTracks().forEach(track => {
+      track.stop();
+      this.remoteStream.removeTrack(track);
+    });
 
     this.audioProcessor.dispose();
     this.unsubscribers.forEach(unsub => unsub());

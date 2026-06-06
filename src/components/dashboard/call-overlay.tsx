@@ -26,7 +26,7 @@ interface CallOverlayProps {
 
 /**
  * @fileOverview Call Interface for Shurukkha Hub.
- * Restored Phase 36.3: High-Fidelity Universal Hardware Purge for both sides.
+ * Updated Phase 36.5: Forced DOM Re-creation for video tags to prevent stale stream buffers.
  */
 
 export function CallOverlay({ callData, onClose }: CallOverlayProps) {
@@ -74,6 +74,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const cleanupHardware = useCallback(() => {
     console.warn("[Imperial Purge] Executing Universal Hardware Shutdown...");
     
+    // Detach srcObject before stopping tracks
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
 
@@ -137,7 +138,9 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
       webrtcRef.current = new WebRTCManager(callData.sessionId);
       await webrtcRef.current.answerCall(stream, (remote) => {
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remote;
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remote;
+        }
       });
       
       await updateDoc(doc(db, 'webrtc_sessions', callData.sessionId), { status: 'connected' });
@@ -157,7 +160,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       isTerminatingRef.current = false;
       
       const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
-      const unsubscribe = onSnapshot(sessionRef, (snap) => {
+      const unsubscribe = onSnapshot(sessionRef, async (snap) => {
         if (!snap.exists()) {
           if (statusRef.current !== 'idle' && statusRef.current !== 'ended') handleEndCall(false);
           return;
@@ -186,7 +189,9 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
             if (localVideoRef.current) localVideoRef.current.srcObject = stream;
             webrtcRef.current = new WebRTCManager(callData.sessionId);
             await webrtcRef.current.createCall(stream, (remote) => {
-              if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remote;
+              if (remoteVideoRef.current) {
+                remoteVideoRef.current.srcObject = remote;
+              }
             });
           } catch (e) { 
             handleEndCall(true); 
@@ -264,7 +269,15 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
           )}
 
           <div className={`w-full h-full relative ${status === 'connected' ? 'block' : 'hidden'}`}>
-             <video ref={remoteVideoRef} autoPlay playsInline className={`w-full h-full object-cover ${callData.type === 'audio' ? 'hidden' : ''}`} />
+             {/* Use sessionId as key to force a fresh video element on every new call */}
+             <video 
+               key={`remote-${callData.sessionId}`}
+               ref={remoteVideoRef} 
+               autoPlay 
+               playsInline 
+               className={`w-full h-full object-cover ${callData.type === 'audio' ? 'hidden' : ''}`} 
+             />
+             
              {callData.type === 'audio' && (
                 <div className="w-full h-full flex flex-col items-center justify-center gap-10 bg-slate-950">
                    <div className="relative">
@@ -289,7 +302,14 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
              </div>
 
              <div className={`absolute top-10 right-10 w-40 md:w-64 aspect-video bg-black rounded-3xl border-2 border-primary/40 shadow-2xl overflow-hidden z-20 transition-all ${callData.type === 'video' ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}>
-                <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+                <video 
+                  key={`local-${callData.sessionId}`}
+                  ref={localVideoRef} 
+                  autoPlay 
+                  playsInline 
+                  muted 
+                  className="w-full h-full object-cover scale-x-[-1]" 
+                />
              </div>
           </div>
 
