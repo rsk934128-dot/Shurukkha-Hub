@@ -2,7 +2,7 @@
 
 /**
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
- * Optimized Phase 36.2: Final Hardware Nuclear Purge for both Caller and Recipient.
+ * Restored Phase 36.3: Universal Hardware Nuclear Purge for all connected parties.
  */
 
 import { db } from './firebase';
@@ -13,6 +13,7 @@ import {
   onSnapshot, 
   addDoc, 
   updateDoc, 
+  serverTimestamp
 } from 'firebase/firestore';
 import { AVController } from './av-controller';
 import { AudioProcessor } from './audio-processor';
@@ -222,10 +223,9 @@ export class WebRTCManager {
   }
 
   dispose() {
-    console.warn("[Imperial Purge] Nuclear Hardware Shutdown...");
+    console.warn("[Imperial Purge] Executing Universal Hardware Shutdown...");
     this.isDisposed = true;
     
-    // Stop all tracked tracks (Local and Remote)
     this.trackedTracks.forEach(track => {
       try {
         track.enabled = false;

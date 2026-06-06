@@ -26,7 +26,7 @@ interface CallOverlayProps {
 
 /**
  * @fileOverview Call Interface for Shurukkha Hub.
- * Optimized Phase 36.2: Fixed Stale Closures and Enhanced Hardware Purge.
+ * Restored Phase 36.3: High-Fidelity Universal Hardware Purge for both sides.
  */
 
 export function CallOverlay({ callData, onClose }: CallOverlayProps) {
@@ -36,7 +36,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const [timer, setTimer] = useState(0)
   const [finalDuration, setFinalDuration] = useState<string | null>(null)
   
-  // Refs to avoid stale closures in listeners
   const statusRef = useRef<'ringing' | 'connected' | 'ended' | 'idle'>('idle')
   const timerRef = useRef(0)
   const localVideoRef = useRef<HTMLVideoElement>(null)
@@ -50,7 +49,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const { playAlertSound } = useAudioEngine()
   const { toast } = useToast()
 
-  // Sync refs with state
   useEffect(() => { statusRef.current = status; }, [status])
   useEffect(() => { timerRef.current = timer; }, [timer])
 
@@ -73,11 +71,8 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     ringtoneIntervalRef.current = setInterval(playAlertSound, 3500)
   }, [playAlertSound, stopRingtone])
 
-  /**
-   * Aggressively stops all tracks and ensures device release.
-   */
   const cleanupHardware = useCallback(() => {
-    console.warn("[Imperial Purge] Nuking Hardware Resources...");
+    console.warn("[Imperial Purge] Executing Universal Hardware Shutdown...");
     
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
@@ -106,13 +101,11 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     const duration = formatTime(timerRef.current);
     setFinalDuration(duration);
 
-    console.log(`[Signal Hub] Terminating Session: ${callData?.sessionId} | Duration: ${duration}`);
+    console.log(`[Signal Hub] Terminating Session: ${callData?.sessionId}`);
     
-    // 1. Immediately Stop Local Hardware
     cleanupHardware();
     setStatus('ended');
 
-    // 2. Notify Grid if needed
     if (callData && shouldUpdateServer) {
       try {
         await updateDoc(doc(db, 'webrtc_sessions', callData.sessionId), { 
@@ -123,15 +116,12 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       } catch (err) {}
     }
 
-    // 3. UI Grace Period before closing HUD
-    // If ended by other party, close faster for better UX
-    const closeDelay = shouldUpdateServer ? 3000 : 1000;
     setTimeout(() => {
       onClose();
       isTerminatingRef.current = false;
       setStatus('idle');
       setFinalDuration(null);
-    }, closeDelay);
+    }, shouldUpdateServer ? 3000 : 1000);
   }, [callData, cleanupHardware, onClose])
 
   const handleAccept = async () => {
@@ -221,12 +211,11 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader className="sr-only">
-          <DialogTitle>Sovereign Call Interface</DialogTitle>
-          <DialogDescription>Locked-Identity encrypted communication via 42 nodes.</DialogDescription>
+          <DialogTitle>Sovereign Call HUD</DialogTitle>
+          <DialogDescription>Universal hardware-controlled signal terminal.</DialogDescription>
         </DialogHeader>
 
         <div className="relative w-full h-full bg-[#05070a] flex items-center justify-center overflow-hidden">
-          
           {status === 'connected' && (
             <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[10020] animate-in fade-in slide-in-from-top-4">
               <div className="flex items-center gap-3 bg-black/60 backdrop-blur-xl px-6 py-2 rounded-full border border-primary/20 shadow-2xl">
