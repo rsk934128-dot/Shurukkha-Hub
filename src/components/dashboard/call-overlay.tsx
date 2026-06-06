@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, ShieldCheck, Loader2, User, Volume2, VolumeX, Activity, Zap, X, Star } from 'lucide-react'
+import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, ShieldCheck, Loader2, User, Volume2, VolumeX, Activity, Zap, X, Star, Clock } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -28,8 +28,7 @@ interface CallOverlayProps {
 
 /**
  * @fileOverview Call Interface for Shurukkha Hub.
- * Forcefully opens and manages WebRTC sessions.
- * Phase 35.5: Fixed Z-Index and Force-Opening Logic.
+ * Optimized Phase 36.0: Added Real-time Duration Timer and End Summary.
  */
 
 export function CallOverlay({ callData, onClose }: CallOverlayProps) {
@@ -37,6 +36,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const [isMicMuted, setIsMicMuted] = useState(false)
   const [isSpeakerOn, setIsSpeakerOn] = useState(true)
   const [timer, setTimer] = useState(0)
+  const [finalDuration, setFinalDuration] = useState<string | null>(null)
   
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
@@ -48,6 +48,12 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   
   const { playAlertSound } = useAudioEngine()
   const { toast } = useToast()
+
+  const formatTime = (s: number) => {
+    const mins = Math.floor(s / 60);
+    const secs = s % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
 
   const stopRingtone = useCallback(() => {
     if (ringtoneIntervalRef.current) {
@@ -89,23 +95,33 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     if (isTerminatingRef.current) return;
     isTerminatingRef.current = true;
     
-    console.log(`[Signal Hub] Terminating Session: ${callData?.sessionId}`);
+    // Capture final time before clearing
+    const duration = formatTime(timer);
+    setFinalDuration(duration);
+
+    console.log(`[Signal Hub] Terminating Session: ${callData?.sessionId} | Duration: ${duration}`);
     stopRingtone();
     setStatus('ended');
     cleanupHardware();
 
     if (callData && shouldUpdateServer) {
       try {
-        await updateDoc(doc(db, 'webrtc_sessions', callData.sessionId), { status: 'ended' });
+        await updateDoc(doc(db, 'webrtc_sessions', callData.sessionId), { 
+          status: 'ended',
+          duration: duration,
+          endTime: serverTimestamp()
+        });
       } catch (err) {}
     }
 
+    // Increased close delay to show the final summary
     setTimeout(() => {
       onClose();
       isTerminatingRef.current = false;
       setStatus('idle');
-    }, 1000);
-  }, [callData, cleanupHardware, onClose, stopRingtone])
+      setFinalDuration(null);
+    }, 3000);
+  }, [callData, cleanupHardware, onClose, stopRingtone, timer])
 
   const handleAccept = async () => {
     if (!callData) return;
@@ -138,9 +154,9 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
   useEffect(() => {
     if (callData) {
-      console.log("[CallOverlay] Initializing Session Interface:", callData.sessionId);
       setStatus('ringing');
       setTimer(0);
+      setFinalDuration(null);
       isTerminatingRef.current = false;
       
       const sessionRef = doc(db, 'webrtc_sessions', callData.sessionId);
@@ -161,7 +177,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       if (callData.isIncoming) {
         startRingtone();
       } else {
-        // I am the caller - initiate WebRTC
         const startOutgoing = async () => {
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -188,12 +203,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     }
   }, [callData?.sessionId, callData?.isIncoming]);
 
-  const formatTime = (s: number) => {
-    const mins = Math.floor(s / 60);
-    const secs = s % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
-
   if (!callData) return null;
 
   return (
@@ -208,6 +217,17 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         </DialogHeader>
 
         <div className="relative w-full h-full bg-[#05070a] flex items-center justify-center overflow-hidden">
+          
+          {/* Universal Floating Timer Badge */}
+          {status === 'connected' && (
+            <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[10020] animate-in fade-in slide-in-from-top-4">
+              <div className="flex items-center gap-3 bg-black/60 backdrop-blur-xl px-6 py-2 rounded-full border border-primary/20 shadow-2xl">
+                 <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                 <p className="text-xl font-mono font-bold text-white tracking-widest leading-none">{formatTime(timer)}</p>
+              </div>
+            </div>
+          )}
+
           {/* Ringing UI */}
           {status === 'ringing' && (
             <div className="flex flex-col items-center gap-10 z-50 animate-in fade-in zoom-in-95 duration-500 w-full px-8 text-center">
@@ -281,9 +301,8 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                    </div>
                    <div className="text-center space-y-4">
                       <h2 className="text-4xl font-headline font-bold text-white tracking-tighter uppercase">{callData.callerName}</h2>
-                      <div className="flex items-center justify-center gap-4">
-                         <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-                         <p className="text-3xl font-mono text-white/60 tracking-widest">{formatTime(timer)}</p>
+                      <div className="flex items-center justify-center gap-2">
+                         <span className="text-[10px] font-bold text-accent uppercase tracking-[0.3em]">Imperial Voice Channel Active</span>
                       </div>
                    </div>
                 </div>
@@ -330,13 +349,25 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
              </div>
           </div>
 
-          {/* Ended View */}
+          {/* Ended View with Summary */}
           {status === 'ended' && (
             <div className="absolute inset-0 bg-black/95 z-[10010] flex flex-col items-center justify-center gap-8 animate-in fade-in duration-300">
-               <div className="w-24 h-24 bg-destructive/10 rounded-full flex items-center justify-center border-2 border-destructive/20">
-                  <PhoneOff size={40} className="text-destructive" />
+               <div className="relative">
+                  <div className="absolute inset-0 bg-destructive/20 blur-3xl rounded-full" />
+                  <div className="w-24 h-24 bg-destructive/10 rounded-full flex items-center justify-center border-2 border-destructive/20 relative z-10">
+                    <PhoneOff size={40} className="text-destructive" />
+                  </div>
                </div>
-               <p className="text-3xl font-headline font-bold text-white uppercase tracking-[0.4em]">Signal Terminated</p>
+               <div className="text-center space-y-2">
+                  <p className="text-3xl font-headline font-bold text-white uppercase tracking-[0.4em]">Signal Terminated</p>
+                  <div className="flex items-center justify-center gap-3 py-4">
+                     <Clock className="text-muted-foreground" size={18} />
+                     <p className="text-xl font-mono text-primary font-bold tracking-widest">
+                        Duration: {finalDuration || formatTime(timer)}
+                     </p>
+                  </div>
+               </div>
+               <Badge variant="outline" className="border-primary/20 text-primary uppercase text-[8px] tracking-[0.3em] font-bold">Imperial Call Summary Recorded</Badge>
             </div>
           )}
 
