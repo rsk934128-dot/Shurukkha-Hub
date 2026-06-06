@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
@@ -30,7 +31,6 @@ export function CommunicationConsole() {
   const [isSending, setIsSending] = useState(false)
   
   const scrollRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const { playMessageSound } = useAudioEngine()
   const lastMessageId = useRef<string | null>(null)
 
@@ -85,10 +85,10 @@ export function CommunicationConsole() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const chatMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
       
-      // Sort client-side
+      // Fixed Sorting: New messages with null timestamps should stay at the bottom
       chatMsgs.sort((a, b) => {
-        const timeA = a.timestamp?.toMillis?.() || a.timestamp?.seconds * 1000 || 0;
-        const timeB = b.timestamp?.toMillis?.() || b.timestamp?.seconds * 1000 || 0;
+        const timeA = a.timestamp?.toMillis?.() || a.timestamp?.seconds * 1000 || Date.now();
+        const timeB = b.timestamp?.toMillis?.() || b.timestamp?.seconds * 1000 || Date.now();
         return timeA - timeB;
       });
 
@@ -101,7 +101,7 @@ export function CommunicationConsole() {
       }
 
       setMessages(chatMsgs);
-      setTimeout(scrollToBottom, 300);
+      setTimeout(scrollToBottom, 100);
     }, (err) => {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: '/messages', operation: 'list' }));
@@ -114,12 +114,14 @@ export function CommunicationConsole() {
   const scrollToBottom = () => {
     if (scrollRef.current) {
       const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+      if (viewport) {
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+      }
     }
   }
 
   const handleSend = async () => {
-    if (!input.trim() || !user || isSending) return;
+    if (!input.trim() || !user || !selectedContact || isSending) return;
     
     setIsSending(true);
     const content = input;
@@ -132,11 +134,13 @@ export function CommunicationConsole() {
         content: content,
         type: 'text'
       });
+      console.log("[Comm] Imperial signal dispatched successfully.");
     } catch (err) {
        console.error("[Comm] Send failed", err);
+       setInput(content); // Restore input on failure
     } finally {
       setIsSending(false);
-      setTimeout(scrollToBottom, 100);
+      setTimeout(scrollToBottom, 50);
     }
   }
 
@@ -165,6 +169,7 @@ export function CommunicationConsole() {
   const handleSelectContact = (contact: any) => {
     setSelectedContact(contact);
     setShowMobileList(false);
+    setMessages([]); // Clear previous messages while loading new ones
   }
 
   return (
@@ -287,7 +292,7 @@ export function CommunicationConsole() {
                     disabled={isSending}
                     className="flex-1 bg-transparent border-none focus-visible:ring-0 text-[12px] md:text-[13px] h-8 md:h-10"
                   />
-                  <Button onClick={handleSend} disabled={!input.trim() || isSending} className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-primary text-background shadow-lg transition-transform active:scale-95">
+                  <Button onClick={handleSend} disabled={!input.trim() || isSending || !selectedContact} className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-primary text-background shadow-lg transition-transform active:scale-95">
                     {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                   </Button>
                 </div>
