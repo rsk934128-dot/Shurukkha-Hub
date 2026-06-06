@@ -98,7 +98,15 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
     } catch (error: any) {
       console.error("SMS Error:", error);
       let msg = "SMS পাঠানো ব্যর্থ। দয়া করে আবার চেষ্টা করুন।";
-      if (error.code === 'auth/invalid-phone-number') msg = "প্রদত্ত মোবাইল নম্বরটি সঠিক নয়।";
+      
+      if (error.code === 'auth/invalid-phone-number') {
+        msg = "প্রদত্ত মোবাইল নম্বরটি সঠিক নয়।";
+      } else if (error.code === 'auth/operation-not-allowed') {
+        msg = "ফায়ারবেস কনসোলে SMS বা এই রিজিয়নটি সক্রিয় নেই। দয়া করে Voice Call অপশনটি ব্যবহার করুন।";
+      } else if (error.code === 'auth/too-many-requests') {
+        msg = "অত্যধিক রিকোয়েস্ট পাঠানো হয়েছে। কিছুক্ষণ পর চেষ্টা করুন।";
+      }
+
       toast({ title: "প্রবেশাধিকার নাকচ", description: msg, variant: "destructive" });
       
       if (recaptchaVerifierRef.current) {
@@ -117,7 +125,9 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
     try {
       const { otp: generatedOtp, audioDataUri } = await generateVoiceOtp();
       setVoiceOtp(generatedOtp);
-      console.log(`[Imperial Call] EXPECTED_OTP: ${generatedOtp}`);
+      
+      // Log for imperial debugging - help user test quickly
+      console.warn(`[IMPERIAL_DEBUG] VOICE_OTP_CODE: ${generatedOtp}`);
       
       // Play the imperial voice audio
       if (audioRef.current) {
@@ -149,7 +159,7 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
       
       if (data.status === 'SUCCESS') {
         setVoiceOtp(data.otp); 
-        console.log(`[Social Dispatch] Platform: ${platform}, EXPECTED_OTP: ${data.otp}`);
+        console.warn(`[IMPERIAL_DEBUG] ${platform.toUpperCase()}_OTP_CODE: ${data.otp}`);
         setStep('otp');
         toast({ 
           title: platform === 'whatsapp' ? "WhatsApp OTP" : "Telegram OTP", 
