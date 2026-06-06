@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
@@ -28,7 +27,7 @@ interface CallOverlayProps {
 
 /**
  * @fileOverview Call Interface for Shurukkha Hub.
- * Optimized Phase 36.0: Added Real-time Duration Timer and End Summary.
+ * Optimized Phase 36.1: Implemented Total Track Purge for multi-side security.
  */
 
 export function CallOverlay({ callData, onClose }: CallOverlayProps) {
@@ -68,17 +67,23 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     ringtoneIntervalRef.current = setInterval(playAlertSound, 3500)
   }, [playAlertSound, stopRingtone])
 
+  /**
+   * Forces release of all local hardware components.
+   */
   const cleanupHardware = useCallback(() => {
-    console.warn("[Imperial Purge] Releasing Hardware Resources...");
+    console.warn("[Imperial Purge] Nuking Hardware Resources for both sides...");
     
+    // Clear video references
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
 
+    // Stop local stream tracks explicitly
     if (localStreamRef.current) {
       WebRTCManager.stopMediaStream(localStreamRef.current);
       localStreamRef.current = null;
     }
 
+    // Dispose signaling and its tracked tracks
     if (webrtcRef.current) {
       webrtcRef.current.dispose();
       webrtcRef.current = null;
@@ -95,15 +100,16 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
     if (isTerminatingRef.current) return;
     isTerminatingRef.current = true;
     
-    // Capture final time before clearing
     const duration = formatTime(timer);
     setFinalDuration(duration);
 
     console.log(`[Signal Hub] Terminating Session: ${callData?.sessionId} | Duration: ${duration}`);
-    stopRingtone();
-    setStatus('ended');
+    
+    // 1. Immediately Stop Local Hardware
     cleanupHardware();
+    setStatus('ended');
 
+    // 2. Notify Grid that session is over
     if (callData && shouldUpdateServer) {
       try {
         await updateDoc(doc(db, 'webrtc_sessions', callData.sessionId), { 
@@ -114,19 +120,19 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       } catch (err) {}
     }
 
-    // Increased close delay to show the final summary
+    // 3. UI Grace Period before closing HUD
     setTimeout(() => {
       onClose();
       isTerminatingRef.current = false;
       setStatus('idle');
       setFinalDuration(null);
     }, 3000);
-  }, [callData, cleanupHardware, onClose, stopRingtone, timer])
+  }, [callData, cleanupHardware, onClose, timer])
 
   const handleAccept = async () => {
     if (!callData) return;
     
-    console.log("[Signal Hub] Accepting Command Signal...");
+    console.log("[Signal Hub] Accepting Imperial Command...");
     stopRingtone(); 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -171,7 +177,10 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
           stopRingtone();
           if (!timerRef.current) timerRef.current = setInterval(() => setTimer(prev => prev + 1), 1000);
         }
-        if (data.status === 'ended' && status !== 'ended') handleEndCall(false);
+        // If the other side ended the call, we must clean up too
+        if (data.status === 'ended' && status !== 'ended') {
+          handleEndCall(false);
+        }
       });
 
       if (callData.isIncoming) {
@@ -196,6 +205,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
         };
         startOutgoing();
       }
+
       return () => {
         unsubscribe();
         cleanupHardware();
@@ -253,13 +263,13 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                  <div className="flex items-center gap-16 mt-6 relative z-[310]">
                     <Button 
                       onClick={(e) => { e.stopPropagation(); handleAccept(); }} 
-                      className="h-24 w-24 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-2xl border-4 border-background flex items-center justify-center neon-glow-primary transition-transform active:scale-90 cursor-pointer pointer-events-auto"
+                      className="h-24 w-24 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-2xl border-4 border-background flex items-center justify-center neon-glow-primary transition-transform active:scale-90 cursor-pointer"
                     >
                       <Phone size={36} />
                     </Button>
                     <Button 
                       onClick={(e) => { e.stopPropagation(); handleEndCall(true); }} 
-                      className="h-24 w-24 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-2xl border-4 border-background flex items-center justify-center transition-transform active:scale-90 cursor-pointer pointer-events-auto"
+                      className="h-24 w-24 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-2xl border-4 border-background flex items-center justify-center transition-transform active:scale-90 cursor-pointer"
                     >
                       <PhoneOff size={36} />
                     </Button>
@@ -273,7 +283,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                    </div>
                    <Button 
                     onClick={(e) => { e.stopPropagation(); handleEndCall(true); }} 
-                    className="h-20 w-20 rounded-full bg-destructive border-4 border-background flex items-center justify-center transition-transform active:scale-90 cursor-pointer pointer-events-auto"
+                    className="h-20 w-20 rounded-full bg-destructive border-4 border-background flex items-center justify-center transition-transform active:scale-90 cursor-pointer"
                   >
                     <PhoneOff size={28} />
                   </Button>

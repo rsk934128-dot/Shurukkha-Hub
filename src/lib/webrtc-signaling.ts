@@ -3,7 +3,7 @@
 /**
  * @fileOverview Overhauled WebRTC Signaling Service for Shurukkha Hub.
  * Optimized Phase 35.0: Locked-Identity Stream Protocol with Aggressive Resource Purge.
- * Updated: Ensures total track destruction and hardware release.
+ * Updated Phase 36.1: Implemented Total Track Destruction for dual-side security.
  */
 
 import { db } from './firebase';
@@ -52,7 +52,7 @@ export class WebRTCManager {
   }
 
   /**
-   * Aggressively stops all tracks in a stream.
+   * Aggressively stops all tracks in a stream and ensures device release.
    */
   static stopMediaStream(stream: MediaStream | null) {
     if (!stream) return;
@@ -60,13 +60,18 @@ export class WebRTCManager {
       try {
         track.enabled = false;
         track.stop();
-        console.log(`[Imperial Purge] Hardware Released: ${track.kind}`);
+        console.log(`[Imperial Purge] Hardware Forcefully Released: ${track.kind}`);
       } catch (e) {}
     });
   }
 
   private trackTracks(stream: MediaStream) {
-    stream.getTracks().forEach(track => this.trackedTracks.add(track));
+    stream.getTracks().forEach(track => {
+      this.trackedTracks.add(track);
+      track.onended = () => {
+        console.log(`[Imperial Purge] Track self-terminated: ${track.kind}`);
+      };
+    });
   }
 
   private async getProcessedStream(originalStream: MediaStream): Promise<MediaStream> {
@@ -216,28 +221,40 @@ export class WebRTCManager {
     }
   }
 
+  /**
+   * Complete teardown of all media and network resources.
+   */
   dispose() {
-    console.warn("[Imperial Purge] Destroying hardware references...");
+    console.warn("[Imperial Purge] Executing Nuclear Hardware Shutdown...");
     this.isDisposed = true;
     
-    // Hard-Stop all tracked tracks
+    // 1. Stop all tracked tracks (Local and Remote)
     this.trackedTracks.forEach(track => {
       try {
         track.enabled = false;
         track.stop();
+        console.log(`[Purge] Track destroyed: ${track.kind}`);
       } catch (e) {}
     });
     this.trackedTracks.clear();
 
-    this.audioProcessor.dispose();
-    this.unsubscribers.forEach(unsub => unsub());
-    
+    // 2. Clear remote stream
+    this.remoteStream.getTracks().forEach(t => t.stop());
+
+    // 3. Close Peer Connection
     if (this.peerConnection) {
-      this.peerConnection.getSenders().forEach(s => s.track?.stop());
+      this.peerConnection.getSenders().forEach(s => {
+        if (s.track) s.track.stop();
+      });
       this.peerConnection.close();
       this.peerConnection = null;
     }
+
+    // 4. Dispose Audio Processor and Subscriptions
+    this.audioProcessor.dispose();
+    this.unsubscribers.forEach(unsub => unsub());
+    this.unsubscribers = [];
     
-    console.log("[Imperial Purge] Done. Hardware SAFE.");
+    console.log("[Imperial Purge] Resource purge 100% complete.");
   }
 }
