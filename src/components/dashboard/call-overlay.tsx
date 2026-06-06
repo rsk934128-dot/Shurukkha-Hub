@@ -26,7 +26,7 @@ interface CallOverlayProps {
 
 /**
  * @fileOverview Call Interface for Shurukkha Hub.
- * Updated Phase 36.5: Forced DOM Re-creation for video tags to prevent stale stream buffers.
+ * Updated Phase 36.8: Forced Universal Kill-Switch with useEffect unmount safety.
  */
 
 export function CallOverlay({ callData, onClose }: CallOverlayProps) {
@@ -74,26 +74,36 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
   const cleanupHardware = useCallback(() => {
     console.warn("[Imperial Purge] Executing Universal Hardware Shutdown...");
     
-    // Detach srcObject before stopping tracks
+    // 1. Detach srcObject before stopping tracks
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
 
+    // 2. Stop Local Stream Tracks
     if (localStreamRef.current) {
       WebRTCManager.stopMediaStream(localStreamRef.current);
       localStreamRef.current = null;
     }
 
+    // 3. Dispose WebRTC Manager (Kills internal tracks)
     if (webrtcRef.current) {
       webrtcRef.current.dispose();
       webrtcRef.current = null;
     }
     
+    // 4. Stop Intervals
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = null;
     }
     stopRingtone();
   }, [stopRingtone])
+
+  // ULTIMATE SAFETY NET: Component unmount ensures hardware closure
+  useEffect(() => {
+    return () => {
+      cleanupHardware();
+    };
+  }, [cleanupHardware]);
 
   const handleEndCall = useCallback(async (shouldUpdateServer = true) => {
     if (isTerminatingRef.current) return;
@@ -122,7 +132,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
       isTerminatingRef.current = false;
       setStatus('idle');
       setFinalDuration(null);
-    }, shouldUpdateServer ? 3000 : 1000);
+    }, shouldUpdateServer ? 3000 : 500);
   }, [callData, cleanupHardware, onClose])
 
   const handleAccept = async () => {
@@ -269,7 +279,6 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
           )}
 
           <div className={`w-full h-full relative ${status === 'connected' ? 'block' : 'hidden'}`}>
-             {/* Use sessionId as key to force a fresh video element on every new call */}
              <video 
                key={`remote-${callData.sessionId}`}
                ref={remoteVideoRef} 
