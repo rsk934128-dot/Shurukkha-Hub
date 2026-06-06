@@ -117,6 +117,7 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
     try {
       const { otp: generatedOtp, audioDataUri } = await generateVoiceOtp();
       setVoiceOtp(generatedOtp);
+      console.log(`[Imperial Call] EXPECTED_OTP: ${generatedOtp}`);
       
       // Play the imperial voice audio
       if (audioRef.current) {
@@ -147,7 +148,8 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
       const data = await response.json();
       
       if (data.status === 'SUCCESS') {
-        setVoiceOtp(data.otp); // Shared state for simulation
+        setVoiceOtp(data.otp); 
+        console.log(`[Social Dispatch] Platform: ${platform}, EXPECTED_OTP: ${data.otp}`);
         setStep('otp');
         toast({ 
           title: platform === 'whatsapp' ? "WhatsApp OTP" : "Telegram OTP", 
@@ -166,21 +168,35 @@ export function PhoneAuthDialog({ isOpen, onSuccess, onCancel }: PhoneAuthProps)
 
     setLoading(true);
     try {
-      if (voiceOtp && otp === voiceOtp) {
-        // Shared logic for Voice/Social OTP simulation
-        toast({ title: "পরিচয় নিশ্চিত", description: "অথেন্টিকেশন সফল হয়েছে।" });
-        onSuccess('est_social_verified_' + btoa(phoneNumber));
-      } else if (confirmationResult) {
+      // 1. Check for Simulated OTP (Voice/Social)
+      if (voiceOtp) {
+        if (otp === voiceOtp) {
+          toast({ title: "পরিচয় নিশ্চিত", description: "অথেন্টিকেশন সফল হয়েছে।" });
+          onSuccess('est_social_verified_' + btoa(phoneNumber));
+          return;
+        } else {
+          toast({ title: "ভুল OTP", description: "সিমুলেটেড কোডটি সঠিক নয়। পুনরায় চেষ্টা করুন।", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 2. Check for Firebase Auth Result (SMS)
+      if (confirmationResult) {
         const userCredential = await confirmationResult.confirm(otp);
         const idToken = await userCredential.user.getIdToken();
         toast({ title: "পরিচয় নিশ্চিত", description: "সাম্রাজ্যে আপনাকে স্বাগতম।" });
         onSuccess(idToken);
-      } else {
-        throw new Error("Invalid Code");
+        return;
       }
+
+      // 3. Fallback for unexpected state
+      toast({ title: "সেশন ত্রুটি", description: "কোনো সক্রিয় অথেন্টিকেশন সেশন খুঁজে পাওয়া যায়নি।", variant: "destructive" });
+      setStep('phone');
+      
     } catch (error: any) {
       console.error("Verification Error:", error);
-      toast({ title: "ভুল OTP", description: "প্রদত্ত কোডটি সঠিক নয়।", variant: "destructive" });
+      toast({ title: "ভুল OTP", description: "প্রদত্ত কোডটি সঠিক নয় বা সেশনটির মেয়াদ শেষ হয়েছে।", variant: "destructive" });
     } finally {
       setLoading(false);
     }
