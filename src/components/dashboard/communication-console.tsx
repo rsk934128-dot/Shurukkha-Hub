@@ -16,6 +16,7 @@ import { collection, query, limit, onSnapshot, where, getDocs, setDoc, doc, serv
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
+import { DisasterStorage } from '@/lib/disaster-storage'
 
 const COMMAND_CENTER_CONTACT = { id: 'command_center', name: "Sovereign Command", role: "admin", status: 'online', avatar: '' }
 
@@ -23,7 +24,7 @@ export function CommunicationConsole() {
   const { user } = useUser()
   const [selectedContact, setSelectedContact] = useState<any>(null)
   const [contacts, setContacts] = useState<any[]>([COMMAND_CENTER_CONTACT])
-  const [messages, setMessages] = useState<Message[]>([])
+  const [serverMessages, setServerMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
@@ -70,12 +71,31 @@ export function CommunicationConsole() {
     );
   }, [contacts, searchQuery]);
 
+  // Combine server messages with local queued messages
+  const messages = useMemo(() => {
+    if (!selectedContact || !user) return [];
+    const currentChatId = CommunicationOrchestrator.getChatId(user.uid, selectedContact.id);
+    const localMsgs = DisasterStorage.getLocalMessages().filter(m => m.chatId === currentChatId);
+    
+    const combined = [...serverMessages];
+    // Add local messages if they aren't already in the server list (deduplicate by content/time if ID is missing)
+    localMsgs.forEach(lm => {
+      if (!combined.find(sm => sm.content === lm.content && Math.abs((sm.timestamp?.toMillis?.() || sm.timestamp) - lm.timestamp) < 5000)) {
+        combined.push(lm);
+      }
+    });
+
+    return combined.sort((a, b) => {
+      const timeA = a.timestamp?.toMillis?.() || (a.timestamp?.seconds ? a.timestamp.seconds * 1000 : null) || Date.now() + 1000;
+      const timeB = b.timestamp?.toMillis?.() || (b.timestamp?.seconds ? b.timestamp.seconds * 1000 : null) || Date.now() + 1000;
+      return timeA - timeB;
+    });
+  }, [serverMessages, selectedContact, user]);
+
   useEffect(() => {
     if (!user || !selectedContact) return;
 
     const currentChatId = CommunicationOrchestrator.getChatId(user.uid, selectedContact.id);
-
-    // Simplified query to avoid composite index requirements
     const q = query(
       collection(db, "messages"),
       where("chatId", "==", currentChatId),
@@ -85,13 +105,6 @@ export function CommunicationConsole() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const chatMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
       
-      // Fixed Sorting: New messages with null timestamps should stay at the bottom
-      chatMsgs.sort((a, b) => {
-        const timeA = a.timestamp?.toMillis?.() || a.timestamp?.seconds * 1000 || Date.now();
-        const timeB = b.timestamp?.toMillis?.() || b.timestamp?.seconds * 1000 || Date.now();
-        return timeA - timeB;
-      });
-
       const lastMsg = chatMsgs[chatMsgs.length - 1];
       if (lastMsg && lastMsg.id !== lastMessageId.current) {
         if (lastMsg.senderId !== user.uid) {
@@ -100,8 +113,8 @@ export function CommunicationConsole() {
         lastMessageId.current = lastMsg.id || null;
       }
 
-      setMessages(chatMsgs);
-      setTimeout(scrollToBottom, 100);
+      setServerMessages(chatMsgs);
+      setTimeout(scrollToBottom, 200);
     }, (err) => {
       if (err.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: '/messages', operation: 'list' }));
@@ -134,13 +147,12 @@ export function CommunicationConsole() {
         content: content,
         type: 'text'
       });
-      console.log("[Comm] Imperial signal dispatched successfully.");
     } catch (err) {
        console.error("[Comm] Send failed", err);
-       setInput(content); // Restore input on failure
+       setInput(content); 
     } finally {
       setIsSending(false);
-      setTimeout(scrollToBottom, 50);
+      setTimeout(scrollToBottom, 100);
     }
   }
 
@@ -169,7 +181,7 @@ export function CommunicationConsole() {
   const handleSelectContact = (contact: any) => {
     setSelectedContact(contact);
     setShowMobileList(false);
-    setMessages([]); // Clear previous messages while loading new ones
+    setServerMessages([]); 
   }
 
   return (
@@ -265,14 +277,19 @@ export function CommunicationConsole() {
                   ) : (
                     messages.map((msg, i) => {
                       const isMe = msg.senderId === user?.uid;
+                      const ts = msg.timestamp?.toMillis ? msg.timestamp.toMillis() : (msg.timestamp?.seconds ? msg.timestamp.seconds * 1000 : msg.timestamp);
+                      
                       return (
                         <div key={msg.id || i} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}>
                           <div className={`max-w-[85%] md:max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-1.5`}>
                             <div className={`p-3.5 px-4 rounded-[1.5rem] border text-[13px] md:text-[14px] shadow-sm leading-relaxed ${isMe ? 'bg-primary text-background border-primary/20 rounded-br-none' : 'bg-muted/80 backdrop-blur-md border-white/10 rounded-tl-none'}`}>
                               {msg.content}
+                              {msg.status === 'queued' && (
+                                <span className="ml-2 inline-block animate-pulse opacity-50"><Loader2 size={10} /></span>
+                              )}
                             </div>
                             <span className="text-[8px] font-mono text-muted-foreground opacity-60 px-1 uppercase tracking-tighter">
-                              {msg.timestamp ? new Date(msg.timestamp.toMillis ? msg.timestamp.toMillis() : msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Encrypting...'}
+                              {ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Syncing...'}
                             </span>
                           </div>
                         </div>

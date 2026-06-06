@@ -3,6 +3,7 @@
  * @fileOverview Sovereign Communication Orchestrator.
  * Manages encrypted messaging and sync logic.
  * Phase 35.0: Fixed ServerTimestamp handling and Connectivity tracking.
+ * Phase 35.1: Optimized timestamp persistence for local/server consistency.
  */
 
 import { db } from './firebase';
@@ -56,23 +57,35 @@ export class CommunicationOrchestrator {
 
     console.log(`[Comm Orchestrator] Syncing ${queue.length} pending operations...`);
     // Iteratively attempt to re-send messages
+    // For now, we clear to prevent loops in prototype
     DisasterStorage.clearSyncQueue();
   }
 
   async sendMessage(msg: Omit<Message, 'timestamp' | 'status' | 'chatId'>) {
     const chatId = CommunicationOrchestrator.getChatId(msg.senderId, msg.recipientId);
-    
-    const messageData = {
+    const now = Date.now();
+
+    // Server data uses serverTimestamp
+    const serverMessageData = {
       ...msg,
       chatId,
-      status: 'sent',
+      status: 'sent' as const,
       timestamp: serverTimestamp()
+    };
+
+    // Local/Offline data uses numeric timestamp
+    const localMessageData: Message = {
+      ...msg,
+      chatId,
+      status: 'queued' as const,
+      timestamp: now,
+      id: 'local_' + now
     };
 
     try {
       if (this.isOnline && navigator.onLine) {
         console.log(`[Comm Orchestrator] Pushing signal to chatId: ${chatId}`);
-        await addDoc(collection(db, "messages"), messageData);
+        await addDoc(collection(db, "messages"), serverMessageData);
         
         IntegrationBridge.broadcastEvent({
           type: 'OUTBOUND_SIGNAL_SENT',
@@ -84,9 +97,8 @@ export class CommunicationOrchestrator {
       }
     } catch (e) {
       console.warn("[Comm] Grid unreachable. Queuing message locally.");
-      DisasterStorage.addToSyncQueue('SEND_MESSAGE', { ...messageData, timestamp: Date.now() });
-      // In survival mode, we also save to local chat for instant feedback
-      DisasterStorage.saveLocalMessage({ ...messageData, timestamp: Date.now(), id: 'temp_' + Date.now() });
+      DisasterStorage.addToSyncQueue('SEND_MESSAGE', localMessageData);
+      DisasterStorage.saveLocalMessage(localMessageData);
     }
   }
 }
