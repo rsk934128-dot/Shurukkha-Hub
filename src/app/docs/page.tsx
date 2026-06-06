@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react'
@@ -27,7 +26,9 @@ import {
   Server,
   DollarSign,
   TrendingUp,
-  Wallet
+  Wallet,
+  Box,
+  Braces
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -315,6 +316,104 @@ console.log(data.payload.status); // "OPTIMAL"`}</code>
                       <p className="text-sm text-muted-foreground">সিস্টেম স্বয়ংক্রিয়ভাবে ৪২টি নোড গ্রিডে লেনদেনের বিশুদ্ধতা যাচাই করে সেটলমেন্ট সম্পন্ন করবে।</p>
                    </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )
+      case 'nodejs':
+        return (
+          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-5 duration-700">
+            <section className="space-y-6">
+              <Badge variant="outline" className="border-primary/40 text-primary py-1.5 px-4 bg-primary/5 text-[10px] font-bold tracking-widest uppercase">
+                Official SDK v1.0.0
+              </Badge>
+              <h2 className="text-4xl md:text-7xl font-headline font-bold tracking-tighter uppercase leading-[0.9]">
+                Sovereign <br/><span className="text-primary italic">Node.js SDK</span>
+              </h2>
+              <p className="max-w-3xl text-muted-foreground text-lg font-light leading-relaxed">
+                আপনার Node.js ব্যাকএন্ড অ্যাপ্লিকেশনে সরাসরি সম্রাটের ৪২টি নোড গ্রিড একীভূত করুন। আমাদের এই SDK স্বয়ংক্রিয়ভাবে RSA v2 সিগনেচার এবং Ephemeral Token ম্যানেজমেন্ট হ্যান্ডেল করে।
+              </p>
+            </section>
+
+            <div className="space-y-8">
+              <div className="p-6 bg-muted/20 rounded-3xl border border-white/5 space-y-4">
+                <div className="flex items-center gap-3 text-accent">
+                  <Terminal size={20} />
+                  <h4 className="font-headline font-bold text-sm uppercase tracking-widest">Installation</h4>
+                </div>
+                <div className="relative group">
+                   <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute top-1/2 -translate-y-1/2 right-4 h-8 w-8 text-white/40 hover:text-white"
+                    onClick={() => copyToClipboard(`npm install @sheikh/core`)}
+                   >
+                    <Copy size={14} />
+                   </Button>
+                   <code className="block p-4 bg-black/40 rounded-xl text-primary font-mono text-xs border border-primary/20">
+                    npm install @sheikh/core
+                   </code>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <h4 className="text-xl font-headline font-bold uppercase flex items-center gap-2">
+                  <Braces className="text-accent" /> Implementation Logic
+                </h4>
+                
+                <Card className="bg-card/40 border-white/5 rounded-[2rem] overflow-hidden">
+                  <CardHeader className="bg-primary/5 border-b border-white/5 py-4">
+                     <p className="text-[10px] font-bold uppercase text-primary tracking-widest">Basic Usage</p>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <pre className="p-6 bg-slate-950 font-mono text-[11px] text-accent/80 overflow-x-auto leading-relaxed">
+{`const { SheikhHub } = require('@sheikh/core');
+
+// Initialize with your Master API Key
+const hub = new SheikhHub({
+  apiKey: 'sk_sov_your_access_token',
+  node: 'anycast_primary'
+});
+
+async function runImperialSync() {
+  try {
+    // 1. Establish Sovereign Handshake
+    const session = await hub.auth.handshake();
+    console.log('Grid Recognized Identity:', session.id);
+
+    // 2. Fetch Vault Capacity
+    const vault = await hub.vault.getStats();
+    console.log('Vault Health:', vault.purity);
+
+    // 3. Dispatch SOS Alert
+    await hub.sos.dispatch({
+      type: 'SERVER_OVERLOAD',
+      location: 'DC-42-PRIMARY',
+      urgency: 'HIGH'
+    });
+
+  } catch (error) {
+    console.error('Sovereign Bridge Failure:', error.message);
+  }
+}
+
+runImperialSync();`}
+                    </pre>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div className="p-6 bg-accent/5 border border-accent/20 rounded-3xl space-y-3">
+                    <Box size={24} className="text-accent" />
+                    <h4 className="font-bold text-sm uppercase">Auto-Signature</h4>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">প্রতিটি রিকোয়েস্ট স্বয়ংক্রিয়ভাবে RSA v2 প্রোটোকল ব্যবহার করে সাইন করা হয়, আপনাকে ম্যানুয়ালি হাশ করার প্রয়োজন নেই।</p>
+                 </div>
+                 <div className="p-6 bg-primary/5 border border-primary/20 rounded-3xl space-y-3">
+                    <RefreshCw size={24} className="text-primary animate-spin-slow" />
+                    <h4 className="font-bold text-sm uppercase">Anycast Failover</h4>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">নিকটতম এবং দ্রুততম নোডটি SDK নিজেই খুঁজে নেয়। একটি নোড অফলাইন হলে তা অটোমেটিক রিলুট হয়।</p>
+                 </div>
               </div>
             </div>
           </div>
