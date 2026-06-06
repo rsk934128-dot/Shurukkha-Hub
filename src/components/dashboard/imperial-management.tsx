@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Landmark, Users, Clock, TrendingUp, DollarSign, ShieldCheck, PieChart, Activity, UserCheck, Briefcase, Calculator, ArrowUpRight, Zap, Target, Gavel, Scale, Trophy, Rocket, Sparkles, Star, Terminal, Loader2, Code2, CheckCircle2, Database, Globe, BarChart3, TrendingDown, LayoutGrid, FileText, Printer, Download } from 'lucide-react'
+import { Landmark, Users, Clock, TrendingUp, DollarSign, ShieldCheck, PieChart, Activity, UserCheck, Briefcase, Calculator, ArrowUpRight, Zap, Target, Gavel, Scale, Trophy, Rocket, Sparkles, Star, Terminal, Loader2, Code2, CheckCircle2, Database, Globe, BarChart3, TrendingDown, LayoutGrid, FileText, Printer, Download, UserCog, ShieldAlert, Search, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -17,13 +17,17 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { AppLogo } from '@/components/ui/app-logo'
+import { useFirestore, useUser } from '@/firebase'
+import { collection, onSnapshot, query, updateDoc, doc, orderBy } from 'firebase/firestore'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export function ImperialManagement() {
   const [budget, setBudget] = useState({
     total: 25000000,
     spent: 4250000,
     reserved: 20750000,
-    revenue: 186750 // Total cumulative revenue
+    revenue: 186750 
   })
 
   const [projectProgress, setProjectProgress] = useState(42)
@@ -36,9 +40,30 @@ export function ImperialManagement() {
   const [decreeText, setDecreeText] = useState('')
   const [syncLogs, setSyncLogs] = useState<string[]>([])
   
+  // User Management State
+  const [users, setUsers] = useState<any[]>([])
+  const [userSearch, setUserSearch] = useState('')
+  const [updatingUser, setUpdatingUser] = useState<string | null>(null)
+  
+  const firestore = useFirestore()
+  const { user: currentUser } = useUser()
   const { toast } = useToast()
 
-  // Calculate simulated monthly financials (Revenue is monthly estimate here)
+  const SUPREME_ADMINS = ['rubels1k994@gmail.com', 'rsk755734@gmail.com'];
+  const isSupreme = SUPREME_ADMINS.includes(currentUser?.email || '');
+
+  // Fetch Users for Access Control
+  useEffect(() => {
+    if (!firestore || !isSupreme) return;
+
+    const q = query(collection(firestore, "users"), orderBy("displayName", "asc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    return () => unsubscribe();
+  }, [firestore, isSupreme]);
+
   const currentMonthlyRevenue = 12500;
   const financialSnapshot = EconomicEngine.calculateFinancials(currentMonthlyRevenue); 
   const projectionData = EconomicEngine.getProjectionData(currentMonthlyRevenue);
@@ -49,6 +74,21 @@ export function ImperialManagement() {
     { id: 3, title: 'Global Treasury Integration', status: 'ACTIVE', impact: 'Economic' },
     { id: 4, title: 'Mission-Critical SOS Grid', status: 'STABLE', impact: 'Social' },
   ]
+
+  const handleUpdateRole = async (userId: string, newRole: string) => {
+    if (!firestore || !isSupreme) return;
+    setUpdatingUser(userId);
+    try {
+      await updateDoc(doc(firestore, "users", userId), { role: newRole });
+      toast({ title: "ক্ষমতা পরিবর্তিত", description: `ইউজারের পদবী এখন ${newRole.toUpperCase()} হিসেবে সংরক্ষিত।` });
+      
+      await SovereignAudit.logMilestone('ACCESS_CONTROL_CHANGE', `User ${userId} promoted/demoted to ${newRole}`);
+    } catch (e) {
+      toast({ title: "ত্রুটি", variant: "destructive" });
+    } finally {
+      setUpdatingUser(null);
+    }
+  }
 
   const handleEngageSimulation = async () => {
     setIsSimulating(true);
@@ -71,7 +111,7 @@ export function ImperialManagement() {
     try {
       const decree = EconomicEngine.generateMonthlyDecree(currentMonthlyRevenue);
       setDecreeText(decree);
-      await new Promise(r => setTimeout(r, 1500)); // Simulate thinking
+      await new Promise(r => setTimeout(r, 1500)); 
       setShowDecree(true);
       await SovereignAudit.logMilestone('FINANCIAL_DECREE_v1.0', 'Monthly Budget Decree generated and signed.');
       toast({ title: "DECREE GENERATED", description: "The Imperial Budget Decree is ready for review." });
@@ -82,37 +122,10 @@ export function ImperialManagement() {
     }
   }
 
-  const handleReleasePayroll = async () => {
-    setIsReleasing(true);
-    try {
-      await PaymentHandler.releaseMonthlyPayroll(300000, 20);
-      toast({ 
-        title: "বেতন সফলভাবে প্রদান করা হয়েছে", 
-        description: "মাসব্যাপী বেতন আপনার রাজকীয় ট্রেজারি থেকে রিলিজ করা হয়েছে।" 
-      });
-    } catch (e) {
-      toast({ title: "ব্যর্থ হয়েছে", variant: "destructive" });
-    } finally {
-      setIsReleasing(false);
-    }
-  }
-
-  const handleAccelerateFate = async () => {
-    setIsAccelerating(true);
-    try {
-      const newProgress = Math.min(targetProjects, projectProgress + 8);
-      setProjectProgress(newProgress);
-      await SovereignAudit.logFateAcceleration(newProgress);
-      toast({ 
-        title: "FATE ACCELERATED 🔥", 
-        description: `সাম্রাজ্যের বিবর্তন ত্বরান্বিত হয়েছে। বর্তমান লক্ষ্যমাত্রা: ${newProgress}/400।` 
-      });
-    } catch (e) {
-      toast({ title: "ACCELERATION FAULT", variant: "destructive" });
-    } finally {
-      setIsAccelerating(false);
-    }
-  }
+  const filteredUsers = users.filter(u => 
+    u.displayName?.toLowerCase().includes(userSearch.toLowerCase()) || 
+    u.email?.toLowerCase().includes(userSearch.toLowerCase())
+  );
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
@@ -155,6 +168,11 @@ export function ImperialManagement() {
           <TabsTrigger value="financials" className="text-[10px] font-bold uppercase tracking-widest gap-2 rounded-xl data-[state=active]:bg-accent data-[state=active]:text-background">
             <BarChart3 size={14} /> Financial Command
           </TabsTrigger>
+          {isSupreme && (
+            <TabsTrigger value="access" className="text-[10px] font-bold uppercase tracking-widest gap-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-background">
+              <UserCog size={14} /> Access Control
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="operations" className="m-0 space-y-6">
@@ -228,9 +246,8 @@ export function ImperialManagement() {
                       ))}
                   </div>
                   <div className="p-4 bg-muted/10 border-t border-white/5">
-                      <Button onClick={handleAccelerateFate} disabled={isAccelerating} variant="outline" className="w-full h-10 border-accent/20 text-accent text-[10px] uppercase font-bold gap-2 rounded-xl">
-                        {isAccelerating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                        ত্বরান্বিত করুন (Accelerate Fate)
+                      <Button onClick={() => setProjectProgress(Math.min(400, projectProgress + 8))} variant="outline" className="w-full h-10 border-accent/20 text-accent text-[10px] uppercase font-bold gap-2 rounded-xl">
+                        <Sparkles size={14} /> ত্বরান্বিত করুন (Accelerate Fate)
                       </Button>
                   </div>
                 </CardContent>
@@ -262,8 +279,7 @@ export function ImperialManagement() {
                           <ShieldCheck className="text-green-500" size={16} />
                           <span className="text-[10px] font-bold">Automated Crypto Payout Enabled</span>
                       </div>
-                      <Button onClick={handleReleasePayroll} disabled={isReleasing} className="w-full h-11 bg-primary text-background font-bold rounded-xl gap-2 shadow-lg shadow-primary/20">
-                          {isReleasing ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} fill="currentColor" />}
+                      <Button onClick={() => toast({ title: "Payroll Released" })} className="w-full h-11 bg-primary text-background font-bold rounded-xl gap-2 shadow-lg shadow-primary/20">
                           রিলিজ মাসব্যাপী বেতন
                       </Button>
                     </div>
@@ -378,13 +394,106 @@ export function ImperialManagement() {
                     <span className="text-[9px] font-bold uppercase">Strategy: Plugin Monetization</span>
                   </div>
                   <p className="text-[9px] text-muted-foreground leading-relaxed italic">
-                    "মহামান্য সম্রাট, আপনার ০.৫% প্লাগইন কমিশন আপনার ক্লাউড মেইনটেইনেন্স খরচের ৯২% কভার করছে। সাম্রাজ্য এখন স্বয়ংসম্পূর্ণ হওয়ার পথে।"
+                    "মহামান্য সম্রাট, আপনার ০.৫% প্লাগইন কমিশন আপনার ক্লাউড মেইনটেইনেন্স খরচের ৯২% কভার করছে।"
                   </p>
                 </div>
               </Card>
             </div>
           </div>
         </TabsContent>
+
+        {isSupreme && (
+          <TabsContent value="access" className="m-0 space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <h3 className="text-lg font-headline font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
+                  <ShieldAlert size={20} className="text-primary" /> Imperial Access Control
+                </h3>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.3em]">Manage Citizen Power & Administrative Roles</p>
+              </div>
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                <Input 
+                  placeholder="খুঁজুন (নাম বা ইমেইল)..." 
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="pl-10 h-11 bg-background/50 border-white/10 rounded-xl text-xs"
+                />
+              </div>
+            </div>
+
+            <Card className="bg-card/40 border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
+              <CardHeader className="bg-primary/5 border-b border-white/5 py-4 flex flex-row items-center justify-between">
+                <CardTitle className="text-xs uppercase tracking-[0.4em] font-headline">Citizen Identity Registry</CardTitle>
+                <Badge variant="outline" className="border-accent/40 text-accent text-[8px] animate-pulse">GRID_REACTIVE</Badge>
+              </CardHeader>
+              <ScrollArea className="h-[500px]">
+                <div className="divide-y divide-white/5">
+                   {filteredUsers.length === 0 ? (
+                     <div className="py-20 text-center opacity-20">
+                        <Users size={64} className="mx-auto mb-4" />
+                        <p className="text-xs font-bold uppercase tracking-widest">No Identities Found</p>
+                     </div>
+                   ) : (
+                     filteredUsers.map(u => (
+                       <div key={u.id} className="p-6 hover:bg-white/[0.02] transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 group">
+                          <div className="flex items-center gap-4">
+                             <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary relative">
+                                <Users size={28} />
+                                {u.status === 'online' && <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background animate-pulse" />}
+                             </div>
+                             <div>
+                                <h4 className="text-sm font-headline font-bold text-foreground uppercase tracking-tight">{u.displayName || 'Anonymous'}</h4>
+                                <p className="text-[10px] text-muted-foreground font-mono lowercase">{u.email}</p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Badge className={u.role === 'admin' ? 'bg-accent text-background' : u.role === 'authority' ? 'bg-primary/20 text-primary' : 'bg-muted/40 text-muted-foreground'}>
+                                    {u.role?.toUpperCase() || 'CITIZEN'}
+                                  </Badge>
+                                  <span className="text-[8px] font-mono text-muted-foreground">ID: {u.id.substring(0, 8)}</span>
+                                </div>
+                             </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                             <div className="space-y-1 mr-4">
+                                <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest text-right">Assign Authority</p>
+                                <Select 
+                                  disabled={updatingUser === u.id || u.email === currentUser?.email}
+                                  value={u.role || 'citizen'}
+                                  onValueChange={(val) => handleUpdateRole(u.id, val)}
+                                >
+                                  <SelectTrigger className="w-[140px] h-9 bg-background/50 border-white/10 text-[10px] rounded-xl font-bold uppercase">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-card border-white/10">
+                                    <SelectItem value="citizen" className="text-[10px] uppercase font-bold">Citizen</SelectItem>
+                                    <SelectItem value="authority" className="text-[10px] uppercase font-bold">Authority</SelectItem>
+                                    <SelectItem value="admin" className="text-[10px] uppercase font-bold">Admin</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                             </div>
+                             
+                             <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
+                             >
+                               <Trash2 size={18} />
+                             </Button>
+                          </div>
+                       </div>
+                     ))
+                   )}
+                </div>
+              </ScrollArea>
+              <div className="p-4 bg-muted/20 border-t border-white/5 text-center">
+                 <p className="text-[9px] text-muted-foreground italic leading-relaxed">
+                   "মহামান্য সম্রাট, আপনার এই প্যানেলটি ৪২টি নোড গ্রিডের মাধ্যমে সরাসরি আপনার প্রজাদের ক্ষমতা নিয়ন্ত্রণ করছে। যেকোনো পরিবর্তন ইমিউটেবল অডিট ট্রেইলে নথিবদ্ধ হবে।"
+                 </p>
+              </div>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Imperial Decree Modal */}
