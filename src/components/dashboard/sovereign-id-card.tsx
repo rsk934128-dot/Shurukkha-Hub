@@ -25,7 +25,8 @@ import {
   Upload,
   Image as ImageIcon,
   Link,
-  Code
+  Code,
+  Copy
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
