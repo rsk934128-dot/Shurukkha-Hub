@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -35,7 +34,8 @@ import {
   History,
   ShieldAlert,
   BookOpen,
-  LayoutGrid
+  LayoutGrid,
+  Mail
 } from "lucide-react"
 
 import {
@@ -181,6 +181,17 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   <UserCircle size={18} className={activeTab === 'profile' ? "text-accent" : "text-muted-foreground"} />
                   <span className="font-medium">প্রোফাইল আইডি</span>
                   <Badge variant="outline" className="ml-auto text-[7px] h-3 border-accent/20 text-accent uppercase font-bold">SOVEREIGN</Badge>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  isActive={activeTab === 'mail'} 
+                  onClick={() => handleNav('mail')}
+                  className="px-4 h-10 gap-3"
+                >
+                  <Mail size={18} className={activeTab === 'mail' ? "text-primary" : "text-muted-foreground"} />
+                  <span className="font-medium">জিমেইল ব্রিজ</span>
+                  <Badge className="ml-auto bg-primary/20 text-primary text-[8px] h-4">SYNC</Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
