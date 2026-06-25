@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { ScrollText, ShieldCheck, ShieldAlert, Clock, Search, Filter, Lock, Eye, RefreshCw, FileSearch, ShieldX } from 'lucide-react'
+import { ScrollText, ShieldCheck, ShieldAlert, Clock, Search, Filter, Lock, Eye, RefreshCw, FileSearch, ShieldX, Terminal, ArrowUpRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,7 @@ import { db } from '@/lib/firebase'
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
+import Link from 'next/link'
 
 export function AuditPanel() {
   const [logs, setLogs] = useState<any[]>([])
@@ -59,9 +60,11 @@ export function AuditPanel() {
           />
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="h-10 text-[10px] uppercase font-bold border-white/10 gap-2">
-            <Filter size={14} /> ফিল্টার
-          </Button>
+          <Link href="/audit">
+            <Button variant="outline" size="sm" className="h-10 text-[10px] uppercase font-bold border-accent/20 text-accent gap-2">
+              <Terminal size={14} /> FULL SENTINEL VIEW <ArrowUpRight size={14} />
+            </Button>
+          </Link>
           <Button variant="outline" size="sm" className="h-10 text-[10px] uppercase font-bold border-white/10 gap-2">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> রিফ্রেশ
           </Button>
@@ -77,7 +80,7 @@ export function AuditPanel() {
               </CardTitle>
               <CardDescription className="text-[10px]">সাম্রাজ্যের প্রতিটি সেশন ও সিকিউরিটি ইভেন্টের ইমিউটেবল লগ।</CardDescription>
             </div>
-            <Badge variant="outline" className="border-accent/40 text-accent font-mono text-[8px]">SHA256_V30_ACTIVE</Badge>
+            <Badge variant="outline" className="border-accent/40 text-accent font-mono text-[8px]">SHA256_V35_ACTIVE</Badge>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -118,13 +121,6 @@ export function AuditPanel() {
                       </Button>
                     </div>
                   </div>
-                  {log.details && (
-                    <div className="mt-3 ml-14 p-3 bg-muted/20 rounded-lg border border-white/5 overflow-hidden">
-                       <pre className="text-[9px] font-mono text-muted-foreground whitespace-pre-wrap">
-                         {JSON.stringify(log.details, null, 2)}
-                       </pre>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>

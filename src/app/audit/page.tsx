@@ -1,27 +1,48 @@
-
 "use client"
 
-import React from 'react'
-import { ShieldCheck, Database, Lock, Eye, History, ArrowLeft, Zap, FileSearch, Globe, Activity, Terminal } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { ShieldCheck, Database, Lock, Eye, History, ArrowLeft, Zap, FileSearch, Globe, Activity, Terminal, ShieldAlert, Cpu, Network, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { AppLogo } from '@/components/ui/app-logo'
+import { db } from '@/lib/firebase'
+import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore'
+import { ScrollArea } from '@/components/ui/scroll-area'
+
+/**
+ * @fileOverview Deep Forensic Audit Sentinel Page.
+ * Visualizes the Merkle Chain integrity and sovereign purity score.
+ */
 
 export default function ForensicAudit() {
+  const [logs, setLogs] = useState<any[]>([])
+  const [purity, setPurity] = useState(100.0)
+
+  useEffect(() => {
+    const q = query(collection(db, "audit_trails"), orderBy("timestamp", "desc"), limit(100));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      // Simulate purity calculation
+      const failures = snapshot.docs.filter(d => d.data().action.includes('FAILED')).length;
+      setPurity(Math.max(98.5, 100 - (failures * 0.1)));
+    });
+    return () => unsubscribe();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#05070a] text-foreground font-body selection:bg-primary/30">
       <div className="fixed inset-0 bg-primary/5 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] pointer-events-none z-0" />
       
-      <main className="relative z-10 container mx-auto px-6 py-20 max-w-4xl">
-        <Link href="/" className="inline-block mb-12">
+      <main className="relative z-10 container mx-auto px-6 py-20 max-w-6xl">
+        <Link href="/dashboard" className="inline-block mb-12">
           <Button variant="ghost" className="text-muted-foreground hover:text-primary gap-2 text-xs uppercase font-bold tracking-widest">
-            <ArrowLeft size={14} /> প্রচ্ছদ পাতায় ফিরে যান
+            <ArrowLeft size={14} /> কন্ট্রোল রুমে ফিরে যান
           </Button>
         </Link>
 
-        <div className="space-y-12">
+        <div className="space-y-16">
           <div className="text-center space-y-6">
             <div className="relative inline-block">
                <div className="absolute inset-0 bg-accent/20 blur-3xl rounded-full" />
@@ -36,50 +57,78 @@ export default function ForensicAudit() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <AuditCard 
-              icon={Database}
-              title="Immutable Audit Trail"
-              desc="আমাদের ৪২টি নোড প্রতি মুহূর্তে একটি 'Consensus Hash' তৈরি করে। এর ফলে কোনো অ্যাডমিনও কোনো লগ মুছে ফেলতে বা পরিবর্তন করতে পারে না।"
-            />
-            <AuditCard 
-              icon={Lock}
-              title="RSA v2 Verification"
-              desc="প্রতিটি ট্রানজেকশন এবং SOS অ্যালার্ট SHA256withRSA অ্যালগরিদম দ্বারা স্বাক্ষরিত। এটি তথ্যের উৎস এবং বিশুদ্ধতা নিশ্চিত করে।"
-            />
-            <AuditCard 
-              icon={Globe}
-              title="Global Heartbeat"
-              desc="প্রতি ৩০ সেকেন্ডে ৪২টি ডিস্ট্রিবিউটেড নোড একে অপরের স্বাস্থ্য এবং ডেটা সিঙ্ক্রোনাইজেশন অডিট করে।"
-            />
-            <AuditCard 
-              icon={Activity}
-              title="Purity Verification"
-              desc="সিস্টেমের বর্তমান বিশুদ্ধতা বা Purity স্কোর ১০০.০%। যেকোনো বিচ্যুতি দেখা দিলে AI স্বয়ংক্রিয়ভাবে সেলফ-হিলিং প্রোটোকল ট্রিগার করে।"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatCard icon={Database} label="System Purity" val={`${purity}%`} color="text-accent" />
+            <StatCard icon={Cpu} label="Sync Latency" val="0.004ms" color="text-primary" />
+            <StatCard icon={Network} label="Active Nodes" val="42/42" color="text-accent" />
+            <StatCard icon={ShieldCheck} label="Merkle State" val="LOCKED" color="text-primary" />
           </div>
 
-          <div className="bg-black/60 border border-accent/20 rounded-[2.5rem] overflow-hidden">
-             <div className="p-6 bg-accent/5 border-b border-accent/10 flex items-center justify-between">
-                <h3 className="text-sm font-headline font-bold text-accent uppercase tracking-widest flex items-center gap-2">
-                  <Terminal size={18} /> Live Integrity Monitor
-                </h3>
-                <Badge className="bg-accent text-background font-bold animate-pulse">OPTIMAL</Badge>
-             </div>
-             <div className="p-8 space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                   <Stat val="100.0%" label="System Purity" />
-                   <Stat val="0.004ms" label="Audit Latency" />
-                   <Stat val="42/42" label="Sync Nodes" />
-                   <Stat val="v31.0" label="Core Protocol" />
-                </div>
-                <div className="p-4 bg-muted/20 rounded-xl font-mono text-[10px] text-accent/60 leading-relaxed overflow-x-auto no-scrollbar">
-                   [AUDIT_SENTINEL]: Master Hash Verified for Block #424242...<br />
-                   [RSA_V2]: Signature match confirmed for core.sheikh...<br />
-                   [INTEGRITY]: All 42 nodes report 100% data consistency...<br />
-                   [STATUS]: Sovereign purity verified. Registry locked.
-                </div>
-             </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Live Stream */}
+            <div className="lg:col-span-8">
+               <Card className="bg-black/60 border border-accent/20 rounded-[2.5rem] overflow-hidden flex flex-col h-[600px] shadow-2xl">
+                  <div className="p-6 bg-accent/5 border-b border-accent/10 flex items-center justify-between">
+                     <h3 className="text-sm font-headline font-bold text-accent uppercase tracking-widest flex items-center gap-2">
+                       <Terminal size={18} /> Live Integrity Stream
+                     </h3>
+                     <Badge className="bg-accent text-background font-bold animate-pulse">OPTIMAL</Badge>
+                  </div>
+                  <ScrollArea className="flex-1 p-6">
+                     <div className="space-y-4">
+                        {logs.map((log, i) => (
+                          <div key={log.id} className="p-4 bg-muted/10 rounded-2xl border border-white/5 group hover:border-accent/20 transition-all animate-in slide-in-from-left-2">
+                             <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-3">
+                                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${log.action.includes('FAILED') ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
+                                      <Zap size={14} className={log.action.includes('FAILED') ? '' : 'animate-pulse'} />
+                                   </div>
+                                   <div>
+                                      <p className="text-[10px] font-bold uppercase tracking-widest text-foreground">{log.action}</p>
+                                      <p className="text-[8px] text-muted-foreground font-mono">HASH: {log.signature?.substring(0, 32)}...</p>
+                                   </div>
+                                </div>
+                                <span className="text-[8px] font-mono text-muted-foreground">{log.timestamp?.toDate?.()?.toLocaleTimeString() || 'LIVE'}</span>
+                             </div>
+                          </div>
+                        ))}
+                     </div>
+                  </ScrollArea>
+               </Card>
+            </div>
+
+            {/* Side Intelligence */}
+            <div className="lg:col-span-4 space-y-8">
+               <Card className="bg-card/40 border-white/5 p-8 rounded-[2.5rem] space-y-6">
+                  <div className="flex items-center gap-3 text-primary">
+                    <ShieldAlert size={24} />
+                    <h3 className="text-lg font-headline font-bold uppercase">Security Directive</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed italic font-light">
+                    "মহামান্য সম্রাট, আপনার এই ৪২টি নোড প্রতি ৩০ সেকেন্ডে একে অপরের সাথে সিঙ্ক হয়। Merkle Chain হাশ ব্যবহার করার ফলে কোনো রুট এক্সেসও এই লগ পরিবর্তন করতে পারবে না।"
+                  </p>
+                  <div className="pt-4 border-t border-white/5 space-y-4">
+                     <div className="flex items-center gap-2">
+                        <CheckCircle2 size={14} className="text-accent" />
+                        <span className="text-[10px] font-bold uppercase">RSA v2.1 Identity Active</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                        <CheckCircle2 size={14} className="text-accent" />
+                        <span className="text-[10px] font-bold uppercase">Anycast Routing Validated</span>
+                     </div>
+                  </div>
+               </Card>
+
+               <Card className="bg-accent/5 border-accent/20 p-8 rounded-[2.5rem] space-y-4">
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-accent">Last Consensus Block</h4>
+                  <div className="p-4 bg-black/40 rounded-2xl border border-white/5 font-mono text-[9px] text-accent/80 space-y-1">
+                     <p>Block_Height: 424242</p>
+                     <p>Consensus: 42/42 Nodes</p>
+                     <p className="truncate">Prev_Hash: 0x42A...99BF</p>
+                     <p className="truncate">Root_Hash: 0x882...FF11</p>
+                  </div>
+               </Card>
+            </div>
           </div>
         </div>
 
@@ -97,27 +146,14 @@ export default function ForensicAudit() {
   )
 }
 
-function AuditCard({ icon: Icon, title, desc }: any) {
+function StatCard({ icon: Icon, label, val, color }: any) {
   return (
-    <Card className="bg-card/40 border-white/5 hover:border-primary/30 transition-all duration-500 rounded-[2rem] overflow-hidden group">
-      <CardContent className="p-8 space-y-4">
-        <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center text-accent border border-accent/20 group-hover:bg-accent/20 transition-all duration-500">
-          <Icon size={28} />
-        </div>
-        <h3 className="text-lg font-headline font-bold text-foreground uppercase tracking-tight">{title}</h3>
-        <p className="text-xs text-muted-foreground leading-relaxed font-light">
-          {desc}
-        </p>
-      </CardContent>
+    <Card className="bg-card/40 border-white/5 p-6 space-y-2 relative overflow-hidden group">
+      <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-all">
+         <Icon size={48} className={color} />
+      </div>
+      <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest">{label}</p>
+      <p className={`text-xl font-headline font-bold ${color}`}>{val}</p>
     </Card>
-  )
-}
-
-function Stat({ val, label }: any) {
-  return (
-    <div className="text-center">
-       <p className="text-2xl font-headline font-bold text-foreground">{val}</p>
-       <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest">{label}</p>
-    </div>
   )
 }

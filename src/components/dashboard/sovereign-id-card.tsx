@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useEffect, useState, useRef } from 'react'
@@ -103,7 +102,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
         name: user.displayName,
         fingerprint,
         role: role,
-        v: '31.0_SOVEREIGN'
+        v: '35.0_SOVEREIGN'
       });
       
       QRCode.toDataURL(data, {

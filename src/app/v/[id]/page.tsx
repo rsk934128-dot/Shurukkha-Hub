@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useEffect, useState } from 'react'
@@ -16,6 +15,7 @@ import { useToast } from '@/hooks/use-toast'
 /**
  * @fileOverview Public Sovereign Identity Verification Page.
  * Accessible via core.sheikh/v/[id]
+ * Updated Phase 37.0: Majestic Passport UI with biometric integrity status.
  */
 
 export default function PublicIdentityVerify() {
@@ -86,7 +86,7 @@ export default function PublicIdentityVerify() {
            <AppLogo size={64} className="mx-auto" />
            <div className="space-y-1">
               <h1 className="text-xl font-headline font-bold uppercase tracking-widest text-primary">Sovereign Identity Registry</h1>
-              <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-[0.4em]">Sirajganj District Administration • Phase 35.0</p>
+              <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-[0.4em]">Sirajganj District Administration • Phase 37.0</p>
            </div>
         </div>
 
@@ -157,7 +157,7 @@ export default function PublicIdentityVerify() {
         </Card>
 
         <p className="text-center mt-8 text-[9px] text-muted-foreground uppercase font-bold tracking-[0.5em] opacity-40">
-           Project ID: 42nd_Archive | Sovereign Standard v35.0
+           Project ID: 42nd_Archive | Sovereign Standard v37.0
         </p>
       </main>
     </div>

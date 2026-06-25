@@ -36,7 +36,9 @@ import {
   BookOpen,
   LayoutGrid,
   Mail,
-  Cloud
+  Cloud,
+  Terminal,
+  ArrowUpRight
 } from "lucide-react"
 
 import {
@@ -142,7 +144,7 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
           <AppLogo size={32} />
           <div>
             <h2 className="text-sm font-headline font-bold tracking-tight uppercase">SHURUKKHA HUB</h2>
-            <p className="text-[8px] text-primary/60 uppercase font-bold tracking-[0.2em]">Sovereign Grid v35.0</p>
+            <p className="text-[8px] text-primary/60 uppercase font-bold tracking-[0.2em]">Sovereign Grid v37.0</p>
           </div>
         </div>
       </SidebarHeader>
@@ -164,7 +166,7 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
               />
             </div>
             <p className="text-[8px] text-muted-foreground leading-relaxed italic">
-              {signalActive ? 'ব্যাকগ্রাউন্ডে আপনি সর্বদা অনলাইনে আছেন। মেসেজ ও কল আসলে নোটিফিকেশন পাবেন।' : 'সক্রিয় করলে পোর্টালে না থাকলেও মিসকল ও মেসেজ নোটিফিকেশন পাবেন।'}
+              {signalActive ? 'ব্যাকগ্রাউন্ডে আপনি সর্বদা অনলাইনে আছেন।' : 'সক্রিয় করলে পোর্টালে না থাকলেও নোটিফিকেশন পাবেন।'}
             </p>
           </div>
         </SidebarGroup>
@@ -192,7 +194,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                 >
                   <Mail size={18} className={activeTab === 'mail' ? "text-primary" : "text-muted-foreground"} />
                   <span className="font-medium">জিমেইল ব্রিজ</span>
-                  <Badge className="ml-auto bg-primary/20 text-primary text-[8px] h-4">SYNC</Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -203,7 +204,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                 >
                   <MessageSquare size={18} className={activeTab === 'messages' ? "text-primary" : "text-muted-foreground"} />
                   <span className="font-medium">মেসেজ সেন্টার</span>
-                  <Badge className="ml-auto bg-primary/20 text-primary text-[8px] h-4">LIVE</Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -222,8 +222,18 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   >
                     <ScanLine size={18} className="animate-pulse" />
                     <span className="font-bold">সভ্যরেন লেন্স</span>
-                    <Badge className="ml-auto bg-accent text-background text-[7px] h-4">SCAN</Badge>
                   </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <Link href="/audit" passHref legacyBehavior>
+                    <SidebarMenuButton 
+                      className="px-4 h-10 gap-3"
+                    >
+                      <Terminal size={18} className="text-accent" />
+                      <span className="font-medium">ফরেনসিক অডিট</span>
+                      <ArrowUpRight size={14} className="opacity-40" />
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
@@ -251,7 +261,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                 >
                   <LayoutGrid size={18} />
                   <span className="font-bold">Public Exchange</span>
-                  <Badge className="ml-auto bg-accent text-background text-[7px] h-4">NEW</Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -293,7 +302,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   >
                     <Cloud size={18} className="text-primary" />
                     <span className="font-medium">সভ্যরেন ভল্ট</span>
-                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-primary/20 text-primary uppercase font-bold">DRIVE</Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
