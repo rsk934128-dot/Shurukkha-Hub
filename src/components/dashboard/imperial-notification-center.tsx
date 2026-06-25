@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -115,7 +116,7 @@ export function ImperialNotificationCenter() {
     });
 
     // 3. Listen for External Signals
-    const unsubSignals = onSnapshot(query(collection(db, "external_notifications"), orderBy("timestamp", "desc"), limit(5)), (snap) => {
+    const unsubSignals = onSnapshot(query(collection(db, "external_notifications"), orderBy("timestamp", "desc"), limit(10)), (snap) => {
       const signals = snap.docs.map(doc => ({ 
         id: doc.id, 
         ...doc.data(), 

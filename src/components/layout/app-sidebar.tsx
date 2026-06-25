@@ -276,40 +276,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
 
                 <SidebarMenuItem>
                   <SidebarMenuButton 
-                    isActive={activeTab === 'security'} 
-                    onClick={() => handleNav('security')}
-                    className="px-4 h-10 gap-3"
-                  >
-                    <ShieldAlert size={18} className="text-destructive" />
-                    <span className="font-medium">Security Shield</span>
-                    <Badge variant="destructive" className="ml-auto text-[8px] h-4">LIVE</Badge>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    isActive={activeTab === 'knowledge'} 
-                    onClick={() => handleNav('knowledge')}
-                    className="px-4 h-10 gap-3"
-                  >
-                    <BookOpen size={18} className="text-primary" />
-                    <span className="font-medium">Knowledge Base</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    isActive={activeTab === 'management'} 
-                    onClick={() => handleNav('management')}
-                    className="px-4 h-10 gap-3"
-                  >
-                    <Settings size={18} className="text-primary" />
-                    <span className="font-medium">প্রশাসনিক কমান্ড</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
                     isActive={activeTab === 'signals'} 
                     onClick={() => handleNav('signals')}
                     className="px-4 h-10 gap-3"
@@ -353,13 +319,23 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      isActive={activeTab === 'partnerships'} 
+                      onClick={() => handleNav('partnerships')}
+                      className="px-4 h-10 gap-3"
+                    >
+                      <Handshake size={18} className="text-primary" />
+                      <span className="font-medium">অংশীদারিত্ব আবেদন</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuButton 
-                    isActive={activeTab === 'partnerships'} 
-                    onClick={() => handleNav('partnerships')}
+                    isActive={activeTab === 'management'} 
+                    onClick={() => handleNav('management')}
                     className="px-4 h-10 gap-3"
                   >
-                    <Handshake size={18} className="text-primary" />
-                    <span className="font-medium">অংশীদারিত্ব আবেদন</span>
+                    <Settings size={18} className="text-primary" />
+                    <span className="font-medium">প্রশাসনিক কমান্ড</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
