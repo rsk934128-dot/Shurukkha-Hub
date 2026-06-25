@@ -67,7 +67,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
   const fingerprint = user?.uid?.substring(0, 12).toUpperCase() || 'EST_XXXX_XXXX';
   const signature = 'SIG_SHA256_' + (user?.email ? btoa(user.email).substring(0, 16).toUpperCase() : 'UNKNOWN');
 
-  // Fetch extended profile data from Firestore
+  // Fetch extended profile data from Firestore on mount and when editing starts
   useEffect(() => {
     if (user?.uid && firestore) {
       const fetchExtendedData = async () => {
@@ -76,8 +76,8 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
           if (userSnap.exists()) {
             const data = userSnap.data();
             setProfileData({
-              displayName: user.displayName || data.displayName || '',
-              photoURL: user.photoURL || data.photoURL || '',
+              displayName: data.displayName || user.displayName || '',
+              photoURL: data.photoURL || user.photoURL || '',
               phoneNumber: data.phoneNumber || '',
               dateOfBirth: data.dateOfBirth || ''
             });
@@ -88,7 +88,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
       };
       fetchExtendedData();
     }
-  }, [user, firestore, isEditing]);
+  }, [user?.uid, firestore, isEditing]);
 
   useEffect(() => {
     if (user?.uid) {
@@ -115,7 +115,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
         setIsGenerating(false);
       });
     }
-  }, [user, role, fingerprint]);
+  }, [user?.uid, role, fingerprint]);
 
   const handleFileClick = () => {
     fileInputRef.current?.click();
@@ -154,22 +154,24 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
     
     setIsSaving(true);
     try {
-      // 1. Update Firebase Auth Profile (Sync Name & Photo)
-      // Note: Firebase Auth photoURL has limits, for very large base64 strings it might fail.
-      // We prioritize Firestore storage for the base64 string.
+      // 1. Update Firebase Auth Profile (Sync Name)
+      // Note: We avoid pushing large base64 strings to Auth Profile due to size limits.
+      // Firestore will hold the primary source of truth for the image.
+      const syncPhotoUrl = profileData.photoURL.length < 2000 ? profileData.photoURL : (user.photoURL || '');
+      
       try {
         await updateProfile(auth.currentUser, {
           displayName: profileData.displayName,
-          photoURL: profileData.photoURL.startsWith('data:') ? 'https://picsum.photos/seed/42/200/200' : profileData.photoURL
+          photoURL: syncPhotoUrl
         });
       } catch (authError) {
-        console.warn("[Auth Sync] Partial failure, skipping large string in auth profile.");
+        console.warn("[Auth Sync] Partially skipped auth-token photo update due to size.");
       }
 
-      // 2. Update Firestore Extended Profile
+      // 2. Update Firestore Extended Profile (Crucial: This is where the real photo is saved)
       await setDoc(doc(firestore, "users", user.uid), {
         displayName: profileData.displayName,
-        photoURL: profileData.photoURL,
+        photoURL: profileData.photoURL, // Full base64 or URL
         phoneNumber: profileData.phoneNumber,
         dateOfBirth: profileData.dateOfBirth,
         lastUpdated: new Date().toISOString()
@@ -179,10 +181,11 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
         title: "পরিচয় আপডেট সফল ✅",
         description: "আপনার সার্বভৌম তথ্য ৪২টি নোড গ্রিডে স্থায়ীভাবে সংরক্ষিত হয়েছে।",
       });
+      
       setIsEditing(false);
       
-      // Give UI time to show success before reload or state sync
-      setTimeout(() => window.location.reload(), 1000);
+      // Refresh browser to ensure all components see the updated Auth & Firestore state
+      setTimeout(() => window.location.reload(), 800);
 
     } catch (error) {
       console.error(error);
@@ -260,9 +263,10 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
                   <div className="absolute -inset-2 bg-gradient-to-b from-primary to-accent rounded-3xl blur-md opacity-30 animate-pulse no-print" />
                   <div className="relative w-32 h-32 rounded-3xl border-2 border-primary/20 overflow-hidden bg-muted p-1">
                     <Avatar className="w-full h-full rounded-2xl">
-                      <AvatarImage src={user.photoURL || undefined} className="object-cover" />
+                      {/* Using profileData.photoURL which is synced with Firestore for better persistence */}
+                      <AvatarImage src={profileData.photoURL || user.photoURL || undefined} className="object-cover" />
                       <AvatarFallback className="bg-primary/10 text-2xl font-headline font-bold text-primary">
-                        {user.displayName?.substring(0, 1).toUpperCase()}
+                        {(profileData.displayName || user.displayName)?.substring(0, 1).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </div>
@@ -282,7 +286,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
               <div className="flex-1 space-y-5 text-center md:text-left w-full">
                 <div>
                   <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest mb-1">Identity Holder</p>
-                  <h2 className="text-xl font-headline font-bold text-foreground tracking-tight leading-tight truncate">{user.displayName || 'Unnamed Sovereign'}</h2>
+                  <h2 className="text-xl font-headline font-bold text-foreground tracking-tight leading-tight truncate">{profileData.displayName || user.displayName || 'Unnamed Sovereign'}</h2>
                   <p className="text-[10px] text-primary font-mono lowercase opacity-70 truncate">{user.email}</p>
                 </div>
 
