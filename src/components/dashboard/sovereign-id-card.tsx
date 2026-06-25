@@ -23,7 +23,9 @@ import {
   Save, 
   X,
   Upload,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Link,
+  Code
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -55,6 +57,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [showIntegration, setShowIntegration] = useState(false);
 
   // Profile Form States
   const [profileData, setProfileData] = useState({
@@ -66,6 +69,8 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
 
   const fingerprint = user?.uid?.substring(0, 12).toUpperCase() || 'EST_XXXX_XXXX';
   const signature = 'SIG_SHA256_' + (user?.email ? btoa(user.email).substring(0, 16).toUpperCase() : 'UNKNOWN');
+  const publicVerifyUrl = typeof window !== 'undefined' ? `${window.location.origin}/v/${user?.uid}` : '';
+  const embedCode = `<iframe src="${publicVerifyUrl}" width="400" height="600" style="border:none;border-radius:32px;box-shadow:0 20px 40px rgba(0,0,0,0.4)"></iframe>`;
 
   // Fetch extended profile data from Firestore on mount
   useEffect(() => {
@@ -126,11 +131,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      toast({ 
-        title: "ফাইল অত্যন্ত বড়", 
-        description: "দয়া করে ২ মেগাবাইটের কম সাইজের ছবি নির্বাচন করুন।", 
-        variant: "destructive" 
-      });
+      toast({ title: "ফাইল অত্যন্ত বড়", description: "দয়া করে ২ মেগাবাইটের কম সাইজের ছবি নির্বাচন করুন।", variant: "destructive" });
       return;
     }
 
@@ -142,19 +143,13 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
       setIsUploading(false);
       toast({ title: "ছবি প্রসেস করা হয়েছে", description: "সংরক্ষণের জন্য 'পরিচয় সংরক্ষণ করুন' বাটনটি চাপুন।" });
     };
-    reader.onerror = () => {
-      setIsUploading(false);
-      toast({ title: "প্রসেসিং ত্রুটি", variant: "destructive" });
-    };
     reader.readAsDataURL(file);
   };
 
   const handleSaveProfile = async () => {
     if (!auth.currentUser || !firestore) return;
-    
     setIsSaving(true);
     try {
-      // 1. Update Firestore Extended Profile (Primary source of truth for photo)
       await setDoc(doc(firestore, "users", user.uid), {
         displayName: profileData.displayName,
         photoURL: profileData.photoURL, 
@@ -163,63 +158,30 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
         lastUpdated: new Date().toISOString()
       }, { merge: true });
 
-      // 2. Update Firebase Auth Profile (Only sync name and low-res photo if short)
-      // Base64 strings are too large for Auth Profile, so we keep Auth's photoURL as is
-      // unless it's a short URL.
       const syncPhotoUrl = profileData.photoURL.length < 2000 ? profileData.photoURL : (auth.currentUser.photoURL || '');
-      
-      await updateProfile(auth.currentUser, {
-        displayName: profileData.displayName,
-        photoURL: syncPhotoUrl
-      });
+      await updateProfile(auth.currentUser, { displayName: profileData.displayName, photoURL: syncPhotoUrl });
 
-      toast({
-        title: "পরিচয় আপডেট সফল ✅",
-        description: "আপনার সার্বভৌম তথ্য ৪২টি নোড গ্রিডে স্থায়ীভাবে সংরক্ষিত হয়েছে।",
-      });
-      
+      toast({ title: "পরিচয় আপডেট সফল ✅", description: "আপনার সার্বভৌম তথ্য ৪২টি নোড গ্রিডে স্থায়ীভাবে সংরক্ষিত হয়েছে।" });
       setIsEditing(false);
-      
-      // Force a hard refresh to re-sync all components with Firestore's new data
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-
+      setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
-      console.error(error);
-      toast({
-        title: "আপডেট ব্যর্থ",
-        description: "যান্ত্রিক ত্রুটির কারণে তথ্য সংরক্ষণ করা সম্ভব হয়নি।",
-        variant: "destructive"
-      });
+      toast({ title: "আপডেট ব্যর্থ", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(publicVerifyUrl);
+    toast({ title: "Public ID লিঙ্ক কপি হয়েছে", description: "যেকোনো ওয়েবসাইটে শেয়ার করার জন্য এটি প্রস্তুত।" });
+  };
+
+  const handleCopyEmbed = () => {
+    navigator.clipboard.writeText(embedCode);
+    toast({ title: "Embed Code কপি হয়েছে", description: "আপনার ওয়েবসাইটে এই কোডটি পেস্ট করুন।" });
+  };
+
   if (!user) return null;
-
-  const handleShare = async () => {
-    const shareData = {
-      title: 'Shurukkha Hub Sovereign ID',
-      text: `আমি সিরাজগঞ্জ সুরক্ষা পোর্টালে আমার সার্বভৌম পরিচয়পত্র (Sovereign ID) নিশ্চিত করেছি। পদবী: ${role === 'admin' ? 'Supreme Admin' : role.toUpperCase()}, ফিঙ্গারপ্রিন্ট: ${fingerprint}`,
-      url: window.location.origin
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(`${shareData.text} \nলিঙ্ক: ${shareData.url}`);
-        toast({ title: "লিঙ্ক কপি করা হয়েছে" });
-      }
-    } catch (err) {}
-  };
-
-  const handleDownload = () => {
-    toast({ title: "ডাউনলোড শুরু হচ্ছে" });
-    setTimeout(() => window.print(), 500);
-  };
 
   return (
     <div className="space-y-8 animate-in fade-in zoom-in-95 duration-700">
@@ -241,16 +203,14 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                 <Button 
-                  onClick={() => setIsEditing(true)} 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8 text-primary hover:bg-primary/10 no-print"
-                 >
+                 <Button onClick={() => setShowIntegration(true)} variant="ghost" size="icon" className="h-8 w-8 text-accent hover:bg-accent/10 no-print">
+                   <Link size={16} />
+                 </Button>
+                 <Button onClick={() => setIsEditing(true)} variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10 no-print">
                    <Settings size={16} />
                  </Button>
                  <Badge variant="outline" className="border-accent/40 text-accent gap-1 text-[8px] h-5 bg-accent/5">
-                   <Zap size={10} fill="currentColor" /> PHASE 31.0
+                   <Zap size={10} fill="currentColor" /> PHASE 35.0
                  </Badge>
               </div>
             </div>
@@ -261,7 +221,6 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
                   <div className="absolute -inset-2 bg-gradient-to-b from-primary to-accent rounded-3xl blur-md opacity-30 animate-pulse no-print" />
                   <div className="relative w-32 h-32 rounded-3xl border-2 border-primary/20 overflow-hidden bg-muted p-1">
                     <Avatar className="w-full h-full rounded-2xl">
-                      {/* Priority: Firestore high-res photo over Auth user photo */}
                       <AvatarImage src={profileData.photoURL || user.photoURL || undefined} className="object-cover" />
                       <AvatarFallback className="bg-primary/10 text-2xl font-headline font-bold text-primary">
                         {(profileData.displayName || user.displayName)?.substring(0, 1).toUpperCase()}
@@ -305,15 +264,6 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
                     </div>
                   )}
 
-                  {profileData.dateOfBirth && (
-                    <div className="space-y-1">
-                      <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest">Birth Registry</p>
-                      <p className="text-[10px] font-mono text-foreground flex items-center justify-center md:justify-start gap-2">
-                        <Calendar size={10} className="text-accent" /> {profileData.dateOfBirth}
-                      </p>
-                    </div>
-                  )}
-
                   <div className="space-y-1">
                     <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest">Digital Fingerprint</p>
                     <code className="text-[10px] font-mono text-foreground/80 bg-black/40 px-2 py-1 rounded-md border border-white/5 block truncate text-center md:text-left">
@@ -328,7 +278,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
                <div className="space-y-1 relative z-10">
                   <div className="flex items-center gap-1.5">
                     <Lock size={10} className="text-accent" />
-                    <span className="text-[8px] font-mono text-accent font-bold uppercase">SHA256withRSA_V2_VERIFIED</span>
+                    <span className="text-[8px] font-mono text-accent font-bold uppercase">SHA256_RSA_V2.1_ACTIVE</span>
                   </div>
                   <p className="text-[7px] text-muted-foreground font-mono opacity-50 truncate max-w-[150px] md:max-w-[200px]">{signature}</p>
                </div>
@@ -336,20 +286,57 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
                   <p className="text-[8px] font-bold text-muted-foreground uppercase">Integrity</p>
                   <p className="text-xs font-headline font-bold text-primary">100.0%</p>
                </div>
-               <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary via-accent to-transparent opacity-30" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       <div className="flex justify-center gap-4 no-print">
-        <Button onClick={handleDownload} variant="outline" className="rounded-full border-primary/20 bg-primary/5 text-primary gap-2 h-11 px-6 font-bold text-xs uppercase tracking-widest hover:bg-primary/10 transition-all">
+        <Button onClick={() => window.print()} variant="outline" className="rounded-full border-primary/20 bg-primary/5 text-primary gap-2 h-11 px-6 font-bold text-xs uppercase tracking-widest hover:bg-primary/10 transition-all">
           <Download size={16} /> ডাউনলোড আইডি
         </Button>
-        <Button onClick={handleShare} variant="outline" className="rounded-full border-accent/20 bg-accent/5 text-accent gap-2 h-11 px-6 font-bold text-xs uppercase tracking-widest hover:bg-accent/10 transition-all">
-          <Share2 size={16} /> শেয়ার করুন
+        <Button onClick={handleCopyLink} variant="outline" className="rounded-full border-accent/20 bg-accent/5 text-accent gap-2 h-11 px-6 font-bold text-xs uppercase tracking-widest hover:bg-accent/10 transition-all">
+          <Share2 size={16} /> লিঙ্ক শেয়ার
         </Button>
       </div>
+
+      {/* Integration Options Dialog */}
+      <Dialog open={showIntegration} onOpenChange={setShowIntegration}>
+        <DialogContent className="max-w-md bg-card border-accent/20 rounded-[2.5rem] shadow-2xl overflow-hidden p-0">
+          <DialogHeader className="p-8 bg-accent/5 border-b border-white/5">
+             <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-accent/10 rounded-2xl flex items-center justify-center text-accent border border-accent/20">
+                   <Globe size={24} />
+                </div>
+                <div>
+                   <DialogTitle className="text-xl font-headline font-bold uppercase tracking-widest">Website Integration</DialogTitle>
+                   <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground">Integrate Shurukkha Hub globally</DialogDescription>
+                </div>
+             </div>
+          </DialogHeader>
+          <div className="p-8 space-y-6">
+             <div className="space-y-3">
+                <Label className="text-[10px] font-bold uppercase tracking-widest ml-1 text-primary">Your Public Identity URL</Label>
+                <div className="flex gap-2">
+                   <Input readOnly value={publicVerifyUrl} className="bg-background/50 border-white/10 h-10 text-[10px] font-mono" />
+                   <Button onClick={handleCopyLink} size="icon" className="shrink-0 bg-primary text-background"><Copy size={16} /></Button>
+                </div>
+                <p className="text-[8px] text-muted-foreground italic">এই লিঙ্কটি আপনার হোয়াটসঅ্যাপ বা ফেসবুক প্রোফাইলে যুক্ত করুন।</p>
+             </div>
+             <div className="space-y-3">
+                <Label className="text-[10px] font-bold uppercase tracking-widest ml-1 text-accent">Embed HTML Code</Label>
+                <div className="bg-black/60 p-4 rounded-xl border border-white/5 relative group">
+                   <code className="text-[9px] font-mono text-accent/80 block break-all">{embedCode}</code>
+                   <Button onClick={handleCopyEmbed} variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7 text-accent opacity-0 group-hover:opacity-100 transition-opacity"><Code size={14} /></Button>
+                </div>
+                <p className="text-[8px] text-muted-foreground italic">আপনার নিজের ওয়েবসাইটে এই কোডটি বসালে আপনার ভেরিফাইড আইডি কার্ড প্রদর্শিত হবে।</p>
+             </div>
+          </div>
+          <DialogFooter className="p-6 bg-muted/20 border-t border-white/5">
+             <Button onClick={() => setShowIntegration(false)} className="w-full h-12 bg-accent text-background font-bold rounded-xl uppercase tracking-widest text-xs">DONE</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Profile Management Dialog */}
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
@@ -365,73 +352,41 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
                 </div>
              </div>
           </DialogHeader>
-
           <div className="p-8 space-y-6">
              <div className="flex flex-col items-center gap-4 mb-4">
                 <div className="relative group cursor-pointer" onClick={handleFileClick}>
                    <Avatar className="h-28 w-28 border-4 border-primary/20 group-hover:border-primary/40 transition-all shadow-xl">
                       <AvatarImage src={profileData.photoURL} className="object-cover" />
-                      <AvatarFallback className="bg-primary/10 text-4xl font-headline font-bold text-primary">
-                        {profileData.displayName?.substring(0, 1)}
-                      </AvatarFallback>
+                      <AvatarFallback className="bg-primary/10 text-4xl font-headline font-bold text-primary">{profileData.displayName?.substring(0, 1)}</AvatarFallback>
                    </Avatar>
                    <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       {isUploading ? <Loader2 size={32} className="text-white animate-spin" /> : <Camera size={32} className="text-white" />}
                    </div>
                 </div>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept="image/*" 
-                  className="hidden" 
-                />
-                <Button variant="outline" size="sm" onClick={handleFileClick} className="h-8 border-primary/20 text-primary text-[10px] uppercase font-bold gap-2 rounded-full">
-                  <Upload size={12} /> নতুন ছবি আপলোড
-                </Button>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+                <Button variant="outline" size="sm" onClick={handleFileClick} className="h-8 border-primary/20 text-primary text-[10px] uppercase font-bold gap-2 rounded-full"><Upload size={12} /> নতুন ছবি আপলোড</Button>
              </div>
-
              <div className="space-y-4">
                 <div className="space-y-2">
                    <Label className="text-[10px] font-bold uppercase tracking-widest ml-1">ডিসপ্লে নাম</Label>
-                   <Input 
-                    value={profileData.displayName}
-                    onChange={e => setProfileData({...profileData, displayName: e.target.value})}
-                    placeholder="আপনার রাজকীয় নাম"
-                    className="bg-background/50 border-white/10 h-12 rounded-xl focus:ring-primary"
-                   />
+                   <Input value={profileData.displayName} onChange={e => setProfileData({...profileData, displayName: e.target.value})} className="bg-background/50 border-white/10 h-12 rounded-xl focus:ring-primary" />
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-2">
                       <Label className="text-[10px] font-bold uppercase tracking-widest ml-1">মোবাইল নম্বর</Label>
-                      <Input 
-                        value={profileData.phoneNumber}
-                        onChange={e => setProfileData({...profileData, phoneNumber: e.target.value})}
-                        placeholder="+৮৮০"
-                        className="bg-background/50 border-white/10 h-12 rounded-xl focus:ring-primary"
-                      />
+                      <Input value={profileData.phoneNumber} onChange={e => setProfileData({...profileData, phoneNumber: e.target.value})} placeholder="+৮৮০" className="bg-background/50 border-white/10 h-12 rounded-xl focus:ring-primary" />
                    </div>
                    <div className="space-y-2">
                       <Label className="text-[10px] font-bold uppercase tracking-widest ml-1">জন্ম তারিখ</Label>
-                      <Input 
-                        type="date"
-                        value={profileData.dateOfBirth}
-                        onChange={e => setProfileData({...profileData, dateOfBirth: e.target.value})}
-                        className="bg-background/50 border-white/10 h-12 rounded-xl focus:ring-primary"
-                      />
+                      <Input type="date" value={profileData.dateOfBirth} onChange={e => setProfileData({...profileData, dateOfBirth: e.target.value})} className="bg-background/50 border-white/10 h-12 rounded-xl focus:ring-primary" />
                    </div>
                 </div>
              </div>
           </div>
-
           <DialogFooter className="p-6 bg-muted/20 border-t border-white/5 flex gap-3">
-             <Button onClick={() => setIsEditing(false)} variant="ghost" className="flex-1 text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
-                <X size={16} className="mr-1" /> বাতিল
-             </Button>
+             <Button onClick={() => setIsEditing(false)} variant="ghost" className="flex-1 text-[10px] uppercase font-bold tracking-widest text-muted-foreground"><X size={16} className="mr-1" /> বাতিল</Button>
              <Button onClick={handleSaveProfile} disabled={isSaving || isUploading} className="flex-1 bg-primary text-background font-bold h-12 rounded-xl gap-2 shadow-lg shadow-primary/20 transition-all active:scale-95">
-                {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                পরিচয় সংরক্ষণ করুন
+                {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} পরিচয় সংরক্ষণ করুন
              </Button>
           </DialogFooter>
         </DialogContent>

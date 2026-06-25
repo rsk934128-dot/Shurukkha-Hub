@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react'
@@ -28,7 +29,9 @@ import {
   TrendingUp,
   Wallet,
   Box,
-  Braces
+  Braces,
+  Smartphone,
+  LayoutGrid
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -61,6 +64,16 @@ export default function DocumentationHub() {
       ]
     },
     {
+      id: 'integration',
+      title: 'ইন্টিগ্রেশন গাইড',
+      icon: Globe,
+      items: [
+        { title: 'পাবলিক আইডি লিঙ্ক', id: 'public-link' },
+        { title: 'ওয়েবসাইট এমবেড (Embed)', id: 'embed' },
+        { title: 'মোবাইল ডিপ লিঙ্কিং', id: 'deep-link' }
+      ]
+    },
+    {
       id: 'api-ref',
       title: 'এপিআই রেফারেন্স',
       icon: Code2,
@@ -68,16 +81,6 @@ export default function DocumentationHub() {
         { title: 'Sovereign Gateway', id: 'gateway' },
         { title: 'Sovereign Pay Bridge', id: 'payouts' },
         { title: 'SOS Signal Hub', id: 'sos-api' }
-      ]
-    },
-    {
-      id: 'sdk',
-      title: 'Sovereign SDK',
-      icon: Terminal,
-      items: [
-        { title: 'Node.js SDK', id: 'nodejs' },
-        { title: 'React Hooks', id: 'react-hooks' },
-        { title: 'Mobile Bridge', id: 'mobile' }
       ]
     }
   ]
@@ -140,29 +143,82 @@ export default function DocumentationHub() {
             </section>
           </div>
         )
-      case 'auth':
+      case 'public-link':
         return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-700">
-            <h2 className="text-4xl md:text-6xl font-headline font-bold uppercase tracking-tight">API এক্সেস কী (Key)</h2>
-            <Card className="bg-black/40 border-white/10 p-8 space-y-6 rounded-[2.5rem]">
-               <p className="text-sm text-muted-foreground leading-relaxed">
-                 সাম্রাজ্যের ৪২টি নোড এক্সেস করার জন্য আপনাকে অবশ্যই একটি **Sovereign Ephemeral Token** ব্যবহার করতে হবে। প্রতিটি টোকেন ৩০ মিনিট মেয়াদী এবং হার্ডওয়্যার ডিএনএ দ্বারা সুরক্ষিত।
-               </p>
-               <div className="p-6 bg-muted/20 rounded-2xl border border-white/5 space-y-4">
-                  <div className="flex items-center gap-2 text-accent">
-                     <Lock size={18} />
-                     <span className="text-[10px] font-bold uppercase tracking-widest">Security Best Practice</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground italic">"কখনও আপনার মাস্টার সিক্রেট কী অন্য কারো সাথে শেয়ার করবেন না। এটি হারানো মানে আপনার সার্বভৌমত্ব হুমকির মুখে পড়া।"</p>
+          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-5 duration-700">
+            <section className="space-y-6">
+              <Badge variant="outline" className="border-accent/40 text-accent py-1.5 px-4 bg-accent/5 text-[10px] font-bold tracking-widest uppercase">
+                Direct Integration v1.0
+              </Badge>
+              <h2 className="text-4xl md:text-7xl font-headline font-bold tracking-tighter uppercase leading-[0.9]">
+                Public <br/><span className="text-accent italic">Identity Links</span>
+              </h2>
+              <p className="max-w-3xl text-muted-foreground text-lg font-light leading-relaxed">
+                হোয়াটসঅ্যাপ বা টেলিগ্রামের মতো আপনার রাজকীয় প্রোফাইল এখন একটি সরাসরি লিঙ্কের মাধ্যমে শেয়ার করা সম্ভব। এটি যেকোনো সোশ্যাল মিডিয়া বা ওয়েবসাইটে সম্রাট এবং তাঁর মার্চেন্টদের সত্যতা প্রমাণ করবে।
+              </p>
+            </section>
+
+            <div className="p-8 bg-black/40 border border-white/10 rounded-[2.5rem] space-y-6">
+               <div className="space-y-2">
+                  <h4 className="text-sm font-bold text-primary uppercase">URL Format:</h4>
+                  <code className="block p-4 bg-muted/20 rounded-xl text-accent font-mono text-xs">
+                    https://core.sheikh/v/[YOUR_USER_ID]
+                  </code>
                </div>
-            </Card>
+               <p className="text-xs text-muted-foreground leading-relaxed italic">
+                 "এই লিঙ্কটি ওপেন করলে আপনার ফিউচারিস্টিক আইডি কার্ড প্রদর্শিত হবে এবং ভিজিটররা সরাসরি সেখান থেকে আপনার সাথে সিকিউরড চ্যাট শুরু করতে পারবে।"
+               </p>
+            </div>
+          </div>
+        )
+      case 'embed':
+        return (
+          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-5 duration-700">
+            <section className="space-y-6">
+              <Badge variant="outline" className="border-primary/40 text-primary py-1.5 px-4 bg-primary/5 text-[10px] font-bold tracking-widest uppercase">
+                Widget Protocol v1.2
+              </Badge>
+              <h2 className="text-4xl md:text-7xl font-headline font-bold tracking-tighter uppercase leading-[0.9]">
+                Website <br/><span className="text-primary italic">Embed (Iframe)</span>
+              </h2>
+              <p className="max-w-3xl text-muted-foreground text-lg font-light leading-relaxed">
+                আপনার সাম্রাজ্যের ভেরিফাইড পরিচয়পত্র এখন যেকোনো ওয়েবসাইটে লাইভ প্রদর্শন করা সম্ভব। নিচের কোডটি ব্যবহার করে আপনি আপনার বিজনেস ওয়েবসাইটে আপনার সার্বভৌম স্ট্যাটাস দেখাতে পারেন।
+              </p>
+            </section>
+
+            <div className="space-y-6">
+               <div className="p-6 bg-muted/20 rounded-3xl border border-white/5 space-y-4">
+                  <div className="flex items-center gap-3 text-accent">
+                    <Code2 size={20} />
+                    <h4 className="font-headline font-bold text-sm uppercase tracking-widest">HTML Snippet</h4>
+                  </div>
+                  <div className="relative group">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute top-2 right-2 h-8 w-8 text-white/40 hover:text-white"
+                      onClick={() => copyToClipboard(`<iframe src="https://core.sheikh/v/YOUR_ID" width="400" height="600" frameborder="0"></iframe>`)}
+                    >
+                      <Copy size={14} />
+                    </Button>
+                    <pre className="p-6 bg-slate-950 rounded-2xl border border-white/5 font-mono text-[10px] text-accent/80 overflow-x-auto">
+                      <code>{`<iframe 
+  src="https://core.sheikh/v/YOUR_ID" 
+  width="400" 
+  height="600" 
+  style="border:none; border-radius:32px; box-shadow:0 20px 40px rgba(0,0,0,0.4);"
+></iframe>`}</code>
+                    </pre>
+                  </div>
+               </div>
+            </div>
           </div>
         )
       case 'gateway':
         return (
           <div className="space-y-12 animate-in fade-in slide-in-from-bottom-5 duration-700">
             <section className="space-y-6">
-              <Badge variant="outline" className="border-accent/40 text-accent py-1 px-4 bg-accent/5 text-[10px] font-bold tracking-widest uppercase">
+              <Badge variant="outline" className="border-accent/40 text-accent py-1.5 px-4 bg-accent/5 text-[10px] font-bold tracking-widest uppercase">
                 Public API v1.0
               </Badge>
               <h2 className="text-4xl md:text-7xl font-headline font-bold tracking-tighter uppercase leading-[0.9]">
@@ -182,238 +238,6 @@ export default function DocumentationHub() {
                 <code className="block p-4 bg-black/40 rounded-xl text-accent font-mono text-xs border border-accent/20">
                   POST https://core.sheikh/api/v1/gateway
                 </code>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="text-lg font-headline font-bold uppercase flex items-center gap-2">
-                  <ShieldCheck className="text-accent" /> Authentication Headers
-                </h4>
-                <div className="bg-black/40 rounded-2xl border border-white/10 p-6 space-y-3 font-mono text-[11px]">
-                  <p className="text-muted-foreground">// Required for every request</p>
-                  <p><span className="text-primary">X-Imperial-Key:</span> sk_sov_your_access_token</p>
-                  <p><span className="text-primary">Content-Type:</span> application/json</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="text-lg font-headline font-bold uppercase flex items-center gap-2">
-                  <Activity className="text-primary" /> Supported Actions
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card className="bg-card/40 border-white/5 p-5 space-y-2">
-                    <p className="text-xs font-bold text-foreground">GET_VAULT_STATUS</p>
-                    <p className="text-[10px] text-muted-foreground">সাম্রাজ্যের ভল্টের বর্তমান ধারণক্ষমতা এবং নোড স্ট্যাটাস প্রদান করে।</p>
-                  </Card>
-                  <Card className="bg-card/40 border-white/5 p-5 space-y-2">
-                    <p className="text-xs font-bold text-foreground">PUSH_DATA_PACKET</p>
-                    <p className="text-[10px] text-muted-foreground">আপনার অ্যাপ থেকে ৪২টি নোড গ্রিডে ডেটা অফলোড করার জন্য।</p>
-                  </Card>
-                </div>
-              </div>
-
-              <div className="p-8 bg-primary/5 border border-primary/20 rounded-[2.5rem] space-y-6">
-                <h4 className="text-xl font-headline font-bold uppercase tracking-widest text-primary">Sample Request (JavaScript)</h4>
-                <div className="relative group">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="absolute top-4 right-4 h-8 w-8 text-white/40 hover:text-white"
-                    onClick={() => copyToClipboard(`fetch('https://core.sheikh/api/v1/gateway', {
-  method: 'POST',
-  headers: {
-    'X-Imperial-Key': 'YOUR_KEY_HERE',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({ action: 'GET_VAULT_STATUS' })
-})`)}
-                  >
-                    <Copy size={14} />
-                  </Button>
-                  <pre className="p-6 bg-slate-950 rounded-2xl border border-white/5 font-mono text-[10px] text-accent/80 overflow-x-auto">
-                    <code>{`const response = await fetch('https://core.sheikh/api/v1/gateway', {
-  method: 'POST',
-  headers: {
-    'X-Imperial-Key': 'YOUR_KEY_HERE',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({ action: 'GET_VAULT_STATUS' })
-});
-
-const data = await response.json();
-console.log(data.payload.status); // "OPTIMAL"`}</code>
-                  </pre>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      case 'payouts':
-        return (
-          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-5 duration-700">
-            <section className="space-y-6">
-              <Badge variant="outline" className="border-primary/40 text-primary py-1.5 px-4 bg-primary/5 text-[10px] font-bold tracking-widest uppercase">
-                Financial Protocol v3.0
-              </Badge>
-              <h2 className="text-4xl md:text-7xl font-headline font-bold tracking-tighter uppercase leading-[0.9]">
-                Sovereign <br/><span className="text-primary italic">Pay Bridge</span>
-              </h2>
-              <p className="max-w-3xl text-muted-foreground text-lg font-light leading-relaxed">
-                সভাৱেন পে ব্রিজ হলো সম্রাটের ফিনটেক সাম্রাজ্যের মেরুদণ্ড। এটি ১৫৫+ দেশের ব্যাংকিং নেটওয়ার্ক এবং PayPal/Wise-এর সমন্বিত গেটওয়ে যা ১ মিলি-সেকেন্ড ল্যাটেন্সিতে লেনদেন নিশ্চিত করে।
-              </p>
-            </section>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-               <div className="p-6 bg-card/40 border border-white/5 rounded-3xl space-y-3">
-                  <Globe className="text-accent" size={24} />
-                  <h4 className="font-bold text-sm uppercase">Global Coverage</h4>
-                  <p className="text-[10px] text-muted-foreground">১৫৫টিরও বেশি দেশে সরাসরি ব্যাংকিং নোড এবং ক্রিপ্টো সেটলমেন্ট সাপোর্ট।</p>
-               </div>
-               <div className="p-6 bg-card/40 border border-white/5 rounded-3xl space-y-3">
-                  <Zap className="text-primary" size={24} />
-                  <h4 className="font-bold text-sm uppercase">Atomic Settlement</h4>
-                  <p className="text-[10px] text-muted-foreground">জিরো-ল্যাটেন্সি ফান্ড ট্রান্সফার যা রিয়েল-টাইমে ট্রেজারি লেজারে আপডেট হয়।</p>
-               </div>
-               <div className="p-6 bg-card/40 border border-white/5 rounded-3xl space-y-3">
-                  <ShieldCheck className="text-accent" size={24} />
-                  <h4 className="font-bold text-sm uppercase">Fraud Shield</h4>
-                  <p className="text-[10px] text-muted-foreground">এআই-চালিত রিস্ক অ্যানালাইসিস যা প্রতিটি ট্রানজেকশনের ফরেনসিক ভেরিফিকেশন করে।</p>
-               </div>
-            </div>
-
-            <div className="space-y-8">
-              <div className="p-6 bg-muted/20 rounded-3xl border border-white/5 space-y-4">
-                <div className="flex items-center gap-3 text-accent">
-                  <Code2 size={20} />
-                  <h4 className="font-headline font-bold text-sm uppercase tracking-widest">Payout Intent Structure</h4>
-                </div>
-                <pre className="p-6 bg-black/40 rounded-2xl border border-accent/20 font-mono text-[10px] text-accent/80 overflow-x-auto">
-                  <code>{`{
-  "amount": 500.00,
-  "currency": "USD",
-  "destination": "WISE_SOVEREIGN_NODE",
-  "recipient_id": "user_4242",
-  "meta": {
-    "node_signature": "rsa_v2_sig_...",
-    "failover": "enabled"
-  }
-}`}</code>
-                </pre>
-              </div>
-
-              <div className="p-8 bg-accent/5 border border-accent/20 rounded-[2.5rem] space-y-6">
-                <h4 className="text-xl font-headline font-bold uppercase tracking-widest text-accent">Integration Blueprint</h4>
-                <div className="space-y-4">
-                   <div className="flex gap-4 items-start">
-                      <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent shrink-0 text-xs font-bold">1</div>
-                      <p className="text-sm text-muted-foreground">প্রথমে `Sovereign Gateway` থেকে একটি সেশন টোকেন সংগ্রহ করুন।</p>
-                   </div>
-                   <div className="flex gap-4 items-start">
-                      <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent shrink-0 text-xs font-bold">2</div>
-                      <p className="text-sm text-muted-foreground">`POST /api/v1/payouts` এন্ডপয়েন্টে আপনার লজিক ডিএনএ এবং ট্রানজেকশন ডাটা পাঠান।</p>
-                   </div>
-                   <div className="flex gap-4 items-start">
-                      <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent shrink-0 text-xs font-bold">3</div>
-                      <p className="text-sm text-muted-foreground">সিস্টেম স্বয়ংক্রিয়ভাবে ৪২টি নোড গ্রিডে লেনদেনের বিশুদ্ধতা যাচাই করে সেটলমেন্ট সম্পন্ন করবে।</p>
-                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      case 'nodejs':
-        return (
-          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-5 duration-700">
-            <section className="space-y-6">
-              <Badge variant="outline" className="border-primary/40 text-primary py-1.5 px-4 bg-primary/5 text-[10px] font-bold tracking-widest uppercase">
-                Official SDK v1.0.0
-              </Badge>
-              <h2 className="text-4xl md:text-7xl font-headline font-bold tracking-tighter uppercase leading-[0.9]">
-                Sovereign <br/><span className="text-primary italic">Node.js SDK</span>
-              </h2>
-              <p className="max-w-3xl text-muted-foreground text-lg font-light leading-relaxed">
-                আপনার Node.js ব্যাকএন্ড অ্যাপ্লিকেশনে সরাসরি সম্রাটের ৪২টি নোড গ্রিড একীভূত করুন। আমাদের এই SDK স্বয়ংক্রিয়ভাবে RSA v2 সিগনেচার এবং Ephemeral Token ম্যানেজমেন্ট হ্যান্ডেল করে।
-              </p>
-            </section>
-
-            <div className="space-y-8">
-              <div className="p-6 bg-muted/20 rounded-3xl border border-white/5 space-y-4">
-                <div className="flex items-center gap-3 text-accent">
-                  <Terminal size={20} />
-                  <h4 className="font-headline font-bold text-sm uppercase tracking-widest">Installation</h4>
-                </div>
-                <div className="relative group">
-                   <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="absolute top-1/2 -translate-y-1/2 right-4 h-8 w-8 text-white/40 hover:text-white"
-                    onClick={() => copyToClipboard(`npm install @sheikh/core`)}
-                   >
-                    <Copy size={14} />
-                   </Button>
-                   <code className="block p-4 bg-black/40 rounded-xl text-primary font-mono text-xs border border-primary/20">
-                    npm install @sheikh/core
-                   </code>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <h4 className="text-xl font-headline font-bold uppercase flex items-center gap-2">
-                  <Braces className="text-accent" /> Implementation Logic
-                </h4>
-                
-                <Card className="bg-card/40 border-white/5 rounded-[2rem] overflow-hidden">
-                  <CardHeader className="bg-primary/5 border-b border-white/5 py-4">
-                     <p className="text-[10px] font-bold uppercase text-primary tracking-widest">Basic Usage</p>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <pre className="p-6 bg-slate-950 font-mono text-[11px] text-accent/80 overflow-x-auto leading-relaxed">
-{`const { SheikhHub } = require('@sheikh/core');
-
-// Initialize with your Master API Key
-const hub = new SheikhHub({
-  apiKey: 'sk_sov_your_access_token',
-  node: 'anycast_primary'
-});
-
-async function runImperialSync() {
-  try {
-    // 1. Establish Sovereign Handshake
-    const session = await hub.auth.handshake();
-    console.log('Grid Recognized Identity:', session.id);
-
-    // 2. Fetch Vault Capacity
-    const vault = await hub.vault.getStats();
-    console.log('Vault Health:', vault.purity);
-
-    // 3. Dispatch SOS Alert
-    await hub.sos.dispatch({
-      type: 'SERVER_OVERLOAD',
-      location: 'DC-42-PRIMARY',
-      urgency: 'HIGH'
-    });
-
-  } catch (error) {
-    console.error('Sovereign Bridge Failure:', error.message);
-  }
-}
-
-runImperialSync();`}
-                    </pre>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className="p-6 bg-accent/5 border border-accent/20 rounded-3xl space-y-3">
-                    <Box size={24} className="text-accent" />
-                    <h4 className="font-bold text-sm uppercase">Auto-Signature</h4>
-                    <p className="text-[10px] text-muted-foreground leading-relaxed">প্রতিটি রিকোয়েস্ট স্বয়ংক্রিয়ভাবে RSA v2 প্রোটোকল ব্যবহার করে সাইন করা হয়, আপনাকে ম্যানুয়ালি হাশ করার প্রয়োজন নেই।</p>
-                 </div>
-                 <div className="p-6 bg-primary/5 border border-primary/20 rounded-3xl space-y-3">
-                    <RefreshCw size={24} className="text-primary animate-spin-slow" />
-                    <h4 className="font-bold text-sm uppercase">Anycast Failover</h4>
-                    <p className="text-[10px] text-muted-foreground leading-relaxed">নিকটতম এবং দ্রুততম নোডটি SDK নিজেই খুঁজে নেয়। একটি নোড অফলাইন হলে তা অটোমেটিক রিলুট হয়।</p>
-                 </div>
               </div>
             </div>
           </div>
@@ -497,18 +321,6 @@ runImperialSync();`}
                 </div>
               ))}
             </div>
-
-            <div className="p-4 bg-accent/5 border border-accent/20 rounded-2xl">
-               <p className="text-[9px] font-bold text-accent uppercase tracking-widest mb-2">System Status</p>
-               <div className="flex items-center justify-between text-[10px] font-mono">
-                  <span className="text-white/60">API Latency</span>
-                  <span className="text-accent">0.004ms</span>
-               </div>
-               <div className="flex items-center justify-between text-[10px] font-mono mt-1">
-                  <span className="text-white/60">Purity Score</span>
-                  <span className="text-accent">100.0%</span>
-               </div>
-            </div>
           </aside>
 
           {/* Main Content Area */}
@@ -524,18 +336,6 @@ runImperialSync();`}
                       <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Sovereign Compliance</p>
                       <p className="text-xs italic text-muted-foreground/60">"The code is the law, and the law is sovereign."</p>
                     </div>
-                  </div>
-                  <div className="flex gap-4">
-                     <Link href="/support">
-                       <Button variant="outline" className="rounded-full border-white/10 text-[10px] uppercase font-bold h-10 px-6">
-                          Support Hub
-                       </Button>
-                     </Link>
-                     <Link href="/security-policy">
-                       <Button variant="outline" className="rounded-full border-white/10 text-[10px] uppercase font-bold h-10 px-6">
-                          Security Policy
-                       </Button>
-                     </Link>
                   </div>
                </div>
                <p className="text-[8px] font-mono text-muted-foreground/30 uppercase tracking-[0.5em]">
