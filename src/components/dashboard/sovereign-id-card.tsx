@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { 
   ShieldCheck, 
   Star, 
@@ -21,7 +21,9 @@ import {
   Phone, 
   Camera, 
   Save, 
-  X 
+  X,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -33,7 +35,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useAuth } from '@/firebase'
-import { doc, updateDoc, getDoc } from 'firebase/firestore'
+import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore'
 import { updateProfile } from 'firebase/auth'
 import QRCode from 'qrcode'
 
@@ -46,11 +48,13 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const auth = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Profile Form States
   const [profileData, setProfileData] = useState({
@@ -72,8 +76,8 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
           if (userSnap.exists()) {
             const data = userSnap.data();
             setProfileData({
-              displayName: user.displayName || '',
-              photoURL: user.photoURL || '',
+              displayName: user.displayName || data.displayName || '',
+              photoURL: user.photoURL || data.photoURL || '',
               phoneNumber: data.phoneNumber || '',
               dateOfBirth: data.dateOfBirth || ''
             });
@@ -84,7 +88,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
       };
       fetchExtendedData();
     }
-  }, [user, firestore]);
+  }, [user, firestore, isEditing]);
 
   useEffect(() => {
     if (user?.uid) {
@@ -113,36 +117,75 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
     }
   }, [user, role, fingerprint]);
 
+  const handleFileClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ 
+        title: "ফাইল অত্যন্ত বড়", 
+        description: "দয়া করে ২ মেগাবাইটের কম সাইজের ছবি নির্বাচন করুন।", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setProfileData(prev => ({ ...prev, photoURL: base64String }));
+      setIsUploading(false);
+      toast({ title: "ছবি প্রসেস করা হয়েছে", description: "সংরক্ষণের জন্য 'পরিচয় সংরক্ষণ করুন' বাটনটি চাপুন।" });
+    };
+    reader.onerror = () => {
+      setIsUploading(false);
+      toast({ title: "প্রসেসিং ত্রুটি", variant: "destructive" });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveProfile = async () => {
     if (!auth.currentUser || !firestore) return;
     
     setIsSaving(true);
     try {
       // 1. Update Firebase Auth Profile (Sync Name & Photo)
-      await updateProfile(auth.currentUser, {
-        displayName: profileData.displayName,
-        photoURL: profileData.photoURL
-      });
+      // Note: Firebase Auth photoURL has limits, for very large base64 strings it might fail.
+      // We prioritize Firestore storage for the base64 string.
+      try {
+        await updateProfile(auth.currentUser, {
+          displayName: profileData.displayName,
+          photoURL: profileData.photoURL.startsWith('data:') ? 'https://picsum.photos/seed/42/200/200' : profileData.photoURL
+        });
+      } catch (authError) {
+        console.warn("[Auth Sync] Partial failure, skipping large string in auth profile.");
+      }
 
       // 2. Update Firestore Extended Profile
-      await updateDoc(doc(firestore, "users", user.uid), {
+      await setDoc(doc(firestore, "users", user.uid), {
         displayName: profileData.displayName,
         photoURL: profileData.photoURL,
         phoneNumber: profileData.phoneNumber,
         dateOfBirth: profileData.dateOfBirth,
         lastUpdated: new Date().toISOString()
-      });
+      }, { merge: true });
 
       toast({
         title: "পরিচয় আপডেট সফল ✅",
-        description: "আপনার সার্বভৌম তথ্য ৪২টি নোড গ্রিডে সংরক্ষিত হয়েছে।",
+        description: "আপনার সার্বভৌম তথ্য ৪২টি নোড গ্রিডে স্থায়ীভাবে সংরক্ষিত হয়েছে।",
       });
       setIsEditing(false);
       
-      // Reload page to refresh all components using the user object
-      setTimeout(() => window.location.reload(), 1500);
+      // Give UI time to show success before reload or state sync
+      setTimeout(() => window.location.reload(), 1000);
 
     } catch (error) {
+      console.error(error);
       toast({
         title: "আপডেট ব্যর্থ",
         description: "যান্ত্রিক ত্রুটির কারণে তথ্য সংরক্ষণ করা সম্ভব হয়নি।",
@@ -322,18 +365,28 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
           </DialogHeader>
 
           <div className="p-8 space-y-6">
-             <div className="flex justify-center mb-4">
-                <div className="relative group cursor-pointer">
-                   <Avatar className="h-24 w-24 border-4 border-primary/20 group-hover:border-primary/40 transition-all">
-                      <AvatarImage src={profileData.photoURL} />
-                      <AvatarFallback className="bg-primary/10 text-2xl font-headline font-bold text-primary">
+             <div className="flex flex-col items-center gap-4 mb-4">
+                <div className="relative group cursor-pointer" onClick={handleFileClick}>
+                   <Avatar className="h-28 w-28 border-4 border-primary/20 group-hover:border-primary/40 transition-all shadow-xl">
+                      <AvatarImage src={profileData.photoURL} className="object-cover" />
+                      <AvatarFallback className="bg-primary/10 text-4xl font-headline font-bold text-primary">
                         {profileData.displayName?.substring(0, 1)}
                       </AvatarFallback>
                    </Avatar>
                    <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Camera size={24} className="text-white" />
+                      {isUploading ? <Loader2 size={32} className="text-white animate-spin" /> : <Camera size={32} className="text-white" />}
                    </div>
                 </div>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange} 
+                  accept="image/*" 
+                  className="hidden" 
+                />
+                <Button variant="outline" size="sm" onClick={handleFileClick} className="h-8 border-primary/20 text-primary text-[10px] uppercase font-bold gap-2 rounded-full">
+                  <Upload size={12} /> নতুন ছবি আপলোড
+                </Button>
              </div>
 
              <div className="space-y-4">
@@ -344,16 +397,6 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
                     onChange={e => setProfileData({...profileData, displayName: e.target.value})}
                     placeholder="আপনার রাজকীয় নাম"
                     className="bg-background/50 border-white/10 h-12 rounded-xl focus:ring-primary"
-                   />
-                </div>
-
-                <div className="space-y-2">
-                   <Label className="text-[10px] font-bold uppercase tracking-widest ml-1">প্রোফাইল ফটো URL</Label>
-                   <Input 
-                    value={profileData.photoURL}
-                    onChange={e => setProfileData({...profileData, photoURL: e.target.value})}
-                    placeholder="https://images.com/photo.jpg"
-                    className="bg-background/50 border-white/10 h-12 rounded-xl focus:ring-primary font-mono text-[10px]"
                    />
                 </div>
 
@@ -384,7 +427,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
              <Button onClick={() => setIsEditing(false)} variant="ghost" className="flex-1 text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
                 <X size={16} className="mr-1" /> বাতিল
              </Button>
-             <Button onClick={handleSaveProfile} disabled={isSaving} className="flex-1 bg-primary text-background font-bold h-12 rounded-xl gap-2 shadow-lg shadow-primary/20">
+             <Button onClick={handleSaveProfile} disabled={isSaving || isUploading} className="flex-1 bg-primary text-background font-bold h-12 rounded-xl gap-2 shadow-lg shadow-primary/20 transition-all active:scale-95">
                 {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                 পরিচয় সংরক্ষণ করুন
              </Button>
