@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { CommunicationOrchestrator, Message } from '@/lib/communication-orchestrator'
 import { db } from '@/lib/firebase'
 import { useUser } from '@/firebase'
-import { collection, query, limit, onSnapshot, where, getDocs, setDoc, doc, serverTimestamp } from 'firebase/firestore'
+import { collection, query, limit, onSnapshot, where, getDocs, setDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
@@ -30,15 +30,52 @@ export function CommunicationConsole() {
   const [loading, setLoading] = useState(true)
   const [showMobileList, setShowMobileList] = useState(true)
   const [isSending, setIsSending] = useState(false)
+  const [lastInteractionMap, setLastInteractionMap] = useState<Record<string, number>>({})
   
   const scrollRef = useRef<HTMLDivElement>(null)
   const { playMessageSound } = useAudioEngine()
   const lastMessageId = useRef<string | null>(null)
 
+  // 1. Listen for global messages involving the current user to update sorting order
   useEffect(() => {
     if (!user) return;
 
-    // Real-time listener for users to track online/offline status
+    // Listen to the last 100 messages where the user could be involved
+    const qGlobal = query(
+      collection(db, "messages"),
+      orderBy("timestamp", "desc"),
+      limit(100)
+    );
+
+    const unsubscribe = onSnapshot(qGlobal, (snapshot) => {
+      const newInteractionMap = { ...lastInteractionMap };
+      let hasChange = false;
+
+      snapshot.docs.forEach(doc => {
+        const d = doc.data();
+        if (d.senderId === user.uid || d.recipientId === user.uid) {
+          const otherId = d.senderId === user.uid ? d.recipientId : d.senderId;
+          const ts = d.timestamp?.toMillis?.() || (d.timestamp?.seconds ? d.timestamp.seconds * 1000 : null) || Date.now();
+          
+          if (!newInteractionMap[otherId] || ts > newInteractionMap[otherId]) {
+            newInteractionMap[otherId] = ts;
+            hasChange = true;
+          }
+        }
+      });
+
+      if (hasChange) {
+        setLastInteractionMap(newInteractionMap);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  // 2. Fetch User Directory
+  useEffect(() => {
+    if (!user) return;
+
     const usersQuery = query(collection(db, "users"), limit(100));
     const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
       const otherUsers = snapshot.docs
@@ -62,15 +99,29 @@ export function CommunicationConsole() {
     return () => unsubscribeUsers();
   }, [user])
 
-  const filteredContacts = useMemo(() => {
-    if (!searchQuery) return contacts;
-    return contacts.filter(c => 
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      c.email?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [contacts, searchQuery]);
+  // 3. Sort and Filter Contacts
+  const sortedAndFilteredContacts = useMemo(() => {
+    // First apply search filter
+    let filtered = contacts;
+    if (searchQuery) {
+      filtered = contacts.filter(c => 
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        c.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
 
-  // Combine server messages with local queued messages
+    // Then sort by last interaction (highest timestamp first)
+    return [...filtered].sort((a, b) => {
+      const timeA = lastInteractionMap[a.id] || 0;
+      const timeB = lastInteractionMap[b.id] || 0;
+      
+      // If timestamps are equal, maintain alphabetical or role-based order
+      if (timeB === timeA) return 0;
+      return timeB - timeA;
+    });
+  }, [contacts, searchQuery, lastInteractionMap]);
+
+  // Combine server messages with local queued messages for the active chat
   const messages = useMemo(() => {
     if (!selectedContact || !user) return [];
     const currentChatId = CommunicationOrchestrator.getChatId(user.uid, selectedContact.id);
@@ -145,6 +196,8 @@ export function CommunicationConsole() {
         content: content,
         type: 'text'
       });
+      // Force update sorting on send
+      setLastInteractionMap(prev => ({ ...prev, [selectedContact.id]: Date.now() }));
     } catch (err) {
        console.error("[Comm] Send failed", err);
        setInput(content); 
@@ -247,7 +300,7 @@ export function CommunicationConsole() {
           
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
-              {filteredContacts.map(res => (
+              {sortedAndFilteredContacts.map(res => (
                 <div 
                   key={res.id} 
                   onClick={() => handleSelectContact(res)}
@@ -261,7 +314,12 @@ export function CommunicationConsole() {
                     <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-card ${res.status === 'online' ? 'bg-green-500 animate-pulse' : 'bg-muted'}`} />
                   </div>
                   <div className="overflow-hidden flex-1">
-                    <p className="text-[11px] font-bold truncate text-foreground">{res.name}</p>
+                    <div className="flex justify-between items-start">
+                      <p className="text-[11px] font-bold truncate text-foreground">{res.name}</p>
+                      {lastInteractionMap[res.id] && (
+                        <span className="text-[7px] text-primary font-mono ml-2">Active</span>
+                      )}
+                    </div>
                     <div className="flex items-center justify-between">
                       <p className="text-[8px] text-muted-foreground uppercase tracking-tight">{res.role}</p>
                       {res.status === 'online' && <span className="text-[7px] font-bold text-green-500 uppercase tracking-widest">Online</span>}
