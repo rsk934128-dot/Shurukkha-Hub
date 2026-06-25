@@ -121,7 +121,8 @@ export function CommunicationConsole() {
         if (change.type === 'added') {
           const d = change.doc.data();
           if (d.senderId !== user.uid) {
-            playMessageSound();
+            // Note: Global listener in NotificationCenter now handles real-time sound
+            // to prevent duplication when the chat view is open.
             if (d.recipientId === user.uid && d.read === false) {
               updateDoc(doc(db, "messages", change.doc.id), { read: true });
             }

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Bell, MessageSquare, ShieldAlert, Zap, Globe, Clock, CheckCircle2, Trash2, Box, Signal, Sparkles, Star, X, ShieldCheck, Send, Loader2 } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { db } from '@/lib/firebase'
-import { collection, query, orderBy, limit, onSnapshot, where, doc, getDoc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore'
+import { collection, query, orderBy, limit, onSnapshot, where, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'
 import { useUser } from '@/firebase'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { AppLogo } from '@/components/ui/app-logo'
@@ -19,9 +19,9 @@ import { IntegrationBridge } from '@/lib/integration-bridge'
 import { useToast } from '@/hooks/use-toast'
 
 /**
- * @fileOverview Imperial Notification Center v2.0.
- * Aggregates all sovereign signals into a single high-fidelity HUD.
- * Updated: Added Sender Avatars, Quick Reply for Messages, and Majestic Audio.
+ * @fileOverview Imperial Notification Center v2.5.
+ * Aggregates all sovereign signals with Real-Time Audio Relay.
+ * Fixed: Real-time sound trigger on message arrival.
  */
 
 export function ImperialNotificationCenter() {
@@ -33,6 +33,8 @@ export function ImperialNotificationCenter() {
   const [replyText, setReplyText] = useState('')
   const [isReplying, setIsReplying] = useState(false)
   const { playMessageSound } = useAudioEngine()
+  
+  const isFirstLoad = useRef(true)
 
   useEffect(() => {
     if (!user) return;
@@ -50,17 +52,33 @@ export function ImperialNotificationCenter() {
       updateNotifications(sos, 'SOS');
     });
 
-    // 2. Listen for Incoming Messages with Sender Details
+    // 2. Real-Time Message Listener with Audio Trigger
     const unsubMessages = onSnapshot(query(
       collection(db, "messages"), 
       where("recipientId", "==", user.uid),
+      orderBy("timestamp", "desc"),
       limit(20)
-    ), async (snap) => {
-      const messageList = [];
-      for (const docSnap of snap.docs) {
+    ), async (snapshot) => {
+      const messageList: any[] = [];
+      
+      // Process changes for sound notification
+      if (!isFirstLoad.current) {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            const data = change.doc.data();
+            if (data.read === false && data.senderId !== user.uid) {
+              console.log("[Imperial Signal] Real-time message detected. Playing Chime...");
+              playMessageSound();
+            }
+          }
+        });
+      }
+      isFirstLoad.current = false;
+
+      // Update the full unread list for UI
+      for (const docSnap of snapshot.docs) {
         const d = docSnap.data();
         if (d.read === false) {
-          // Fetch sender info for avatar
           let senderAvatar = '';
           try {
             const senderRef = doc(db, "users", d.senderId);
@@ -82,15 +100,6 @@ export function ImperialNotificationCenter() {
         }
       }
       
-      if (messageList.length > 0) {
-        const lastMsg = messageList[0];
-        playMessageSound();
-        NotificationManager.sendNotification(
-          `নতুন মেসেজ: ${lastMsg.content.substring(0, 20)}...`,
-          "সাম্রাজ্যের নোটিফিকেশন সেন্টার চেক করুন।",
-          `msg-${lastMsg.id}`
-        );
-      }
       updateNotifications(messageList, 'MESSAGE');
     });
 
@@ -147,8 +156,6 @@ export function ImperialNotificationCenter() {
       };
 
       await addDoc(collection(db, "messages"), replyData);
-      
-      // Mark original as read
       const originalRef = doc(db, "messages", selectedNotif.id);
       await updateDoc(originalRef, { read: true });
 
