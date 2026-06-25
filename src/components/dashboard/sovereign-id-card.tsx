@@ -67,7 +67,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
   const fingerprint = user?.uid?.substring(0, 12).toUpperCase() || 'EST_XXXX_XXXX';
   const signature = 'SIG_SHA256_' + (user?.email ? btoa(user.email).substring(0, 16).toUpperCase() : 'UNKNOWN');
 
-  // Fetch extended profile data from Firestore on mount and when editing starts
+  // Fetch extended profile data from Firestore on mount
   useEffect(() => {
     if (user?.uid && firestore) {
       const fetchExtendedData = async () => {
@@ -88,7 +88,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
       };
       fetchExtendedData();
     }
-  }, [user?.uid, firestore, isEditing]);
+  }, [user?.uid, firestore]);
 
   useEffect(() => {
     if (user?.uid) {
@@ -154,28 +154,24 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
     
     setIsSaving(true);
     try {
-      // 1. Update Firebase Auth Profile (Sync Name)
-      // Note: We avoid pushing large base64 strings to Auth Profile due to size limits.
-      // Firestore will hold the primary source of truth for the image.
-      const syncPhotoUrl = profileData.photoURL.length < 2000 ? profileData.photoURL : (user.photoURL || '');
-      
-      try {
-        await updateProfile(auth.currentUser, {
-          displayName: profileData.displayName,
-          photoURL: syncPhotoUrl
-        });
-      } catch (authError) {
-        console.warn("[Auth Sync] Partially skipped auth-token photo update due to size.");
-      }
-
-      // 2. Update Firestore Extended Profile (Crucial: This is where the real photo is saved)
+      // 1. Update Firestore Extended Profile (Primary source of truth for photo)
       await setDoc(doc(firestore, "users", user.uid), {
         displayName: profileData.displayName,
-        photoURL: profileData.photoURL, // Full base64 or URL
+        photoURL: profileData.photoURL, 
         phoneNumber: profileData.phoneNumber,
         dateOfBirth: profileData.dateOfBirth,
         lastUpdated: new Date().toISOString()
       }, { merge: true });
+
+      // 2. Update Firebase Auth Profile (Only sync name and low-res photo if short)
+      // Base64 strings are too large for Auth Profile, so we keep Auth's photoURL as is
+      // unless it's a short URL.
+      const syncPhotoUrl = profileData.photoURL.length < 2000 ? profileData.photoURL : (auth.currentUser.photoURL || '');
+      
+      await updateProfile(auth.currentUser, {
+        displayName: profileData.displayName,
+        photoURL: syncPhotoUrl
+      });
 
       toast({
         title: "পরিচয় আপডেট সফল ✅",
@@ -184,8 +180,10 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
       
       setIsEditing(false);
       
-      // Refresh browser to ensure all components see the updated Auth & Firestore state
-      setTimeout(() => window.location.reload(), 800);
+      // Force a hard refresh to re-sync all components with Firestore's new data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
 
     } catch (error) {
       console.error(error);
@@ -263,7 +261,7 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
                   <div className="absolute -inset-2 bg-gradient-to-b from-primary to-accent rounded-3xl blur-md opacity-30 animate-pulse no-print" />
                   <div className="relative w-32 h-32 rounded-3xl border-2 border-primary/20 overflow-hidden bg-muted p-1">
                     <Avatar className="w-full h-full rounded-2xl">
-                      {/* Using profileData.photoURL which is synced with Firestore for better persistence */}
+                      {/* Priority: Firestore high-res photo over Auth user photo */}
                       <AvatarImage src={profileData.photoURL || user.photoURL || undefined} className="object-cover" />
                       <AvatarFallback className="bg-primary/10 text-2xl font-headline font-bold text-primary">
                         {(profileData.displayName || user.displayName)?.substring(0, 1).toUpperCase()}

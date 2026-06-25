@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -99,16 +100,21 @@ export default function ShurukkhaDashboard() {
           const currentRole = isAdmin ? 'admin' : (data?.role || 'citizen');
           setUserRole(currentRole as any);
 
-          setDoc(userRef, {
-            displayName: user.displayName,
+          // CRITICAL FIX: Only initialize photo and name if they don't exist in Firestore.
+          // This prevents the low-quality Auth photo from overwriting the high-quality Base64 upload.
+          const updateObj: any = {
             email: user.email,
-            photoURL: user.photoURL,
             role: currentRole,
             lastLogin: new Date().toISOString(),
             status: 'online',
             lastActive: new Date().toISOString(),
             deviceFingerprint: DeviceValidator.generateFingerprint()
-          }, { merge: true });
+          };
+
+          if (!data?.photoURL) updateObj.photoURL = user.photoURL;
+          if (!data?.displayName) updateObj.displayName = user.displayName;
+
+          setDoc(userRef, updateObj, { merge: true });
 
           if (currentRole === 'admin' || currentRole === 'authority') {
             setActiveView('ops');
