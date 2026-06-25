@@ -1,4 +1,3 @@
-
 "use client"
 
 /**
@@ -21,27 +20,37 @@ export function useAudioEngine() {
     }
   };
 
-  // Play a synthesized imperial chime for messages
+  // Play a synthesized majestic digital chime for messages
   const playMessageSound = useCallback(() => {
     initContext();
     const ctx = audioContext.current!;
     if (ctx.state === 'suspended') ctx.resume();
 
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
+    const now = ctx.currentTime;
+    
+    const playTone = (freq: number, start: number, dur: number, gainVal: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, start);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.8, start + dur);
+      
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(gainVal, start + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(start);
+      osc.stop(start + dur);
+    };
 
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.1);
-
-    gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    oscillator.start();
-    oscillator.stop(ctx.currentTime + 0.2);
+    // Majestic Sequence
+    playTone(880, now, 0.4, 0.1);
+    playTone(1320, now + 0.1, 0.3, 0.08);
+    playTone(1760, now + 0.2, 0.2, 0.06);
   }, []);
 
   // Play a synthesized high-fidelity imperial ringtone for incoming calls

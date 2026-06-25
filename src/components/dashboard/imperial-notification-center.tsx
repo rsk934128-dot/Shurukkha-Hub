@@ -1,36 +1,43 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Bell, MessageSquare, ShieldAlert, Zap, Globe, Clock, CheckCircle2, Trash2, Box, Signal, Sparkles, Star, X, ShieldCheck } from 'lucide-react'
+import { Bell, MessageSquare, ShieldAlert, Zap, Globe, Clock, CheckCircle2, Trash2, Box, Signal, Sparkles, Star, X, ShieldCheck, Send, Loader2 } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { db } from '@/lib/firebase'
-import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore'
+import { collection, query, orderBy, limit, onSnapshot, where, doc, getDoc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore'
 import { useUser } from '@/firebase'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { AppLogo } from '@/components/ui/app-logo'
 import { NotificationManager } from '@/lib/notification-manager'
+import { IntegrationBridge } from '@/lib/integration-bridge'
+import { useToast } from '@/hooks/use-toast'
 
 /**
- * @fileOverview Imperial Notification Center.
+ * @fileOverview Imperial Notification Center v2.0.
  * Aggregates all sovereign signals into a single high-fidelity HUD.
- * Updated Phase 39.0: Fixed Message Ingestion and added browser-level push relay.
+ * Updated: Added Sender Avatars, Quick Reply for Messages, and Majestic Audio.
  */
 
 export function ImperialNotificationCenter() {
   const { user } = useUser()
+  const { toast } = useToast()
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [selectedNotif, setSelectedNotif] = useState<any>(null)
+  const [replyText, setReplyText] = useState('')
+  const [isReplying, setIsReplying] = useState(false)
   const { playMessageSound } = useAudioEngine()
 
   useEffect(() => {
     if (!user) return;
 
-    // 1. Listen for SOS Alerts (Aggressive Strategy)
+    // 1. Listen for SOS Alerts
     const unsubSOS = onSnapshot(query(collection(db, "sos_alerts"), orderBy("timestamp", "desc"), limit(5)), (snap) => {
       const sos = snap.docs.map(doc => ({ 
         id: doc.id, 
@@ -43,37 +50,51 @@ export function ImperialNotificationCenter() {
       updateNotifications(sos, 'SOS');
     });
 
-    // 2. Listen for Incoming Messages (Broad Query to avoid Index errors)
+    // 2. Listen for Incoming Messages with Sender Details
     const unsubMessages = onSnapshot(query(
       collection(db, "messages"), 
       where("recipientId", "==", user.uid),
       limit(20)
-    ), (snap) => {
-      const msgs = snap.docs
-        .filter(doc => doc.data().read === false)
-        .map(doc => ({ 
-          id: doc.id, 
-          ...doc.data(), 
-          type: 'MESSAGE',
-          icon: MessageSquare,
-          color: 'text-primary',
-          label: 'New Message'
-        }));
+    ), async (snap) => {
+      const messageList = [];
+      for (const docSnap of snap.docs) {
+        const d = docSnap.data();
+        if (d.read === false) {
+          // Fetch sender info for avatar
+          let senderAvatar = '';
+          try {
+            const senderRef = doc(db, "users", d.senderId);
+            const senderSnap = await getDoc(senderRef);
+            if (senderSnap.exists()) {
+              senderAvatar = senderSnap.data().photoURL || '';
+            }
+          } catch (e) {}
+
+          messageList.push({
+            id: docSnap.id,
+            ...d,
+            type: 'MESSAGE',
+            icon: MessageSquare,
+            color: 'text-primary',
+            label: 'New Message',
+            senderAvatar
+          });
+        }
+      }
       
-      if (msgs.length > 0) {
-        // Trigger sound and browser push if new messages arrived
-        const lastMsg = msgs[0];
+      if (messageList.length > 0) {
+        const lastMsg = messageList[0];
         playMessageSound();
         NotificationManager.sendNotification(
-          "নতুন মেসেজ প্রাপ্ত",
-          lastMsg.content.substring(0, 50) + (lastMsg.content.length > 50 ? '...' : ''),
+          `নতুন মেসেজ: ${lastMsg.content.substring(0, 20)}...`,
+          "সাম্রাজ্যের নোটিফিকেশন সেন্টার চেক করুন।",
           `msg-${lastMsg.id}`
         );
       }
-      updateNotifications(msgs, 'MESSAGE');
+      updateNotifications(messageList, 'MESSAGE');
     });
 
-    // 3. Listen for External Signals (Imperial Vouchers, Antivirus etc.)
+    // 3. Listen for External Signals
     const unsubSignals = onSnapshot(query(collection(db, "external_notifications"), orderBy("timestamp", "desc"), limit(5)), (snap) => {
       const signals = snap.docs.map(doc => ({ 
         id: doc.id, 
@@ -95,7 +116,6 @@ export function ImperialNotificationCenter() {
 
   const updateNotifications = (newData: any[], type: string) => {
     setNotifications(prev => {
-      // Remove old notifications of the same type and merge new ones
       const filtered = prev.filter(n => n.type !== type);
       const combined = [...newData, ...filtered].sort((a, b) => {
         const timeA = a.timestamp?.toMillis?.() || a.timestamp?.seconds * 1000 || new Date(a.timestamp).getTime() || 0;
@@ -109,6 +129,38 @@ export function ImperialNotificationCenter() {
   useEffect(() => {
     setUnreadCount(notifications.length);
   }, [notifications]);
+
+  const handleQuickReply = async () => {
+    if (!selectedNotif || !replyText.trim() || !user) return;
+    setIsReplying(true);
+    try {
+      const chatId = [user.uid, selectedNotif.senderId].sort().join('_');
+      const replyData = {
+        senderId: user.uid,
+        recipientId: selectedNotif.senderId,
+        chatId,
+        content: replyText,
+        type: 'text',
+        timestamp: serverTimestamp(),
+        read: false,
+        status: 'sent'
+      };
+
+      await addDoc(collection(db, "messages"), replyData);
+      
+      // Mark original as read
+      const originalRef = doc(db, "messages", selectedNotif.id);
+      await updateDoc(originalRef, { read: true });
+
+      toast({ title: "উত্তর পাঠানো হয়েছে", description: "আপনার রাজকীয় উত্তর ১ মিলি-সেকেন্ডে পৌঁছেছে।" });
+      setReplyText('');
+      setSelectedNotif(null);
+    } catch (e) {
+      toast({ title: "প্রেরণ ব্যর্থ", variant: "destructive" });
+    } finally {
+      setIsReplying(false);
+    }
+  };
 
   const getRelativeTime = (ts: any) => {
     if (!ts) return 'Just now';
@@ -159,8 +211,17 @@ export function ImperialNotificationCenter() {
                       onClick={() => setSelectedNotif(notif)}
                       className="p-4 hover:bg-white/[0.03] transition-colors flex items-start gap-4 group cursor-pointer"
                     >
-                      <div className={`w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center border border-white/5 shrink-0 group-hover:scale-110 transition-transform ${notif.color}`}>
-                        <notif.icon size={18} />
+                      <div className="shrink-0">
+                        {notif.type === 'MESSAGE' && notif.senderAvatar ? (
+                          <Avatar className="h-10 w-10 border border-primary/20 group-hover:scale-110 transition-transform">
+                            <AvatarImage src={notif.senderAvatar} className="object-cover" />
+                            <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{notif.label[0]}</AvatarFallback>
+                          </Avatar>
+                        ) : (
+                          <div className={`w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center border border-white/5 group-hover:scale-110 transition-transform ${notif.color}`}>
+                            <notif.icon size={18} />
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex justify-between items-start">
@@ -199,8 +260,17 @@ export function ImperialNotificationCenter() {
                <AppLogo size={200} />
             </div>
             <div className="flex items-center gap-4 relative z-10">
-              <div className={`w-16 h-16 rounded-2xl bg-black/40 flex items-center justify-center border-2 border-primary/20 ${selectedNotif?.color}`}>
-                 {selectedNotif && <selectedNotif.icon size={32} className="animate-pulse" />}
+              <div className="shrink-0">
+                {selectedNotif?.type === 'MESSAGE' && selectedNotif.senderAvatar ? (
+                  <Avatar className="h-16 w-16 border-2 border-primary/20 shadow-lg">
+                    <AvatarImage src={selectedNotif.senderAvatar} className="object-cover" />
+                    <AvatarFallback className="bg-primary/10 text-xl font-bold text-primary">{selectedNotif.label[0]}</AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className={`w-16 h-16 rounded-2xl bg-black/40 flex items-center justify-center border-2 border-primary/20 ${selectedNotif?.color}`}>
+                     {selectedNotif && <selectedNotif.icon size={32} className="animate-pulse" />}
+                  </div>
+                )}
               </div>
               <div>
                 <DialogTitle className="text-xl font-headline font-bold tracking-widest text-primary uppercase leading-none">
@@ -218,6 +288,33 @@ export function ImperialNotificationCenter() {
                <p className="italic">"{selectedNotif?.content || selectedNotif?.location || selectedNotif?.note || 'No detailed data available.'}"</p>
             </div>
 
+            {selectedNotif?.type === 'MESSAGE' && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                <div className="flex gap-2">
+                  <Badge onClick={() => setReplyText('Verified. সাম্রাজ্যের ভল্টে সংরক্ষিত।')} variant="outline" className="cursor-pointer hover:bg-primary/20 text-[8px] border-primary/20 py-1.5 px-3 uppercase">Verify</Badge>
+                  <Badge onClick={() => setReplyText('On my way. দ্রুত ব্যবস্থা নেওয়া হচ্ছে।')} variant="outline" className="cursor-pointer hover:bg-accent/20 text-[8px] border-accent/20 py-1.5 px-3 uppercase text-accent">On Way</Badge>
+                  <Badge onClick={() => setReplyText('Received. জয় আপনার হোক।')} variant="outline" className="cursor-pointer hover:bg-primary/20 text-[8px] border-primary/20 py-1.5 px-3 uppercase">Confirm</Badge>
+                </div>
+                <div className="flex gap-3 bg-muted/10 p-2 rounded-2xl border border-white/5">
+                  <Input 
+                    value={replyText}
+                    onChange={e => setReplyText(e.target.value)}
+                    placeholder="দ্রুত উত্তর দিন..."
+                    className="bg-transparent border-none focus-visible:ring-0 text-sm h-12"
+                    onKeyDown={e => e.key === 'Enter' && handleQuickReply()}
+                  />
+                  <Button 
+                    onClick={handleQuickReply}
+                    disabled={isReplying || !replyText.trim()}
+                    className="h-12 px-6 bg-primary text-background font-bold rounded-xl gap-2 shadow-lg shadow-primary/20"
+                  >
+                    {isReplying ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                    SEND
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
                <div className="p-4 bg-muted/20 rounded-2xl border border-white/5 space-y-1">
                   <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest">Received Time</p>
@@ -230,21 +327,11 @@ export function ImperialNotificationCenter() {
                   <p className="text-[10px] font-mono text-accent truncate">SHA256_{selectedNotif?.id.substring(0, 16).toUpperCase()}</p>
                </div>
             </div>
-
-            <div className="flex items-center gap-3 p-4 bg-accent/5 rounded-2xl border border-accent/20">
-               <Globe size={18} className="text-accent" />
-               <p className="text-[10px] text-muted-foreground italic">
-                 "মহামান্য সম্রাট, এই সংকেতটি সরাসরি ৪২টি নোড গ্রিড থেকে রিয়েল-টাইমে প্রসেস করা হয়েছে।"
-               </p>
-            </div>
           </div>
 
           <div className="p-6 bg-muted/20 border-t border-white/5 flex gap-4">
              <Button onClick={() => setSelectedNotif(null)} className="flex-1 bg-primary text-background font-bold h-12 rounded-xl gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
                 <CheckCircle2 size={18} /> ACKNOWLEDGE
-             </Button>
-             <Button variant="outline" className="flex-1 border-white/10 text-white font-bold h-12 rounded-xl gap-2 hover:bg-white/5">
-                <Trash2 size={18} className="text-destructive" /> DISMISS SIGNAL
              </Button>
           </div>
         </DialogContent>
