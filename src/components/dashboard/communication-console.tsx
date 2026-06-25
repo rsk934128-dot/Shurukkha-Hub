@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { MessageSquare, Send, Paperclip, Phone, Video, User, ShieldCheck, Search, Loader2, Signal, ArrowLeft, Info } from 'lucide-react'
+import { MessageSquare, Send, Paperclip, Phone, Video, User, ShieldCheck, Search, Loader2, Signal, ArrowLeft, Info, PhoneCall } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,6 +18,12 @@ import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
 import { DisasterStorage } from '@/lib/disaster-storage'
 import { useToast } from '@/hooks/use-toast'
+
+/**
+ * @fileOverview Sovereign Communication Console.
+ * Manages individual and group encrypted communications.
+ * Phase 42.0: Integrated Direct Audio/Video Call Buttons in Chat Header.
+ */
 
 const COMMAND_CENTER_CONTACT = { id: 'command_center', name: "Sovereign Command", role: "admin", status: 'online', avatar: '' }
 
@@ -80,16 +86,11 @@ export function CommunicationConsole() {
        console.error("[Comm Console] Global Listener Error:", err);
        if (err.code === 'failed-precondition') {
           setHasIndexError(true);
-          toast({
-            title: "ইন্ডেক্স মিসিং (Safe-Mode Active)",
-            description: "সম্রাট, সর্টিং সক্রিয় করার জন্য ইন্ডেক্স তৈরি করা হচ্ছে। অনুগ্রহ করে ব্রাউজার কনসোল চেক করুন।",
-            variant: "destructive"
-          });
        }
     });
 
     return () => unsubscribe();
-  }, [user?.uid, toast, hasIndexError]);
+  }, [user?.uid, hasIndexError]);
 
   // 2. User Directory sync
   useEffect(() => {
@@ -225,38 +226,76 @@ export function CommunicationConsole() {
     }
   }
 
+  const initiateCall = async (type: 'audio' | 'video') => {
+    if (!user || !selectedContact) return;
+    
+    console.log(`[Comm Console] Initiating ${type} call to: ${selectedContact.id}`);
+    const sessionId = `call_direct_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const sessionRef = doc(db, 'webrtc_sessions', sessionId);
+    
+    try {
+      await setDoc(sessionRef, {
+        callerId: user.uid,
+        callerName: user.displayName || 'Imperial Sovereign',
+        callerAvatar: user.photoURL || '',
+        recipientId: selectedContact.id,
+        recipientName: selectedContact.name,
+        recipientAvatar: selectedContact.avatar || '',
+        status: 'ringing',
+        type: type,
+        timestamp: serverTimestamp()
+      });
+      toast({ title: "সিগন্যাল পাঠানো হচ্ছে...", description: `${selectedContact.name}-এর সাথে সংযোগ স্থাপন করা হচ্ছে।` });
+    } catch (e) {
+      toast({ title: "সেশন ত্রুটি", variant: "destructive" });
+    }
+  }
+
   return (
-    <Card className="bg-card/40 border-primary/20 flex flex-col h-full overflow-hidden neon-glow-primary">
+    <Card className="bg-card/40 border-primary/20 flex flex-col h-full overflow-hidden neon-glow-primary shadow-2xl">
       <CardHeader className="bg-primary/5 border-b border-white/5 py-3 md:py-4 px-4 md:px-6 flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
           {!showMobileList && (
-            <Button variant="ghost" size="icon" onClick={() => setShowMobileList(true)} className="md:hidden h-8 w-8">
+            <Button variant="ghost" size="icon" onClick={() => setShowMobileList(true)} className="md:hidden h-8 w-8 text-primary">
               <ArrowLeft size={20} />
             </Button>
           )}
           {selectedContact && !showMobileList ? (
-            <div className="flex items-center gap-2 md:gap-3">
-              <Avatar className="h-8 w-8 md:h-10 md:w-10 border border-primary/40">
+            <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
+              <Avatar className="h-8 w-8 md:h-10 md:w-10 border border-primary/40 shrink-0">
                 <AvatarImage src={selectedContact.avatar || undefined} />
                 <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{selectedContact.name?.[0]}</AvatarFallback>
               </Avatar>
-              <div>
-                <CardTitle className="text-[11px] md:text-sm font-headline font-bold uppercase tracking-widest">{selectedContact.name}</CardTitle>
+              <div className="min-w-0">
+                <CardTitle className="text-[11px] md:text-sm font-headline font-bold uppercase tracking-widest truncate">{selectedContact.name}</CardTitle>
                 <p className="text-[7px] md:text-[9px] text-muted-foreground font-mono">{selectedContact.status === 'online' ? 'SIGNAL_ACTIVE' : 'SIGNAL_IDLE'}</p>
               </div>
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <Signal className="text-primary" size={20} />
+              <Signal className="text-primary animate-pulse" size={20} />
               <CardTitle className="text-xs md:text-sm font-headline font-bold uppercase tracking-widest">Sovereign Channels</CardTitle>
             </div>
           )}
         </div>
-        {hasIndexError && (
-          <Badge variant="destructive" className="animate-pulse text-[8px] gap-1 px-3">
-            <Info size={10} /> Safe-Mode
-          </Badge>
-        )}
+
+        <div className="flex items-center gap-2">
+          {selectedContact && !showMobileList && (
+            <>
+              <Button onClick={() => initiateCall('audio')} variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10 rounded-xl bg-accent/5 text-accent hover:bg-accent/20 border border-accent/20">
+                <Phone size={18} />
+              </Button>
+              <Button onClick={() => initiateCall('video')} variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10 rounded-xl bg-primary/5 text-primary hover:bg-primary/20 border border-primary/20">
+                <Video size={18} />
+              </Button>
+            </>
+          )}
+          {hasIndexError && (
+            <Badge variant="destructive" className="animate-pulse text-[8px] gap-1 px-3 hidden xs:flex">
+              <Info size={10} /> Safe-Mode
+            </Badge>
+          )}
+        </div>
       </CardHeader>
 
       <div className="flex-1 flex overflow-hidden">
@@ -264,13 +303,13 @@ export function CommunicationConsole() {
           <div className="p-4 border-b border-white/5">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-              <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-9 pl-9 text-[11px] bg-background/50 border-white/10 rounded-xl" />
+              <Input placeholder="Search Identity..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-9 pl-9 text-[11px] bg-background/50 border-white/10 rounded-xl focus:ring-primary" />
             </div>
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
               {sortedAndFilteredContacts.map(res => (
-                <div key={res.id} onClick={() => handleSelectContact(res)} className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${selectedContact?.id === res.id ? 'bg-primary/20 border border-primary/30' : 'hover:bg-white/5'}`}>
+                <div key={res.id} onClick={() => handleSelectContact(res)} className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${selectedContact?.id === res.id ? 'bg-primary/20 border border-primary/30 shadow-lg' : 'hover:bg-white/5'}`}>
                   <div className="relative">
                     <Avatar className="h-9 w-9 border border-white/10">
                       <AvatarImage src={res.avatar || undefined} />
@@ -285,7 +324,7 @@ export function CommunicationConsole() {
                         <Badge className="bg-primary text-background h-4 min-w-4 px-1 flex items-center justify-center font-bold text-[9px] animate-pulse">{unreadCountMap[res.id]}</Badge>
                       )}
                     </div>
-                    <p className="text-[8px] text-muted-foreground uppercase">{res.role}</p>
+                    <p className="text-[8px] text-muted-foreground uppercase tracking-widest">{res.role}</p>
                   </div>
                 </div>
               ))}
@@ -304,7 +343,7 @@ export function CommunicationConsole() {
                     return (
                       <div key={i} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}>
                         <div className={`max-w-[85%] md:max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-1`}>
-                          <div className={`p-3 rounded-2xl text-[13px] md:text-[14px] ${isMe ? 'bg-primary text-background rounded-br-none' : 'bg-muted/80 border border-white/10 rounded-tl-none'}`}>
+                          <div className={`p-3 rounded-2xl text-[13px] md:text-[14px] ${isMe ? 'bg-primary text-background rounded-br-none shadow-lg' : 'bg-muted/80 border border-white/10 rounded-tl-none'}`}>
                             {msg.content}
                           </div>
                           <span className="text-[7px] font-mono text-muted-foreground opacity-60 uppercase">{ts ? new Date(ts).toLocaleTimeString() : 'Syncing...'}</span>
@@ -316,8 +355,8 @@ export function CommunicationConsole() {
               </ScrollArea>
               <div className="p-3 md:p-4 bg-background/80 border-t border-white/5 backdrop-blur-xl">
                 <div className="flex items-center gap-2 md:gap-3 bg-black/40 border border-white/10 rounded-2xl p-2 px-3">
-                  <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} placeholder="Send message..." disabled={isSending} className="flex-1 bg-transparent border-none focus-visible:ring-0 text-[12px] h-8 md:h-10" />
-                  <Button onClick={handleSend} disabled={!input.trim() || isSending} className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-primary text-background shadow-lg">
+                  <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} placeholder="সাম্রাজ্যের সিগন্যাল পাঠান..." disabled={isSending} className="flex-1 bg-transparent border-none focus-visible:ring-0 text-[12px] h-8 md:h-10" />
+                  <Button onClick={handleSend} disabled={!input.trim() || isSending} className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-primary text-background shadow-lg hover:scale-105 active:scale-95 transition-transform">
                     {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                   </Button>
                 </div>
@@ -325,8 +364,9 @@ export function CommunicationConsole() {
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8 opacity-20 hidden md:flex">
-              <MessageSquare size={64} className="mb-4" />
-              <p className="font-headline font-bold uppercase tracking-[0.2em] text-xs">Select a contact</p>
+              <MessageSquare size={80} className="mb-6 text-primary" />
+              <p className="font-headline font-bold uppercase tracking-[0.3em] text-xs">Awaiting Imperial Channel Selection</p>
+              <p className="text-[10px] mt-2 italic">Select a contact to begin secure communication.</p>
             </div>
           )}
         </div>
