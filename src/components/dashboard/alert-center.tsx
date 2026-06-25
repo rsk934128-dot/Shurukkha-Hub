@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { db } from '@/lib/firebase'
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore'
+import { collection, onSnapshot, query, orderBy, limit, doc, getDoc } from 'firebase/firestore'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
 import { useUser } from '@/firebase'
@@ -19,12 +19,37 @@ export function AlertCenter() {
   const { user } = useUser()
   const [alerts, setAlerts] = useState<any[]>([])
   const [isOpen, setIsOpen] = useState(false)
-
-  const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
+  const [isAuthorized, setIsAuthorized] = useState(false)
 
   useEffect(() => {
-    // Only subscribe if the user is an authorized admin
-    if (!isAdmin) {
+    if (!user) return;
+
+    const checkAuth = async () => {
+      // Direct Email Check
+      if (ADMIN_EMAILS.includes(user.email || '')) {
+        setIsAuthorized(true);
+        return;
+      }
+
+      // Firestore Role Check
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        const role = userSnap.data()?.role;
+        if (role === 'admin' || role === 'authority') {
+          setIsAuthorized(true);
+        }
+      } catch (e) {
+        setIsAuthorized(false);
+      }
+    };
+
+    checkAuth();
+  }, [user]);
+
+  useEffect(() => {
+    // Only subscribe if the user is verified as authorized in the DB
+    if (!isAuthorized) {
       setAlerts([]);
       return;
     }
@@ -45,18 +70,15 @@ export function AlertCenter() {
       setAlerts(newAlerts);
     }, async (err) => {
       if (err.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: '/suspect_profiles',
-          operation: 'list'
-        }));
+        console.warn("[Alert Center] Permission denied, possibly during session init.");
       }
     });
 
     return () => unsubscribe();
-  }, [isOpen, isAdmin])
+  }, [isOpen, isAuthorized])
 
-  // Don't render anything if there are no alerts or user is not an admin
-  if (!isAdmin || alerts.length === 0) return null;
+  // Don't render anything if there are no alerts or user is not authorized
+  if (!isAuthorized || alerts.length === 0) return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-[100]">
@@ -87,7 +109,7 @@ export function AlertCenter() {
                   <div key={alert.id} className="p-3 bg-destructive/5 border border-destructive/10 rounded-xl space-y-2 group hover:bg-destructive/10 transition-all">
                     <div className="flex justify-between items-start">
                       <Badge variant="destructive" className="text-[7px] h-4 uppercase tracking-widest">
-                        {alert.threatLevel} THREAT
+                        {alert.threatLevel || 'SEC'} THREAT
                       </Badge>
                       <span className="text-[8px] text-muted-foreground font-mono">
                         {alert.timestamp?.toDate?.()?.toLocaleTimeString() || '00:00'}

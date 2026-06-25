@@ -9,17 +9,19 @@ service cloud.firestore {
     }
     
     function isAdmin() {
+      let adminEmails = ['rubels1k994@gmail.com', 'rsk755734@gmail.com'];
       return isAuthenticated() && (
-        request.auth.token.email == 'rubels1k994@gmail.com' || 
-        request.auth.token.email == 'rsk755734@gmail.com' || 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        request.auth.token.email in adminEmails || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
     }
 
     function isAuthority() {
       return isAuthenticated() && (
         isAdmin() || 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'authority'
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'authority')
       );
     }
 
@@ -58,8 +60,9 @@ service cloud.firestore {
 
     // Standard collections
     match /audit_trails/{logId} { 
-      allow read: if isAuthority(); 
+      allow read: if isAuthenticated(); // লগের স্বচ্ছতা সবার জন্য উন্মুক্ত (Read-Only)
       allow create: if isAuthenticated(); 
+      allow delete: if isAdmin();
     }
     
     match /messages/{messageId} { allow read, write: if isAuthenticated(); }
