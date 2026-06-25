@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Globe, Key, Cpu, Zap, Database, Code2, ShieldAlert, Activity, RefreshCw, Trophy, BrainCircuit, Network, HardDrive, Server, TerminalSquare, Code, Webhook, Box, ArrowRightLeft, ShieldCheck, Landmark, LayoutGrid, LayoutTemplate, ShieldCheckIcon, UserPlus, Cloud, Swords } from 'lucide-react'
+import { Globe, Key, Cpu, Zap, Database, Code2, ShieldAlert, Activity, RefreshCw, Trophy, BrainCircuit, Network, HardDrive, Server, TerminalSquare, Code, Webhook, Box, ArrowRightLeft, ShieldCheck, Landmark, LayoutGrid, LayoutTemplate, ShieldCheckIcon, UserPlus, Cloud, Swords, Lock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,20 +34,25 @@ export function IntegrationPanel() {
   const [vaultStats, setVaultStats] = useState<VaultStats>(GoogleDriveBridge.getVaultStats())
   const [devKey, setDevKey] = useState<string | null>(null)
   const [activeSignals, setActiveSignals] = useState<any[]>([])
+  const [hasPermissionError, setHasPermissionError] = useState(false)
   
   const { toast } = useToast()
 
   useEffect(() => {
     const unsubApps = onSnapshot(query(collection(db, "integrations")), (snapshot) => {
       setApps(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setHasPermissionError(false);
     }, (err) => {
+      console.error("[Sovereign Guard] Apps Permission Error:", err);
       if (err.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: '/integrations', operation: 'list' }));
+        setHasPermissionError(true);
       }
     });
 
     const unsubSignals = onSnapshot(query(collection(db, "audit_trails"), orderBy("timestamp", "desc"), limit(10)), (snapshot) => {
       setActiveSignals(snapshot.docs.filter(d => d.data().action === 'PLUGIN_SIGNAL_DISPATCHED').map(d => d.data()));
+    }, (err) => {
+      console.warn("[Sovereign Guard] Signals Permission Error (Suppressed for non-admins)");
     });
 
     const interval = setInterval(() => {
@@ -73,6 +78,25 @@ export function IntegrationPanel() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (hasPermissionError) {
+    return (
+      <Card className="bg-card border-destructive/20 p-12 flex flex-col items-center justify-center text-center space-y-6">
+        <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center border-2 border-destructive/20">
+          <Lock className="text-destructive" size={40} />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-xl font-headline font-bold text-white uppercase tracking-widest">Access Restricted</h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto italic">
+            "মহামান্য সম্রাট, এই প্যানেলটি শুধুমাত্র উচ্চপদস্থ কর্মকর্তাদের জন্য সংরক্ষিত। আপনার আইডেন্টিটি র্যাঙ্ক অনুযায়ী এই ডাটা প্যাকেটগুলো এক্সেস করার অনুমতি নেই।"
+          </p>
+        </div>
+        <Button variant="outline" className="border-primary/20 text-primary" onClick={() => window.location.reload()}>
+          <RefreshCw size={16} className="mr-2" /> RE-AUTHENTICATE
+        </Button>
+      </Card>
+    );
   }
 
   return (

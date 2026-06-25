@@ -12,7 +12,14 @@ service cloud.firestore {
       return isAuthenticated() && (
         request.auth.token.email == 'rubels1k994@gmail.com' || 
         request.auth.token.email == 'rsk755734@gmail.com' || 
-        request.auth.token.role == 'admin'
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
+    function isAuthority() {
+      return isAuthenticated() && (
+        isAdmin() || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'authority'
       );
     }
 
@@ -38,7 +45,8 @@ service cloud.firestore {
 
     // External Notifications (Signal Hub)
     match /external_notifications/{notifId} {
-      allow read, write: if isAdmin();
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
       allow create: if isAuthenticated();
     }
 
@@ -49,14 +57,19 @@ service cloud.firestore {
     }
 
     // Standard collections
-    match /audit_trails/{logId} { allow read: if isAdmin(); allow create: if isAuthenticated(); }
+    match /audit_trails/{logId} { 
+      allow read: if isAuthority(); 
+      allow create: if isAuthenticated(); 
+    }
+    
     match /messages/{messageId} { allow read, write: if isAuthenticated(); }
     match /incidents/{incidentId} { allow read, write: if isAuthenticated(); }
     match /sovereign_domains/{domainId} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /partner_requests/{requestId} { allow read: if isAdmin(); allow create: if isAuthenticated(); }
+    match /partner_requests/{requestId} { allow read: if isAuthority(); allow create: if isAuthenticated(); }
     match /relief_inventory/{itemId} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
     match /relief_distributions/{distId} { allow read: if isAuthenticated(); allow write: if isAdmin(); }
-    match /suspect_profiles/{profileId} { allow read: if isAdmin(); allow write: if isAdmin(); }
+    match /suspect_profiles/{profileId} { allow read: if isAuthority(); allow write: if isAdmin(); }
+    
     match /webrtc_sessions/{sessionId} {
       allow read, write: if isAuthenticated();
       match /ice_candidates/{candidateId} {
