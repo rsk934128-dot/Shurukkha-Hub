@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -30,6 +29,7 @@ import { NotificationHub } from '@/components/dashboard/notification-hub'
 import { ImperialManagement } from '@/components/dashboard/imperial-management'
 import { IntegrationPanel } from '@/components/dashboard/integration-panel'
 import { LiveShield } from '@/components/security/live-shield'
+import { ImperialNotificationCenter } from '@/components/dashboard/imperial-notification-center'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFirestore, useUser, useAuth } from '@/firebase'
@@ -214,6 +214,7 @@ export default function ShurukkhaDashboard() {
             <div className="flex items-center gap-2 md:gap-4">
               {survivalMode && <Badge variant="destructive" className="h-5 text-[6px] md:text-[8px]">SURVIVAL</Badge>}
               <SovereignStatusWidget />
+              <ImperialNotificationCenter />
               <Avatar className="h-7 w-7 md:h-8 md:w-8 border border-primary/20 cursor-pointer" onClick={() => setActiveView('profile')}>
                 <AvatarImage src={user?.photoURL || undefined} />
                 <AvatarFallback className="bg-primary/10 text-[8px] md:text-[10px]">{user?.displayName?.substring(0, 2).toUpperCase()}</AvatarFallback>
