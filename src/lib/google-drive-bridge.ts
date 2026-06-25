@@ -17,6 +17,15 @@ export interface VaultStats {
   exchangeVolume: string; 
 }
 
+export interface VaultFile {
+  id: string;
+  name: string;
+  type: string;
+  size: string;
+  modified: string;
+  purity: string;
+}
+
 export const GoogleDriveBridge = {
   vaultId: 'imperial_vault_42nd_archive',
 
@@ -79,5 +88,14 @@ export const GoogleDriveBridge = {
       offloadEfficiency: 92,
       exchangeVolume: '1.2 PB'
     };
+  },
+
+  getRecentFiles: (): VaultFile[] => {
+    return [
+      { id: 'f1', name: 'Project_42_Final_Build.zip', type: 'Archive', size: '245 MB', modified: '2 hours ago', purity: '100.0%' },
+      { id: 'f2', name: 'Imperial_Decree_May_2026.pdf', type: 'Document', size: '1.2 MB', modified: 'Yesterday', purity: '100.0%' },
+      { id: 'f3', name: 'Flood_Sim_Vectors_v2.json', type: 'Data', size: '42 KB', modified: '3 days ago', purity: '100.0%' },
+      { id: 'f4', name: 'Sovereign_OS_Kernel_Beta.bin', type: 'Binary', size: '840 MB', modified: '1 week ago', purity: '100.0%' },
+    ];
   }
 };

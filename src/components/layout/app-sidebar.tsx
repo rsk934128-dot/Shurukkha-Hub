@@ -35,7 +35,8 @@ import {
   ShieldAlert,
   BookOpen,
   LayoutGrid,
-  Mail
+  Mail,
+  Cloud
 } from "lucide-react"
 
 import {
@@ -135,7 +136,7 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
   }
 
   return (
-    <Sidebar className="border-r border-white/5 bg-card/60 backdrop-blur-xl">
+    <Sidebar className="border-r border-white/5 bg-sidebar">
       <SidebarHeader className="p-4 border-b border-white/5">
         <div className="flex items-center gap-3">
           <AppLogo size={32} />
@@ -253,18 +254,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   <Badge className="ml-auto bg-accent text-background text-[7px] h-4">NEW</Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild
-                  className="px-4 h-10 gap-3 text-primary hover:bg-primary/10"
-                >
-                  <Link href="/docs" target="_blank">
-                    <BookOpen size={18} />
-                    <span className="font-bold">Imperial Documentation</span>
-                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-primary/20 text-primary">DOCS</Badge>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -298,77 +287,13 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
 
                 <SidebarMenuItem>
                   <SidebarMenuButton 
-                    isActive={activeTab === 'intelligence'} 
-                    onClick={() => handleNav('intelligence')}
+                    isActive={activeTab === 'vault'} 
+                    onClick={() => handleNav('vault')}
                     className="px-4 h-10 gap-3"
                   >
-                    <SearchCode size={18} className={activeTab === 'intelligence' ? "text-accent" : "text-muted-foreground"} />
-                    <span className="font-medium">ইন্টেলিজেন্স বোর্ড</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    isActive={activeTab === 'relief'} 
-                    onClick={() => handleNav('relief')}
-                    className="px-4 h-10 gap-3"
-                  >
-                    <Box size={18} className="text-amber-500" />
-                    <span className="font-medium">ত্রাণ ও সম্পদ</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    isActive={activeTab === 'manifesto'} 
-                    onClick={() => handleNav('manifesto')}
-                    className="px-4 h-10 gap-3"
-                  >
-                    <Scale size={18} className="text-accent" />
-                    <span className="font-medium">ভিশন ও ম্যানিফেস্টো</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton 
-                      isActive={activeTab === 'partnerships'} 
-                      onClick={() => handleNav('partnerships')}
-                      className="px-4 h-10 gap-3"
-                    >
-                      <Handshake size={18} className="text-primary" />
-                      <span className="font-medium">অংশীদারিত্ব আবেদন</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuButton 
-                    isActive={activeTab === 'management'} 
-                    onClick={() => handleNav('management')}
-                    className="px-4 h-10 gap-3"
-                  >
-                    <Settings size={18} className="text-primary" />
-                    <span className="font-medium">প্রশাসনিক কমান্ড</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    isActive={activeTab === 'analytics'} 
-                    onClick={() => handleNav('analytics')}
-                    className="px-4 h-10 gap-3"
-                  >
-                    <Activity size={18} className="text-accent" />
-                    <span className="font-medium">সিস্টেম হেলথ</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    isActive={activeTab === 'audits'} 
-                    onClick={() => handleNav('audits')}
-                    className="px-4 h-10 gap-3"
-                  >
-                    <ShieldCheck size={18} className="text-primary" />
-                    <span className="font-medium">নিরাপত্তা অডিট</span>
+                    <Cloud size={18} className="text-primary" />
+                    <span className="font-medium">সভ্যরেন ভল্ট</span>
+                    <Badge variant="outline" className="ml-auto text-[7px] h-3 border-primary/20 text-primary uppercase font-bold">DRIVE</Badge>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
@@ -380,17 +305,6 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   >
                     <Globe size={18} className="text-accent" />
                     <span className="font-medium">নেটওয়ার্ক ম্যাপ</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    isActive={activeTab === 'treasury'} 
-                    onClick={() => handleNav('treasury')}
-                    className="px-4 h-10 gap-3"
-                  >
-                    <Landmark size={18} className="text-primary" />
-                    <span className="font-medium">গ্লোবাল ট্রেজারি</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -422,14 +336,7 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
             </SidebarMenuItem>
           )}
         </SidebarMenu>
-        <div className="p-3 bg-primary/5 rounded-xl border border-primary/20">
-          <div className="flex items-center gap-2 mb-1">
-            <Zap size={12} className="text-primary fill-primary" />
-            <span className="text-[9px] font-bold uppercase tracking-widest text-primary">Status: Sovereign</span>
-          </div>
-          <p className="text-[8px] text-muted-foreground italic">আপনার সাম্রাজ্য এখন ১০০% নিরাপদ।</p>
-        </div>
-      </SidebarFooter>
+      </SidebarContent>
     </Sidebar>
   )
 }

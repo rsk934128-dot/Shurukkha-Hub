@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode, MessageSquare, Handshake, Box, Scale, Settings, Mail } from 'lucide-react'
+import { Shield, Bell, User, Video, LayoutDashboard, Radio, Play, Loader2, Wifi, WifiOff, RefreshCw, Share2, BrainCircuit, Zap, BarChart3, Activity, PowerOff, Globe, Lock, Landmark, Database, Star, Network, Menu, LogOut, LogIn, Fingerprint, FileSearch, Sparkles, CreditCard, UserCircle, Signal, SignalHigh, SignalLow, Plane, Smartphone, ShieldAlert, FileText, SearchCode, MessageSquare, Handshake, Box, Scale, Settings, Mail, Cloud } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { SOSButton } from '@/components/dashboard/sos-button'
@@ -31,6 +31,7 @@ import { IntegrationPanel } from '@/components/dashboard/integration-panel'
 import { LiveShield } from '@/components/security/live-shield'
 import { ImperialNotificationCenter } from '@/components/dashboard/imperial-notification-center'
 import { MailInbox } from '@/components/dashboard/mail-inbox'
+import { VaultManager } from '@/components/dashboard/vault-manager'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFirestore, useUser, useAuth } from '@/firebase'
@@ -120,46 +121,8 @@ export default function ShurukkhaDashboard() {
       };
 
       fetchRole();
-
-      const handleUnload = () => {
-        updateDoc(userRef, { 
-          status: 'offline',
-          lastActive: new Date().toISOString()
-        });
-      };
-
-      window.addEventListener('beforeunload', handleUnload);
-      return () => {
-        window.removeEventListener('beforeunload', handleUnload);
-        handleUnload();
-      };
     }
   }, [user?.uid, firestore])
-
-  useEffect(() => {
-    const handleConnectivityChange = () => {
-      const online = navigator.onLine;
-      setIsOffline(!online);
-      
-      CommunicationOrchestrator.getInstance().setConnectivity(online);
-      
-      if (!online) {
-        setSurvivalMode(true);
-        toast({ title: "SURVIVAL MODE ACTIVE", variant: "destructive" });
-      } else { 
-        setSurvivalMode(false); 
-      }
-    };
-    
-    window.addEventListener('online', handleConnectivityChange)
-    window.addEventListener('offline', handleConnectivityChange)
-    handleConnectivityChange();
-    
-    return () => {
-      window.removeEventListener('online', handleConnectivityChange)
-      window.removeEventListener('offline', handleConnectivityChange)
-    }
-  }, [toast])
 
   const handleLogout = async () => {
     if (auth && user && firestore) {
@@ -178,7 +141,7 @@ export default function ShurukkhaDashboard() {
     if (view === 'lens') { setIsLensOpen(true); return; }
     if (view === 'exchange') { window.open('/exchange', '_blank'); return; }
     setActiveView(view);
-    if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile', 'messages', 'partnerships', 'relief', 'manifesto', 'signals', 'management', 'security', 'mail'].includes(view)) {
+    if (['ops', 'intelligence', 'analytics', 'audits', 'integrations', 'treasury', 'profile', 'messages', 'partnerships', 'relief', 'manifesto', 'signals', 'management', 'security', 'mail', 'vault'].includes(view)) {
       setActiveSubTab(view);
     }
   }
@@ -209,7 +172,6 @@ export default function ShurukkhaDashboard() {
             </div>
             
             <div className="flex items-center gap-2 md:gap-4">
-              {survivalMode && <Badge variant="destructive" className="h-5 text-[6px] md:text-[8px]">SURVIVAL</Badge>}
               <SovereignStatusWidget />
               <ImperialNotificationCenter />
               <Avatar className="h-7 w-7 md:h-8 md:w-8 border border-primary/20 cursor-pointer" onClick={() => setActiveView('profile')}>
@@ -220,7 +182,7 @@ export default function ShurukkhaDashboard() {
           </header>
 
           <main className="flex-1 px-3 md:px-6 py-4 md:py-6 overflow-x-hidden">
-            {(userRole === 'admin' || userRole === 'authority') && activeView !== 'profile' && activeView !== 'citizen' && activeView !== 'messages' && activeView !== 'mail' && (
+            {(userRole === 'admin' || userRole === 'authority') && activeView !== 'profile' && activeView !== 'citizen' && activeView !== 'messages' && activeView !== 'mail' && activeView !== 'vault' && (
               <div className="space-y-6 md:space-y-8 mb-6 md:mb-8">
                 <ImperialOverview />
                 <SovereignStatusReport />
@@ -243,8 +205,9 @@ export default function ShurukkhaDashboard() {
             {activeView === 'messages' && <div className="h-[calc(100vh-140px)] md:h-[calc(100vh-180px)] max-w-5xl mx-auto w-full"><CommunicationConsole /></div>}
             {activeView === 'profile' && <div className="max-w-4xl mx-auto"><SovereignIDCard user={user} role={userRole} /></div>}
             {activeView === 'mail' && <div className="max-w-7xl mx-auto w-full h-[calc(100vh-120px)]"><MailInbox /></div>}
+            {activeView === 'vault' && <div className="max-w-7xl mx-auto w-full"><VaultManager /></div>}
 
-            {(activeView !== 'citizen' && activeView !== 'profile' && activeView !== 'messages' && activeView !== 'mail') && (
+            {(activeView !== 'citizen' && activeView !== 'profile' && activeView !== 'messages' && activeView !== 'mail' && activeView !== 'vault') && (
               <Tabs value={activeSubTab} onValueChange={handleSidebarNavigate} className="w-full">
                 <TabsContent value="ops" className="h-[calc(100vh-220px)] md:h-[calc(100vh-250px)]"><DispatcherConsole /></TabsContent>
                 <TabsContent value="management"><ImperialManagement /></TabsContent>
