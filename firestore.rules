@@ -42,6 +42,12 @@ service cloud.firestore {
       allow create: if isAuthenticated();
     }
 
+    // Integrations (Plugins / Apps)
+    match /integrations/{appId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
     // Standard collections
     match /audit_trails/{logId} { allow read: if isAdmin(); allow create: if isAuthenticated(); }
     match /messages/{messageId} { allow read, write: if isAuthenticated(); }
