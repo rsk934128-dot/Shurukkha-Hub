@@ -2,13 +2,39 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
-import { ShieldCheck, Star, Fingerprint, Lock, Globe, Zap, QrCode, Cpu, User, Share2, Download, Sparkles, Loader2 } from 'lucide-react'
+import { 
+  ShieldCheck, 
+  Star, 
+  Fingerprint, 
+  Lock, 
+  Globe, 
+  Zap, 
+  QrCode, 
+  Cpu, 
+  User, 
+  Share2, 
+  Download, 
+  Sparkles, 
+  Loader2, 
+  Settings, 
+  Calendar, 
+  Phone, 
+  Camera, 
+  Save, 
+  X 
+} from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { AppLogo } from '@/components/ui/app-logo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
+import { useFirestore, useAuth } from '@/firebase'
+import { doc, updateDoc, getDoc } from 'firebase/firestore'
+import { updateProfile } from 'firebase/auth'
 import QRCode from 'qrcode'
 
 interface SovereignIDCardProps {
@@ -18,15 +44,50 @@ interface SovereignIDCardProps {
 
 export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const auth = useAuth();
+  
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Profile Form States
+  const [profileData, setProfileData] = useState({
+    displayName: user?.displayName || '',
+    photoURL: user?.photoURL || '',
+    phoneNumber: '',
+    dateOfBirth: ''
+  });
 
   const fingerprint = user?.uid?.substring(0, 12).toUpperCase() || 'EST_XXXX_XXXX';
   const signature = 'SIG_SHA256_' + (user?.email ? btoa(user.email).substring(0, 16).toUpperCase() : 'UNKNOWN');
 
+  // Fetch extended profile data from Firestore
+  useEffect(() => {
+    if (user?.uid && firestore) {
+      const fetchExtendedData = async () => {
+        try {
+          const userSnap = await getDoc(doc(firestore, "users", user.uid));
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            setProfileData({
+              displayName: user.displayName || '',
+              photoURL: user.photoURL || '',
+              phoneNumber: data.phoneNumber || '',
+              dateOfBirth: data.dateOfBirth || ''
+            });
+          }
+        } catch (e) {
+          console.warn("[Profile] Could not fetch extended data.");
+        }
+      };
+      fetchExtendedData();
+    }
+  }, [user, firestore]);
+
   useEffect(() => {
     if (user?.uid) {
-      // Generate real QR code with user identity
       const data = JSON.stringify({
         uid: user.uid,
         name: user.displayName,
@@ -39,8 +100,8 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
         margin: 2,
         width: 200,
         color: {
-          dark: '#7597FF', // Primary color
-          light: '#00000000' // Transparent
+          dark: '#7597FF', 
+          light: '#00000000'
         }
       }).then(url => {
         setQrDataUrl(url);
@@ -52,6 +113,46 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
     }
   }, [user, role, fingerprint]);
 
+  const handleSaveProfile = async () => {
+    if (!auth.currentUser || !firestore) return;
+    
+    setIsSaving(true);
+    try {
+      // 1. Update Firebase Auth Profile (Sync Name & Photo)
+      await updateProfile(auth.currentUser, {
+        displayName: profileData.displayName,
+        photoURL: profileData.photoURL
+      });
+
+      // 2. Update Firestore Extended Profile
+      await updateDoc(doc(firestore, "users", user.uid), {
+        displayName: profileData.displayName,
+        photoURL: profileData.photoURL,
+        phoneNumber: profileData.phoneNumber,
+        dateOfBirth: profileData.dateOfBirth,
+        lastUpdated: new Date().toISOString()
+      });
+
+      toast({
+        title: "পরিচয় আপডেট সফল ✅",
+        description: "আপনার সার্বভৌম তথ্য ৪২টি নোড গ্রিডে সংরক্ষিত হয়েছে।",
+      });
+      setIsEditing(false);
+      
+      // Reload page to refresh all components using the user object
+      setTimeout(() => window.location.reload(), 1500);
+
+    } catch (error) {
+      toast({
+        title: "আপডেট ব্যর্থ",
+        description: "যান্ত্রিক ত্রুটির কারণে তথ্য সংরক্ষণ করা সম্ভব হয়নি।",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (!user) return null;
 
   const handleShare = async () => {
@@ -61,39 +162,19 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
       url: window.location.origin
     };
 
-    const fallbackCopy = async () => {
-      try {
-        await navigator.clipboard.writeText(`${shareData.text} \nলিঙ্ক: ${shareData.url}`);
-        toast({
-          title: "লিঙ্ক কপি করা হয়েছে",
-          description: "শেয়ার করার জন্য তথ্য ক্লিপবোর্ডে সংরক্ষিত হয়েছে।",
-        });
-      } catch (err) {
-        toast({ title: "শেয়ার ব্যর্থ", description: "তথ্য কপি করা সম্ভব হয়নি।", variant: "destructive" });
-      }
-    };
-
     try {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        await fallbackCopy();
+        await navigator.clipboard.writeText(`${shareData.text} \nলিঙ্ক: ${shareData.url}`);
+        toast({ title: "লিঙ্ক কপি করা হয়েছে" });
       }
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        await fallbackCopy();
-      }
-    }
+    } catch (err) {}
   };
 
   const handleDownload = () => {
-    toast({
-      title: "ডাউনলোড শুরু হচ্ছে",
-      description: "আপনার সার্বভৌম পরিচয়পত্রটি PDF ফরম্যাটে জেনারেট করা হচ্ছে।",
-    });
-    setTimeout(() => {
-      window.print();
-    }, 500);
+    toast({ title: "ডাউনলোড শুরু হচ্ছে" });
+    setTimeout(() => window.print(), 500);
   };
 
   return (
@@ -105,7 +186,6 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
           <div className="absolute top-0 right-0 p-8 opacity-[0.03] rotate-12 pointer-events-none">
             <AppLogo size={300} />
           </div>
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.02] pointer-events-none" />
           
           <CardContent className="p-0">
             <div className="p-6 border-b border-white/5 flex justify-between items-center bg-primary/5">
@@ -116,9 +196,19 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
                   <p className="text-[7px] text-muted-foreground uppercase font-bold tracking-[0.3em]">Sovereign Infrastructure</p>
                 </div>
               </div>
-              <Badge variant="outline" className="border-accent/40 text-accent gap-1 text-[8px] h-5 bg-accent/5">
-                <Zap size={10} fill="currentColor" /> PHASE 31.0
-              </Badge>
+              <div className="flex items-center gap-2">
+                 <Button 
+                  onClick={() => setIsEditing(true)} 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 text-primary hover:bg-primary/10 no-print"
+                 >
+                   <Settings size={16} />
+                 </Button>
+                 <Badge variant="outline" className="border-accent/40 text-accent gap-1 text-[8px] h-5 bg-accent/5">
+                   <Zap size={10} fill="currentColor" /> PHASE 31.0
+                 </Badge>
+              </div>
             </div>
 
             <div className="p-8 flex flex-col md:flex-row gap-8 items-center md:items-start">
@@ -135,36 +225,49 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
                   </div>
                 </div>
                 
-                <div className="relative group/qr">
-                   <div className="absolute -inset-2 bg-primary/20 blur-xl rounded-full opacity-0 group-hover/qr:opacity-100 transition-all duration-500" />
-                   <div className="relative w-24 h-24 bg-black/40 border border-white/5 rounded-2xl p-2 flex items-center justify-center overflow-hidden">
-                      {isGenerating ? (
-                        <Loader2 className="animate-spin text-primary/40" size={24} />
-                      ) : qrDataUrl ? (
-                        <img src={qrDataUrl} alt="Identity QR" className="w-full h-full object-contain filter drop-shadow-[0_0_5px_rgba(117,151,255,0.5)]" />
-                      ) : (
-                        <QrCode size={40} className="text-primary/20" />
-                      )}
-                   </div>
+                <div className="relative w-24 h-24 bg-black/40 border border-white/5 rounded-2xl p-2 flex items-center justify-center overflow-hidden">
+                  {isGenerating ? (
+                    <Loader2 className="animate-spin text-primary/40" size={24} />
+                  ) : qrDataUrl ? (
+                    <img src={qrDataUrl} alt="Identity QR" className="w-full h-full object-contain filter drop-shadow-[0_0_5px_rgba(117,151,255,0.5)]" />
+                  ) : (
+                    <QrCode size={40} className="text-primary/20" />
+                  )}
                 </div>
               </div>
 
               <div className="flex-1 space-y-5 text-center md:text-left w-full">
                 <div>
                   <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest mb-1">Identity Holder</p>
-                  <h2 className="text-xl font-headline font-bold text-foreground tracking-tight leading-tight truncate">{user.displayName}</h2>
+                  <h2 className="text-xl font-headline font-bold text-foreground tracking-tight leading-tight truncate">{user.displayName || 'Unnamed Sovereign'}</h2>
                   <p className="text-[10px] text-primary font-mono lowercase opacity-70 truncate">{user.email}</p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3">
                   <div className="space-y-1">
                     <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest">Sovereign Rank</p>
-                    <div className="flex items-center justify-center md:justify-start gap-2">
-                       <Badge className={`uppercase text-[9px] font-bold h-6 px-3 rounded-lg ${role === 'admin' ? 'bg-accent text-background' : 'bg-primary text-background'}`}>
-                         <Star size={10} fill="currentColor" className="mr-1.5" /> {role === 'admin' ? 'Supreme Admin' : role.toUpperCase()}
-                       </Badge>
-                    </div>
+                    <Badge className={`uppercase text-[9px] font-bold h-6 px-3 rounded-lg ${role === 'admin' ? 'bg-accent text-background' : 'bg-primary text-background'}`}>
+                      <Star size={10} fill="currentColor" className="mr-1.5" /> {role === 'admin' ? 'Supreme Admin' : role.toUpperCase()}
+                    </Badge>
                   </div>
+
+                  {profileData.phoneNumber && (
+                    <div className="space-y-1">
+                      <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest">Signal Number</p>
+                      <p className="text-[10px] font-mono text-foreground flex items-center justify-center md:justify-start gap-2">
+                        <Phone size={10} className="text-primary" /> {profileData.phoneNumber}
+                      </p>
+                    </div>
+                  )}
+
+                  {profileData.dateOfBirth && (
+                    <div className="space-y-1">
+                      <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest">Birth Registry</p>
+                      <p className="text-[10px] font-mono text-foreground flex items-center justify-center md:justify-start gap-2">
+                        <Calendar size={10} className="text-accent" /> {profileData.dateOfBirth}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="space-y-1">
                     <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest">Digital Fingerprint</p>
@@ -203,29 +306,91 @@ export function SovereignIDCard({ user, role }: SovereignIDCardProps) {
         </Button>
       </div>
 
-      <div className="p-6 bg-primary/5 border border-primary/20 rounded-[2rem] max-w-lg mx-auto space-y-4 no-print">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center text-primary">
-            <Sparkles size={20} />
+      {/* Profile Management Dialog */}
+      <Dialog open={isEditing} onOpenChange={setIsEditing}>
+        <DialogContent className="max-w-md bg-card border-primary/20 rounded-[2.5rem] shadow-2xl overflow-hidden p-0">
+          <DialogHeader className="p-8 bg-primary/5 border-b border-white/5">
+             <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary border border-primary/20">
+                   <User size={24} />
+                </div>
+                <div>
+                   <DialogTitle className="text-xl font-headline font-bold uppercase tracking-widest">Manage Identity</DialogTitle>
+                   <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground">Sovereign Profile Customization</DialogDescription>
+                </div>
+             </div>
+          </DialogHeader>
+
+          <div className="p-8 space-y-6">
+             <div className="flex justify-center mb-4">
+                <div className="relative group cursor-pointer">
+                   <Avatar className="h-24 w-24 border-4 border-primary/20 group-hover:border-primary/40 transition-all">
+                      <AvatarImage src={profileData.photoURL} />
+                      <AvatarFallback className="bg-primary/10 text-2xl font-headline font-bold text-primary">
+                        {profileData.displayName?.substring(0, 1)}
+                      </AvatarFallback>
+                   </Avatar>
+                   <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Camera size={24} className="text-white" />
+                   </div>
+                </div>
+             </div>
+
+             <div className="space-y-4">
+                <div className="space-y-2">
+                   <Label className="text-[10px] font-bold uppercase tracking-widest ml-1">ডিসপ্লে নাম</Label>
+                   <Input 
+                    value={profileData.displayName}
+                    onChange={e => setProfileData({...profileData, displayName: e.target.value})}
+                    placeholder="আপনার রাজকীয় নাম"
+                    className="bg-background/50 border-white/10 h-12 rounded-xl focus:ring-primary"
+                   />
+                </div>
+
+                <div className="space-y-2">
+                   <Label className="text-[10px] font-bold uppercase tracking-widest ml-1">প্রোফাইল ফটো URL</Label>
+                   <Input 
+                    value={profileData.photoURL}
+                    onChange={e => setProfileData({...profileData, photoURL: e.target.value})}
+                    placeholder="https://images.com/photo.jpg"
+                    className="bg-background/50 border-white/10 h-12 rounded-xl focus:ring-primary font-mono text-[10px]"
+                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest ml-1">মোবাইল নম্বর</Label>
+                      <Input 
+                        value={profileData.phoneNumber}
+                        onChange={e => setProfileData({...profileData, phoneNumber: e.target.value})}
+                        placeholder="+৮৮০"
+                        className="bg-background/50 border-white/10 h-12 rounded-xl focus:ring-primary"
+                      />
+                   </div>
+                   <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest ml-1">জন্ম তারিখ</Label>
+                      <Input 
+                        type="date"
+                        value={profileData.dateOfBirth}
+                        onChange={e => setProfileData({...profileData, dateOfBirth: e.target.value})}
+                        className="bg-background/50 border-white/10 h-12 rounded-xl focus:ring-primary"
+                      />
+                   </div>
+                </div>
+             </div>
           </div>
-          <div>
-            <h4 className="text-sm font-headline font-bold">সার্বভৌম নিরাপত্তার নির্দেশিকা</h4>
-            <p className="text-[10px] text-muted-foreground">আপনার এই ডিজিটাল পরিচয় অত্যন্ত সংবেদনশীল।</p>
-          </div>
-        </div>
-        <div className="grid gap-3">
-          {[
-            { icon: Cpu, text: "আপনার আইডিটি সরাসরি 'Project 42' এর ৪২টি নোডের সাথে সিঙ্ক্রোনাইজড।" },
-            { icon: QrCode, text: "সভ্যরেন লেন্স ব্যবহার করে কর্মকর্তারা আপনার আইডি স্ক্যান করে পরিচয় নিশ্চিত করতে পারবেন।" },
-            { icon: User, text: "অননুমোদিত ডিভাইসে এই আইডি ব্যবহারের চেষ্টা করলে সেশন স্বয়ংক্রিয়ভাবে বাতিল হবে।" }
-          ].map((item, idx) => (
-            <div key={idx} className="flex gap-3 items-start text-[10px] text-foreground/70 bg-black/20 p-3 rounded-xl border border-white/5">
-              <item.icon size={14} className="text-primary shrink-0 mt-0.5" />
-              <p>{item.text}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+
+          <DialogFooter className="p-6 bg-muted/20 border-t border-white/5 flex gap-3">
+             <Button onClick={() => setIsEditing(false)} variant="ghost" className="flex-1 text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
+                <X size={16} className="mr-1" /> বাতিল
+             </Button>
+             <Button onClick={handleSaveProfile} disabled={isSaving} className="flex-1 bg-primary text-background font-bold h-12 rounded-xl gap-2 shadow-lg shadow-primary/20">
+                {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                পরিচয় সংরক্ষণ করুন
+             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
