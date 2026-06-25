@@ -336,7 +336,7 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
             </SidebarMenuItem>
           )}
         </SidebarMenu>
-      </SidebarContent>
+      </SidebarFooter>
     </Sidebar>
   )
 }
