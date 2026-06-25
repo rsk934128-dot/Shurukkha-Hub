@@ -21,7 +21,8 @@ import {
   Landmark,
   Globe,
   Zap,
-  Bot
+  Bot,
+  AlertCircle
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -37,6 +38,11 @@ import { IntegrationBridge } from '@/lib/integration-bridge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 
+/**
+ * @fileOverview Imperial Mail Inbox HUD.
+ * Integrated with Sovereign Mail Bridge and AI Assistant.
+ */
+
 export function MailInbox() {
   const [mails, setMails] = useState<any[]>([
     { id: 'm1', from: 'Google Security', subject: 'New Login to Sovereign Hub', date: '10:42 AM', body: 'A new device was detected accessing the 42nd Node Registry.', read: false, starred: true, avatar: '' },
@@ -44,7 +50,7 @@ export function MailInbox() {
     { id: 'm3', from: 'Sheikh Archive', subject: 'Project 43 Specifications', date: 'Yesterday', body: 'The next phase of the 400-project mission involves global anycast scaling.', read: true, starred: true, avatar: '' },
     { id: 'm4', from: 'Kaspersky Lab', subject: 'Voucher Code: EX-42-SOV', date: '2 Days ago', body: 'Your imperial antivirus license has been extended by 365 days.', read: false, starred: false, avatar: '' }
   ])
-  const [selectedMail, setSelectedNotif] = useState<any>(null)
+  const [selectedMail, setSelectedMail] = useState<any>(null)
   const [search, setSearch] = useState('')
   const [isComposing, setIsComposing] = useState(false)
   const [isDrafting, setIsDrafting] = useState(false)
@@ -54,7 +60,7 @@ export function MailInbox() {
 
   const handleAiDraft = async () => {
     if (!composeData.to || !composeData.subject) {
-      toast({ title: "তথ্য দিন", description: "প্রাপক এবং বিষয় আগে লিখুন।", variant: "destructive" });
+      toast({ title: "তথ্য অপর্যাপ্ত", description: "প্রাপক এবং বিষয় আগে লিখুন।", variant: "destructive" });
       return;
     }
     setIsDrafting(true);
@@ -66,9 +72,13 @@ export function MailInbox() {
         tone: 'Majectic'
       });
       setAiDraft(result.draft);
-      toast({ title: "এআই ড্রাফট প্রস্তুত", description: "আপনার রাজকীয় উত্তর ড্রাফট করা হয়েছে।" });
+      if (result.isFallback) {
+        toast({ title: "Sovereign Mode Active", description: "এআই অফলাইন থাকায় লোকাল ড্রাফটিং লজিক ব্যবহৃত হয়েছে।" });
+      } else {
+        toast({ title: "এআই ড্রাফট প্রস্তুত", description: "আপনার রাজকীয় উত্তর ড্রাফট করা হয়েছে।" });
+      }
     } catch (e) {
-      toast({ title: "ড্রাফটিং ব্যর্থ", variant: "destructive" });
+      toast({ title: "ড্রাফটিং ব্যর্থ", description: "এআই ইঞ্জিন এবং ফলব্যাক উভয়ই বিচ্যুত হয়েছে।", variant: "destructive" });
     } finally {
       setIsDrafting(false);
     }
@@ -110,7 +120,7 @@ export function MailInbox() {
           <h2 className="text-xl md:text-2xl font-headline font-bold uppercase tracking-tight text-foreground flex items-center gap-3">
             <Mail className="text-primary animate-pulse" /> Imperial <span className="text-primary italic">Gmail Bridge</span>
           </h2>
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Sovereign Communication Hub v35.0</p>
+          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Sovereign Communication Hub v37.5</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setIsComposing(true)} className="h-10 bg-primary text-background font-bold gap-2 px-6 rounded-xl shadow-lg shadow-primary/20 hover:scale-105 transition-all">
@@ -123,7 +133,6 @@ export function MailInbox() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0">
-        {/* Mail List */}
         <div className="lg:col-span-12 flex flex-col gap-4 min-h-0">
           <Card className="bg-card/40 border-white/5 flex-1 overflow-hidden flex flex-col shadow-2xl rounded-[2.5rem]">
             <div className="p-4 border-b border-white/5 bg-muted/20 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -147,7 +156,7 @@ export function MailInbox() {
                  {filteredMails.map((mail) => (
                    <div 
                     key={mail.id} 
-                    onClick={() => setSelectedNotif(mail)}
+                    onClick={() => setSelectedMail(mail)}
                     className={`p-4 md:p-6 flex items-center gap-4 cursor-pointer transition-all hover:bg-white/[0.03] group ${!mail.read ? 'bg-primary/[0.02] border-l-4 border-l-primary' : 'border-l-4 border-l-transparent'}`}
                    >
                      <div className="flex items-center gap-4 shrink-0">
@@ -264,7 +273,7 @@ export function MailInbox() {
       </Dialog>
 
       {/* Mail Detail Dialog */}
-      <Dialog open={!!selectedMail} onOpenChange={(open) => !open && setSelectedNotif(null)}>
+      <Dialog open={!!selectedMail} onOpenChange={(open) => !open && setSelectedMail(null)}>
         <DialogContent className="max-w-3xl bg-[#05070a] border-primary/20 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95">
            {selectedMail && (
              <>
@@ -305,7 +314,13 @@ export function MailInbox() {
                    <Button variant="outline" className="flex-1 border-white/10 text-white font-bold h-12 rounded-xl gap-2 hover:bg-white/5">
                       <Trash2 size={18} className="text-destructive" /> DELETE
                    </Button>
-                   <Button onClick={() => { setSelectedNotif(null); setIsComposing(true); setComposeData({ to: selectedMail.from, subject: `Re: ${selectedMail.subject}`, context: '' }); }} className="flex-1 bg-primary text-background font-bold h-12 rounded-xl gap-2 shadow-lg shadow-primary/20">
+                   <Button onClick={() => { 
+                    const from = selectedMail.from;
+                    const subject = selectedMail.subject;
+                    setSelectedMail(null); 
+                    setIsComposing(true); 
+                    setComposeData({ to: from, subject: `Re: ${subject}`, context: '' }); 
+                  }} className="flex-1 bg-primary text-background font-bold h-12 rounded-xl gap-2 shadow-lg shadow-primary/20">
                       <Send size={18} /> REPLY
                    </Button>
                 </DialogFooter>

@@ -2,6 +2,7 @@
 /**
  * @fileOverview Imperial Mail Assistant Flow.
  * Drafts professional and majestic emails or replies for the Sovereign.
+ * Updated Phase 37.5: Added Sovereign Fallback Logic for mission-critical drafting.
  */
 
 import {ai} from '@/ai/genkit';
@@ -18,6 +19,7 @@ export type MailAssistantInput = z.infer<typeof MailAssistantInputSchema>;
 const MailAssistantOutputSchema = z.object({
   draft: z.string().describe('The drafted email content in Bengali or English as appropriate'),
   suggestedSubject: z.string().describe('A refined majestic subject line'),
+  isFallback: z.boolean().optional().describe('Whether or not the draft was generated via local fallback logic'),
 });
 export type MailAssistantOutput = z.infer<typeof MailAssistantOutputSchema>;
 
@@ -54,8 +56,30 @@ const imperialMailAssistantFlow = ai.defineFlow(
     outputSchema: MailAssistantOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    if (!output) throw new Error('Mail Engine failed');
-    return output;
+    try {
+      const {output} = await prompt(input);
+      if (!output) throw new Error('Mail Engine returned empty output');
+      return output;
+    } catch (error) {
+      console.warn(`[Sovereign Fallback] Mail Assistant Engine unreachable. Using Imperial Strategic Logic...`);
+      
+      const fallbackDraft = `
+মহামান্য ${input.recipientName},
+
+সিরাজগঞ্জ সুরক্ষা সাম্রাজ্যের পক্ষ থেকে আপনাকে অভিবাদন। আপনার পত্রের বিষয়বস্তু "${input.subject}" সম্রাটের দৃষ্টিগোচর হয়েছে।
+
+${input.context}
+
+এই বিষয়ে সাম্রাজ্যের পরবর্তী সিদ্ধান্ত আপনাকে অতিসত্বর অবগত করা হবে। আপনার সহযোগিতা আমাদের কাম্য।
+
+জয় আপনার হোক, মহামান্য।
+      `.trim();
+
+      return {
+        draft: fallbackDraft,
+        suggestedSubject: `[RE]: ${input.subject} | Sovereign Response`,
+        isFallback: true
+      };
+    }
   }
 );
