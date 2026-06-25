@@ -26,7 +26,7 @@ interface CallOverlayProps {
 
 /**
  * @fileOverview Call Interface for Shurukkha Hub.
- * Updated Phase 37.5: Sovereign Nuclear Kill-Switch Integration.
+ * Updated Phase 40.0: Compact UI for better video visibility.
  */
 
 export function CallOverlay({ callData, onClose }: CallOverlayProps) {
@@ -231,10 +231,10 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
         <div className="relative w-full h-full bg-[#05070a] flex items-center justify-center overflow-hidden">
           {status === 'connected' && (
-            <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[10020] animate-in fade-in slide-in-from-top-4">
-              <div className="flex items-center gap-3 bg-black/60 backdrop-blur-xl px-6 py-2 rounded-full border border-primary/20 shadow-2xl">
-                 <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                 <p className="text-xl font-mono font-bold text-white tracking-widest leading-none">{formatTime(timer)}</p>
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[10020] animate-in fade-in slide-in-from-top-4">
+              <div className="flex items-center gap-2 bg-black/60 backdrop-blur-xl px-4 py-1.5 rounded-full border border-primary/20 shadow-2xl">
+                 <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                 <p className="text-sm font-mono font-bold text-white tracking-widest leading-none">{formatTime(timer)}</p>
               </div>
             </div>
           )}
@@ -261,8 +261,8 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                
                {callData.isIncoming ? (
                  <div className="flex items-center gap-16 mt-6 relative z-[310]">
-                    <Button onClick={(e) => { e.stopPropagation(); handleAccept(); }} className="h-24 w-24 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-2xl border-4 border-background flex items-center justify-center transition-transform active:scale-90 cursor-pointer"><Phone size={36} /></Button>
-                    <Button onClick={(e) => { e.stopPropagation(); handleEndCall(true); }} className="h-24 w-24 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-2xl border-4 border-background flex items-center justify-center transition-transform active:scale-90 cursor-pointer"><PhoneOff size={36} /></Button>
+                    <Button onClick={(e) => { e.stopPropagation(); handleAccept(); }} className="h-20 w-20 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-2xl border-4 border-background flex items-center justify-center transition-transform active:scale-90 cursor-pointer"><Phone size={32} /></Button>
+                    <Button onClick={(e) => { e.stopPropagation(); handleEndCall(true); }} className="h-20 w-20 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-2xl border-4 border-background flex items-center justify-center transition-transform active:scale-90 cursor-pointer"><PhoneOff size={32} /></Button>
                  </div>
                ) : (
                  <div className="space-y-8">
@@ -271,7 +271,7 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                       <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
                       <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
                    </div>
-                   <Button onClick={(e) => { e.stopPropagation(); handleEndCall(true); }} className="h-20 w-20 rounded-full bg-destructive border-4 border-background flex items-center justify-center transition-transform active:scale-90 cursor-pointer"><PhoneOff size={28} /></Button>
+                   <Button onClick={(e) => { e.stopPropagation(); handleEndCall(true); }} className="h-16 w-16 rounded-full bg-destructive border-4 border-background flex items-center justify-center transition-transform active:scale-90 cursor-pointer"><PhoneOff size={24} /></Button>
                  </div>
                )}
             </div>
@@ -299,17 +299,18 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
                 </div>
              )}
              
-             <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-10 bg-black/60 backdrop-blur-3xl p-6 px-12 rounded-[4rem] border border-white/10 shadow-2xl z-[10015]">
-                <Button onClick={() => { if (localStreamRef.current) { const t = localStreamRef.current.getAudioTracks()[0]; if (t) { t.enabled = !t.enabled; setIsMicMuted(!t.enabled); } } }} className={`h-16 w-16 rounded-full border border-white/10 transition-all ${isMicMuted ? 'bg-destructive/20 text-destructive border-destructive/40' : 'bg-white/5 text-white hover:bg-white/10'}`}>
-                  {isMicMuted ? <MicOff size={28} /> : <Mic size={28} />}
+             {/* Compact UI Controls for better video visibility */}
+             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-6 bg-black/40 backdrop-blur-xl p-3 px-8 rounded-full border border-white/10 shadow-2xl z-[10015] hover:bg-black/60 transition-all">
+                <Button onClick={() => { if (localStreamRef.current) { const t = localStreamRef.current.getAudioTracks()[0]; if (t) { t.enabled = !t.enabled; setIsMicMuted(!t.enabled); } } }} className={`h-11 w-11 rounded-full border border-white/10 transition-all ${isMicMuted ? 'bg-destructive/20 text-destructive border-destructive/40' : 'bg-white/5 text-white hover:bg-white/10'}`}>
+                  {isMicMuted ? <MicOff size={20} /> : <Mic size={20} />}
                 </Button>
-                <Button onClick={() => handleEndCall(true)} className="h-28 w-28 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-2xl border-4 border-background flex items-center justify-center transition-transform active:scale-90"><PhoneOff size={40} /></Button>
-                <Button onClick={() => setIsSpeakerOn(!isSpeakerOn)} className={`h-16 w-16 rounded-full border border-white/10 transition-all ${isSpeakerOn ? 'bg-accent/20 text-accent border-accent/40' : 'bg-white/5 text-white/40'}`}>
-                  {isSpeakerOn ? <Volume2 size={28} /> : <VolumeX size={28} />}
+                <Button onClick={() => handleEndCall(true)} className="h-16 w-16 rounded-full bg-destructive hover:bg-destructive/90 text-white shadow-2xl border-4 border-background flex items-center justify-center transition-transform active:scale-95"><PhoneOff size={28} /></Button>
+                <Button onClick={() => setIsSpeakerOn(!isSpeakerOn)} className={`h-11 w-11 rounded-full border border-white/10 transition-all ${isSpeakerOn ? 'bg-accent/20 text-accent border-accent/40' : 'bg-white/5 text-white/40'}`}>
+                  {isSpeakerOn ? <Volume2 size={20} /> : <VolumeX size={20} />}
                 </Button>
              </div>
 
-             <div className={`absolute top-10 right-10 w-40 md:w-64 aspect-video bg-black rounded-3xl border-2 border-primary/40 shadow-2xl overflow-hidden z-20 transition-all ${callData.type === 'video' ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}>
+             <div className={`absolute top-10 right-10 w-32 md:w-48 aspect-video bg-black rounded-2xl border-2 border-primary/40 shadow-2xl overflow-hidden z-20 transition-all ${callData.type === 'video' ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}>
                 <video 
                   key={`local-${callData.sessionId}`}
                   ref={localVideoRef} 
@@ -323,10 +324,10 @@ export function CallOverlay({ callData, onClose }: CallOverlayProps) {
 
           {status === 'ended' && (
             <div className="absolute inset-0 bg-black/95 z-[10010] flex flex-col items-center justify-center gap-8 animate-in fade-in duration-300">
-               <div className="w-24 h-24 bg-destructive/10 rounded-full flex items-center justify-center border-2 border-destructive/20 relative z-10"><PhoneOff size={40} className="text-destructive" /></div>
+               <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center border-2 border-destructive/20 relative z-10"><PhoneOff size={32} className="text-destructive" /></div>
                <div className="text-center space-y-2">
-                  <p className="text-3xl font-headline font-bold text-white uppercase tracking-[0.4em]">Signal Terminated</p>
-                  <p className="text-xl font-mono text-primary font-bold">Duration: {finalDuration || formatTime(timer)}</p>
+                  <p className="text-2xl font-headline font-bold text-white uppercase tracking-[0.4em]">Signal Terminated</p>
+                  <p className="text-lg font-mono text-primary font-bold">Duration: {finalDuration || formatTime(timer)}</p>
                </div>
             </div>
           )}
