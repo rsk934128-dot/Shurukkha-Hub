@@ -19,9 +19,9 @@ import { IntegrationBridge } from '@/lib/integration-bridge'
 import { useToast } from '@/hooks/use-toast'
 
 /**
- * @fileOverview Imperial Notification Center v2.5.
+ * @fileOverview Imperial Notification Center v3.0.
  * Aggregates all sovereign signals with Real-Time Audio Relay.
- * Fixed: Real-time sound trigger on message arrival.
+ * Fixed: Robust real-time sound trigger and First-Load handling.
  */
 
 export function ImperialNotificationCenter() {
@@ -34,7 +34,7 @@ export function ImperialNotificationCenter() {
   const [isReplying, setIsReplying] = useState(false)
   const { playMessageSound } = useAudioEngine()
   
-  const isFirstLoad = useRef(true)
+  const isFirstBatchHandled = useRef(false)
 
   useEffect(() => {
     if (!user) return;
@@ -52,30 +52,41 @@ export function ImperialNotificationCenter() {
       updateNotifications(sos, 'SOS');
     });
 
-    // 2. Real-Time Message Listener with Audio Trigger
+    // 2. Real-Time Message Listener with Refined Audio Trigger
     const unsubMessages = onSnapshot(query(
       collection(db, "messages"), 
       where("recipientId", "==", user.uid),
       orderBy("timestamp", "desc"),
       limit(20)
     ), async (snapshot) => {
-      const messageList: any[] = [];
       
-      // Process changes for sound notification
-      if (!isFirstLoad.current) {
+      // If this is the very first load, we silence the chime
+      if (!isFirstBatchHandled.current) {
+        console.log("[Imperial Signal] Initializing Message Grid. Chime Silenced.");
+        isFirstBatchHandled.current = true;
+      } else {
+        // Trigger sound only for NEW documents added to the snapshot
         snapshot.docChanges().forEach(change => {
           if (change.type === 'added') {
             const data = change.doc.data();
-            if (data.read === false && data.senderId !== user.uid) {
-              console.log("[Imperial Signal] Real-time message detected. Playing Chime...");
+            // Safety: Only play if sender is NOT the current user
+            if (data.senderId !== user.uid) {
+              console.warn("[Imperial Signal] NEW DATA PACKET RECEIVED. Playing Chime...");
               playMessageSound();
+              
+              // Also send a browser push notification
+              NotificationManager.sendNotification(
+                "নতুন রাজকীয় বার্তা",
+                data.content.substring(0, 50) + "...",
+                `msg-${change.doc.id}`
+              );
             }
           }
         });
       }
-      isFirstLoad.current = false;
 
-      // Update the full unread list for UI
+      // Sync the UI list with unread items
+      const messageList: any[] = [];
       for (const docSnap of snapshot.docs) {
         const d = docSnap.data();
         if (d.read === false) {
@@ -121,7 +132,7 @@ export function ImperialNotificationCenter() {
       unsubMessages();
       unsubSignals();
     };
-  }, [user?.uid]);
+  }, [user?.uid, playMessageSound]);
 
   const updateNotifications = (newData: any[], type: string) => {
     setNotifications(prev => {
@@ -159,7 +170,7 @@ export function ImperialNotificationCenter() {
       const originalRef = doc(db, "messages", selectedNotif.id);
       await updateDoc(originalRef, { read: true });
 
-      toast({ title: "উত্তর পাঠানো হয়েছে", description: "আপনার রাজকীয় উত্তর ১ মিলি-সেকেন্ডে পৌঁছেছে।" });
+      toast({ title: "উত্তর পাঠানো হয়েছে", description: "আপনার রাজকীয় উত্তর ১ মিলি-সেকেন্ডে পৌঁছেছে।" });
       setReplyText('');
       setSelectedNotif(null);
     } catch (e) {
@@ -200,7 +211,7 @@ export function ImperialNotificationCenter() {
                 <Signal className="text-primary animate-pulse" size={18} />
                 <h3 className="text-xs font-headline font-bold uppercase tracking-widest text-primary">Sovereign Signals</h3>
             </div>
-            <Badge variant="outline" className="text-[8px] border-primary/40 text-primary uppercase font-bold tracking-tighter">Live Monitor</Badge>
+            <Badge variant="outline" className="text-[7px] border-primary/40 text-primary uppercase font-bold tracking-tighter">Live Monitor</Badge>
           </div>
 
           <ScrollArea className="h-[400px]">

@@ -34,7 +34,6 @@ export function CommunicationConsole() {
   const [lastInteractionMap, setLastInteractionMap] = useState<Record<string, number>>({})
   
   const scrollRef = useRef<HTMLDivElement>(null)
-  const { playMessageSound } = useAudioEngine()
 
   // 1. Global Message Listener for Priority Sorting and Badge Updates
   useEffect(() => {
@@ -103,7 +102,7 @@ export function CommunicationConsole() {
     return () => unsubscribeUsers();
   }, [user])
 
-  // 3. Selective Chat Listener
+  // 3. Selective Chat Listener - Handles 'read' status only
   useEffect(() => {
     if (!user || !selectedContact) return;
 
@@ -120,12 +119,9 @@ export function CommunicationConsole() {
       snapshot.docChanges().forEach(change => {
         if (change.type === 'added') {
           const d = change.doc.data();
-          if (d.senderId !== user.uid) {
-            // Note: Global listener in NotificationCenter now handles real-time sound
-            // to prevent duplication when the chat view is open.
-            if (d.recipientId === user.uid && d.read === false) {
-              updateDoc(doc(db, "messages", change.doc.id), { read: true });
-            }
+          // Clear notification count by marking as read if the console is open for this contact
+          if (d.recipientId === user.uid && d.read === false) {
+            updateDoc(doc(db, "messages", change.doc.id), { read: true });
           }
         }
       });
@@ -135,7 +131,7 @@ export function CommunicationConsole() {
     });
 
     return () => unsubscribe();
-  }, [selectedContact, user, playMessageSound]);
+  }, [selectedContact, user]);
 
   const sortedAndFilteredContacts = useMemo(() => {
     let filtered = contacts;

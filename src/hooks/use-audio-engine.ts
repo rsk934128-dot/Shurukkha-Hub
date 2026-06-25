@@ -3,7 +3,7 @@
 /**
  * @fileOverview Sovereign Audio Engine Hook.
  * Manages high-definition sound effects for imperial notifications and calls.
- * Phase 35.5: Added Professional Synthesis for Imperial Ringtone.
+ * Phase 36.5: Added Professional Synthesis with proactive context resumption.
  */
 
 import { useCallback, useRef } from 'react'
@@ -11,20 +11,24 @@ import { useCallback, useRef } from 'react'
 export function useAudioEngine() {
   const audioContext = useRef<AudioContext | null>(null);
 
-  const initContext = () => {
+  const initContext = async () => {
     if (!audioContext.current) {
       const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext);
       if (AudioCtx) {
         audioContext.current = new AudioCtx();
       }
     }
+    
+    if (audioContext.current && audioContext.current.state === 'suspended') {
+      await audioContext.current.resume();
+    }
+    return audioContext.current;
   };
 
   // Play a synthesized majestic digital chime for messages
-  const playMessageSound = useCallback(() => {
-    initContext();
-    const ctx = audioContext.current!;
-    if (ctx.state === 'suspended') ctx.resume();
+  const playMessageSound = useCallback(async () => {
+    const ctx = await initContext();
+    if (!ctx) return;
 
     const now = ctx.currentTime;
     
@@ -54,11 +58,9 @@ export function useAudioEngine() {
   }, []);
 
   // Play a synthesized high-fidelity imperial ringtone for incoming calls
-  const playAlertSound = useCallback(() => {
-    initContext();
-    const ctx = audioContext.current!;
+  const playAlertSound = useCallback(async () => {
+    const ctx = await initContext();
     if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume();
 
     // Imperial Harmony: Two-Tone Synthesis
     const playTone = (freq: number, startTime: number, duration: number) => {
@@ -81,11 +83,10 @@ export function useAudioEngine() {
     };
 
     const now = ctx.currentTime;
-    // Sequence of tones for a distinct "Imperial" alert
     playTone(440, now, 0.4);
-    playTone(554.37, now + 0.1, 0.4); // C#
-    playTone(659.25, now + 0.2, 0.5); // E
-    playTone(880, now + 0.3, 0.6);   // A
+    playTone(554.37, now + 0.1, 0.4);
+    playTone(659.25, now + 0.2, 0.5);
+    playTone(880, now + 0.3, 0.6);
   }, []);
 
   return { playMessageSound, playAlertSound };
