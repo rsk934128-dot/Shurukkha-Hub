@@ -12,11 +12,12 @@ import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/f
 import { useUser } from '@/firebase'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { AppLogo } from '@/components/ui/app-logo'
+import { NotificationManager } from '@/lib/notification-manager'
 
 /**
  * @fileOverview Imperial Notification Center.
  * Aggregates all sovereign signals into a single high-fidelity HUD.
- * Updated Phase 38.0: Added Full-Scale Detail Expansion View.
+ * Updated Phase 39.0: Fixed Message Ingestion and added browser-level push relay.
  */
 
 export function ImperialNotificationCenter() {
@@ -29,7 +30,7 @@ export function ImperialNotificationCenter() {
   useEffect(() => {
     if (!user) return;
 
-    // Aggregate SOS Alerts (if admin/authority)
+    // 1. Listen for SOS Alerts (Aggressive Strategy)
     const unsubSOS = onSnapshot(query(collection(db, "sos_alerts"), orderBy("timestamp", "desc"), limit(5)), (snap) => {
       const sos = snap.docs.map(doc => ({ 
         id: doc.id, 
@@ -42,21 +43,37 @@ export function ImperialNotificationCenter() {
       updateNotifications(sos, 'SOS');
     });
 
-    // Aggregate Messages
-    const unsubMessages = onSnapshot(query(collection(db, "messages"), where("recipientId", "==", user.uid), where("read", "==", false), limit(5)), (snap) => {
-      const msgs = snap.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data(), 
-        type: 'MESSAGE',
-        icon: MessageSquare,
-        color: 'text-primary',
-        label: 'New Message'
-      }));
+    // 2. Listen for Incoming Messages (Broad Query to avoid Index errors)
+    const unsubMessages = onSnapshot(query(
+      collection(db, "messages"), 
+      where("recipientId", "==", user.uid),
+      limit(20)
+    ), (snap) => {
+      const msgs = snap.docs
+        .filter(doc => doc.data().read === false)
+        .map(doc => ({ 
+          id: doc.id, 
+          ...doc.data(), 
+          type: 'MESSAGE',
+          icon: MessageSquare,
+          color: 'text-primary',
+          label: 'New Message'
+        }));
+      
+      if (msgs.length > 0) {
+        // Trigger sound and browser push if new messages arrived
+        const lastMsg = msgs[0];
+        playMessageSound();
+        NotificationManager.sendNotification(
+          "নতুন মেসেজ প্রাপ্ত",
+          lastMsg.content.substring(0, 50) + (lastMsg.content.length > 50 ? '...' : ''),
+          `msg-${lastMsg.id}`
+        );
+      }
       updateNotifications(msgs, 'MESSAGE');
-      if (msgs.length > 0) playMessageSound();
     });
 
-    // Aggregate External Signals
+    // 3. Listen for External Signals (Imperial Vouchers, Antivirus etc.)
     const unsubSignals = onSnapshot(query(collection(db, "external_notifications"), orderBy("timestamp", "desc"), limit(5)), (snap) => {
       const signals = snap.docs.map(doc => ({ 
         id: doc.id, 
@@ -78,13 +95,14 @@ export function ImperialNotificationCenter() {
 
   const updateNotifications = (newData: any[], type: string) => {
     setNotifications(prev => {
+      // Remove old notifications of the same type and merge new ones
       const filtered = prev.filter(n => n.type !== type);
       const combined = [...newData, ...filtered].sort((a, b) => {
-        const timeA = a.timestamp?.toMillis?.() || a.timestamp?.seconds * 1000 || new Date(a.timestamp).getTime();
-        const timeB = b.timestamp?.toMillis?.() || b.timestamp?.seconds * 1000 || new Date(b.timestamp).getTime();
+        const timeA = a.timestamp?.toMillis?.() || a.timestamp?.seconds * 1000 || new Date(a.timestamp).getTime() || 0;
+        const timeB = b.timestamp?.toMillis?.() || b.timestamp?.seconds * 1000 || new Date(b.timestamp).getTime() || 0;
         return timeB - timeA;
       });
-      return combined.slice(0, 10);
+      return combined.slice(0, 15);
     });
   };
 
@@ -153,7 +171,7 @@ export function ImperialNotificationCenter() {
                           {notif.content || notif.location || notif.note || "New high-priority data packet received."}
                         </p>
                         <div className="flex items-center gap-2 pt-1">
-                            <Badge variant="outline" className="text-[6px] border-white/5 uppercase opacity-50">Node: Sadar_01</Badge>
+                            <Badge variant="outline" className="text-[6px] border-white/5 uppercase opacity-50">Node: Anycast_Primary</Badge>
                             <div className="flex items-center gap-1 text-[6px] font-bold text-accent">
                               <Sparkles size={8} /> AI_VERIFIED
                             </div>
