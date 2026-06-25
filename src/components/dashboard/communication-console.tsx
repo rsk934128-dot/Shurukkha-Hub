@@ -78,10 +78,17 @@ export function CommunicationConsole() {
       });
     }, (err) => {
        console.error("[Comm Console] Global Listener Error:", err);
+       if (err.code === 'failed-precondition') {
+          toast({
+            title: "ইন্ডেক্স মিসিং (Composite Index Required)",
+            description: "সম্রাট, এই কন্টাক্ট লিস্ট সময়ের ক্রমানুসারে সাজাতে একটি ইন্ডেক্স প্রয়োজন। অনুগ্রহ করে ব্রাউজার কনসোল চেক করুন।",
+            variant: "destructive"
+          });
+       }
     });
 
     return () => unsubscribe();
-  }, [user?.uid]);
+  }, [user?.uid, toast]);
 
   // 2. User Directory sync
   useEffect(() => {

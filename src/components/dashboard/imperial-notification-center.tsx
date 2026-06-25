@@ -22,9 +22,9 @@ import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
 
 /**
- * @fileOverview Imperial Notification Center v3.1.
+ * @fileOverview Imperial Notification Center v3.2.
  * Aggregates all sovereign signals with Real-Time Audio Relay.
- * Fixed: Robust Firestore Index error handling and performance optimization.
+ * Enhanced: Advanced Firestore Index guidance and error handling.
  */
 
 export function ImperialNotificationCenter() {
@@ -67,16 +67,13 @@ export function ImperialNotificationCenter() {
     ), async (snapshot) => {
       
       if (!isFirstBatchHandled.current) {
-        console.log("[Imperial Signal] Initializing Message Grid. Chime Silenced.");
         isFirstBatchHandled.current = true;
       } else {
         snapshot.docChanges().forEach(change => {
           if (change.type === 'added') {
             const data = change.doc.data();
             if (data.senderId !== user.uid) {
-              console.warn("[Imperial Signal] NEW DATA PACKET RECEIVED. Playing Chime...");
               playMessageSound();
-              
               NotificationManager.sendNotification(
                 "নতুন রাজকীয় বার্তা",
                 data.content.substring(0, 50) + "...",
@@ -122,7 +119,7 @@ export function ImperialNotificationCenter() {
       if (err.code === 'failed-precondition') {
         toast({
           title: "ইন্ডেক্স প্রয়োজন (Index Required)",
-          description: "সার্ভারে তথ্য সর্ট করার জন্য একটি ইন্ডেক্স প্রয়োজন। অনুগ্রহ করে ব্রাউজার কনসোলে থাকা লিঙ্কে ক্লিক করে এটি তৈরি করুন।",
+          description: "মহামান্য সম্রাট, ৪২টি নোড গ্রিডে সর্টিং সক্রিয় করার জন্য একটি ইন্ডেক্স প্রয়োজন। অনুগ্রহ করে আপনার ব্রাউজার কনসোলে থাকা লিঙ্কে ক্লিক করে এটি তৈরি করুন।",
           variant: "destructive"
         });
       } else if (err.code === 'permission-denied') {
@@ -153,7 +150,7 @@ export function ImperialNotificationCenter() {
       unsubMessages();
       unsubSignals();
     };
-  }, [user?.uid, playMessageSound]);
+  }, [user?.uid, playMessageSound, toast]);
 
   const updateNotifications = (newData: any[], type: string) => {
     setNotifications(prev => {
