@@ -1,6 +1,7 @@
+
 "use client"
 
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { MessageSquare, Send, Paperclip, Phone, Video, User, ShieldCheck, Search, Loader2, Signal, ArrowLeft } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -16,12 +17,13 @@ import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
 import { DisasterStorage } from '@/lib/disaster-storage'
-import { NotificationManager } from '@/lib/notification-manager'
+import { useToast } from '@/hooks/use-toast'
 
 const COMMAND_CENTER_CONTACT = { id: 'command_center', name: "Sovereign Command", role: "admin", status: 'online', avatar: '' }
 
 export function CommunicationConsole() {
   const { user } = useUser()
+  const { toast } = useToast()
   const [selectedContact, setSelectedContact] = useState<any>(null)
   const [contacts, setContacts] = useState<any[]>([COMMAND_CENTER_CONTACT])
   const [serverMessages, setServerMessages] = useState<Message[]>([])
@@ -46,32 +48,36 @@ export function CommunicationConsole() {
     );
 
     const unsubscribe = onSnapshot(qAll, (snapshot) => {
-      const newInteractionMap = { ...lastInteractionMap };
-      const newUnreadMap: Record<string, number> = {};
-      let hasChange = false;
+      setLastInteractionMap(prev => {
+        const newMap = { ...prev };
+        const newUnreadMap: Record<string, number> = {};
+        let hasChange = false;
 
-      snapshot.docs.forEach(doc => {
-        const d = doc.data();
-        const isRecipient = d.recipientId === user.uid;
-        const isSender = d.senderId === user.uid;
+        snapshot.docs.forEach(doc => {
+          const d = doc.data();
+          const isRecipient = d.recipientId === user.uid;
+          const isSender = d.senderId === user.uid;
 
-        if (isRecipient || isSender) {
-          const otherId = isRecipient ? d.senderId : d.recipientId;
-          const ts = d.timestamp?.toMillis?.() || (d.timestamp?.seconds ? d.timestamp.seconds * 1000 : null) || Date.now();
-          
-          if (!newInteractionMap[otherId] || ts > newInteractionMap[otherId]) {
-            newInteractionMap[otherId] = ts;
-            hasChange = true;
+          if (isRecipient || isSender) {
+            const otherId = isRecipient ? d.senderId : d.recipientId;
+            const ts = d.timestamp?.toMillis?.() || (d.timestamp?.seconds ? d.timestamp.seconds * 1000 : null) || Date.now();
+            
+            if (!newMap[otherId] || ts > newMap[otherId]) {
+              newMap[otherId] = ts;
+              hasChange = true;
+            }
+
+            if (isRecipient && d.read === false) {
+              newUnreadMap[d.senderId] = (newUnreadMap[d.senderId] || 0) + 1;
+            }
           }
+        });
 
-          if (isRecipient && d.read === false) {
-            newUnreadMap[d.senderId] = (newUnreadMap[d.senderId] || 0) + 1;
-          }
-        }
+        setUnreadCountMap(newUnreadMap);
+        return hasChange ? newMap : prev;
       });
-
-      if (hasChange) setLastInteractionMap(newInteractionMap);
-      setUnreadCountMap(newUnreadMap);
+    }, (err) => {
+       console.error("[Comm Console] Global Listener Error:", err);
     });
 
     return () => unsubscribe();
@@ -97,6 +103,8 @@ export function CommunicationConsole() {
       
       setContacts([COMMAND_CENTER_CONTACT, ...otherUsers]);
       setLoading(false);
+    }, (err) => {
+      console.error("[Comm Console] User Directory Error:", err);
     });
 
     return () => unsubscribeUsers();
@@ -119,7 +127,6 @@ export function CommunicationConsole() {
       snapshot.docChanges().forEach(change => {
         if (change.type === 'added') {
           const d = change.doc.data();
-          // Clear notification count by marking as read if the console is open for this contact
           if (d.recipientId === user.uid && d.read === false) {
             updateDoc(doc(db, "messages", change.doc.id), { read: true });
           }
@@ -128,6 +135,8 @@ export function CommunicationConsole() {
 
       setServerMessages(chatMsgs);
       setTimeout(scrollToBottom, 200);
+    }, (err) => {
+       console.error("[Comm Console] Chat Stream Error:", err);
     });
 
     return () => unsubscribe();
@@ -155,18 +164,18 @@ export function CommunicationConsole() {
     });
 
     return combined.sort((a, b) => {
-      const timeA = a.timestamp?.toMillis?.() || (a.timestamp?.seconds ? a.timestamp.seconds * 1000 : a.timestamp);
-      const timeB = b.timestamp?.toMillis?.() || (b.timestamp?.seconds ? b.timestamp.seconds * 1000 : b.timestamp);
+      const timeA = a.timestamp?.toMillis?.() || (a.timestamp?.seconds ? a.timestamp.seconds * 1000 : a.timestamp) || 0;
+      const timeB = b.timestamp?.toMillis?.() || (b.timestamp?.seconds ? b.timestamp.seconds * 1000 : b.timestamp) || 0;
       return timeA - timeB;
     });
   }, [serverMessages, selectedContact, user]);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
       const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
       if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
     }
-  }
+  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || !user || !selectedContact || isSending) return;
@@ -199,10 +208,12 @@ export function CommunicationConsole() {
         where("senderId", "==", contact.id),
         where("read", "==", false)
       );
-      const snap = await getDocs(q);
-      const batch = writeBatch(db);
-      snap.docs.forEach(d => batch.update(d.ref, { read: true }));
-      await batch.commit();
+      try {
+        const snap = await getDocs(q);
+        const batch = writeBatch(db);
+        snap.docs.forEach(d => batch.update(d.ref, { read: true }));
+        await batch.commit();
+      } catch (e) {}
     }
   }
 

@@ -18,11 +18,13 @@ import { AppLogo } from '@/components/ui/app-logo'
 import { NotificationManager } from '@/lib/notification-manager'
 import { IntegrationBridge } from '@/lib/integration-bridge'
 import { useToast } from '@/hooks/use-toast'
+import { errorEmitter } from '@/firebase/error-emitter'
+import { FirestorePermissionError } from '@/firebase/errors'
 
 /**
- * @fileOverview Imperial Notification Center v3.0.
+ * @fileOverview Imperial Notification Center v3.1.
  * Aggregates all sovereign signals with Real-Time Audio Relay.
- * Fixed: Robust real-time sound trigger and First-Load handling.
+ * Fixed: Robust Firestore Index error handling and performance optimization.
  */
 
 export function ImperialNotificationCenter() {
@@ -36,6 +38,7 @@ export function ImperialNotificationCenter() {
   const { playMessageSound } = useAudioEngine()
   
   const isFirstBatchHandled = useRef(false)
+  const senderCache = useRef<Record<string, string>>({})
 
   useEffect(() => {
     if (!user) return;
@@ -51,9 +54,11 @@ export function ImperialNotificationCenter() {
         label: 'Emergency Alert'
       }));
       updateNotifications(sos, 'SOS');
+    }, (err) => {
+      console.error("[Imperial Signal] SOS Listener Error:", err);
     });
 
-    // 2. Real-Time Message Listener with Refined Audio Trigger
+    // 2. Real-Time Message Listener with Index Guard
     const unsubMessages = onSnapshot(query(
       collection(db, "messages"), 
       where("recipientId", "==", user.uid),
@@ -61,21 +66,17 @@ export function ImperialNotificationCenter() {
       limit(20)
     ), async (snapshot) => {
       
-      // If this is the very first load, we silence the chime
       if (!isFirstBatchHandled.current) {
         console.log("[Imperial Signal] Initializing Message Grid. Chime Silenced.");
         isFirstBatchHandled.current = true;
       } else {
-        // Trigger sound only for NEW documents added to the snapshot
         snapshot.docChanges().forEach(change => {
           if (change.type === 'added') {
             const data = change.doc.data();
-            // Safety: Only play if sender is NOT the current user
             if (data.senderId !== user.uid) {
               console.warn("[Imperial Signal] NEW DATA PACKET RECEIVED. Playing Chime...");
               playMessageSound();
               
-              // Also send a browser push notification
               NotificationManager.sendNotification(
                 "নতুন রাজকীয় বার্তা",
                 data.content.substring(0, 50) + "...",
@@ -86,19 +87,22 @@ export function ImperialNotificationCenter() {
         });
       }
 
-      // Sync the UI list with unread items
       const messageList: any[] = [];
       for (const docSnap of snapshot.docs) {
         const d = docSnap.data();
         if (d.read === false) {
-          let senderAvatar = '';
-          try {
-            const senderRef = doc(db, "users", d.senderId);
-            const senderSnap = await getDoc(senderRef);
-            if (senderSnap.exists()) {
-              senderAvatar = senderSnap.data().photoURL || '';
-            }
-          } catch (e) {}
+          let senderAvatar = senderCache.current[d.senderId] || '';
+          
+          if (!senderAvatar && !senderCache.current[d.senderId]) {
+            try {
+              const senderRef = doc(db, "users", d.senderId);
+              const senderSnap = await getDoc(senderRef);
+              if (senderSnap.exists()) {
+                senderAvatar = senderSnap.data().photoURL || '';
+                senderCache.current[d.senderId] = senderAvatar;
+              }
+            } catch (e) {}
+          }
 
           messageList.push({
             id: docSnap.id,
@@ -113,6 +117,20 @@ export function ImperialNotificationCenter() {
       }
       
       updateNotifications(messageList, 'MESSAGE');
+    }, (err) => {
+      console.error("[Imperial Signal] Message Query Error:", err);
+      if (err.code === 'failed-precondition') {
+        toast({
+          title: "ইন্ডেক্স প্রয়োজন (Index Required)",
+          description: "সার্ভারে তথ্য সর্ট করার জন্য একটি ইন্ডেক্স প্রয়োজন। অনুগ্রহ করে ব্রাউজার কনসোলে থাকা লিঙ্কে ক্লিক করে এটি তৈরি করুন।",
+          variant: "destructive"
+        });
+      } else if (err.code === 'permission-denied') {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: '/messages',
+          operation: 'list'
+        }));
+      }
     });
 
     // 3. Listen for External Signals
@@ -126,6 +144,8 @@ export function ImperialNotificationCenter() {
         label: doc.data().companyName || 'External Signal'
       }));
       updateNotifications(signals, 'SIGNAL');
+    }, (err) => {
+      console.error("[Imperial Signal] External Signal Error:", err);
     });
 
     return () => {
