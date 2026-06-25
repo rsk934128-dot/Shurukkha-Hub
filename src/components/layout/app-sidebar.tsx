@@ -225,15 +225,16 @@ export function AppSidebar({ userRole, onNavigate, onLogout, activeTab }: AppSid
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <Link href="/audit" passHref legacyBehavior>
-                    <SidebarMenuButton 
-                      className="px-4 h-10 gap-3"
-                    >
+                  <SidebarMenuButton 
+                    asChild
+                    className="px-4 h-10 gap-3"
+                  >
+                    <Link href="/audit">
                       <Terminal size={18} className="text-accent" />
                       <span className="font-medium">ফরেনসিক অডিট</span>
                       <ArrowUpRight size={14} className="opacity-40" />
-                    </SidebarMenuButton>
-                  </Link>
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
