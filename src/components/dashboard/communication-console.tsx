@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { MessageSquare, Send, Paperclip, Phone, Video, User, ShieldCheck, Search, Loader2, Signal, ArrowLeft } from 'lucide-react'
+import { MessageSquare, Send, Paperclip, Phone, Video, User, ShieldCheck, Search, Loader2, Signal, ArrowLeft, Info } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,18 +34,18 @@ export function CommunicationConsole() {
   const [showMobileList, setShowMobileList] = useState(true)
   const [isSending, setIsSending] = useState(false)
   const [lastInteractionMap, setLastInteractionMap] = useState<Record<string, number>>({})
+  const [hasIndexError, setHasIndexError] = useState(false)
   
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // 1. Global Message Listener for Priority Sorting and Badge Updates
+  // 1. Global Message Listener for Priority Sorting
   useEffect(() => {
     if (!user) return;
 
-    const qAll = query(
-      collection(db, "messages"),
-      orderBy("timestamp", "desc"),
-      limit(100)
-    );
+    // Use Safe-Mode query if index error detected
+    const qAll = hasIndexError
+      ? query(collection(db, "messages"), limit(100))
+      : query(collection(db, "messages"), orderBy("timestamp", "desc"), limit(100));
 
     const unsubscribe = onSnapshot(qAll, (snapshot) => {
       setLastInteractionMap(prev => {
@@ -79,16 +79,17 @@ export function CommunicationConsole() {
     }, (err) => {
        console.error("[Comm Console] Global Listener Error:", err);
        if (err.code === 'failed-precondition') {
+          setHasIndexError(true);
           toast({
-            title: "ইন্ডেক্স মিসিং (Composite Index Required)",
-            description: "সম্রাট, এই কন্টাক্ট লিস্ট সময়ের ক্রমানুসারে সাজাতে একটি ইন্ডেক্স প্রয়োজন। অনুগ্রহ করে ব্রাউজার কনসোল চেক করুন।",
+            title: "ইন্ডেক্স মিসিং (Safe-Mode Active)",
+            description: "সম্রাট, সর্টিং সক্রিয় করার জন্য ইন্ডেক্স তৈরি করা হচ্ছে। অনুগ্রহ করে ব্রাউজার কনসোল চেক করুন।",
             variant: "destructive"
           });
        }
     });
 
     return () => unsubscribe();
-  }, [user?.uid, toast]);
+  }, [user?.uid, toast, hasIndexError]);
 
   // 2. User Directory sync
   useEffect(() => {
@@ -117,7 +118,7 @@ export function CommunicationConsole() {
     return () => unsubscribeUsers();
   }, [user])
 
-  // 3. Selective Chat Listener - Handles 'read' status only
+  // 3. Selective Chat Listener
   useEffect(() => {
     if (!user || !selectedContact) return;
 
@@ -251,6 +252,11 @@ export function CommunicationConsole() {
             </div>
           )}
         </div>
+        {hasIndexError && (
+          <Badge variant="destructive" className="animate-pulse text-[8px] gap-1 px-3">
+            <Info size={10} /> Safe-Mode
+          </Badge>
+        )}
       </CardHeader>
 
       <div className="flex-1 flex overflow-hidden">

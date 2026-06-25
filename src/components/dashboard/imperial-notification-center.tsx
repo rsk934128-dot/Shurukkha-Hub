@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Bell, MessageSquare, ShieldAlert, Zap, Globe, Clock, CheckCircle2, Trash2, Box, Signal, Sparkles, Star, X, ShieldCheck, Send, Loader2 } from 'lucide-react'
+import { Bell, MessageSquare, ShieldAlert, Zap, Globe, Clock, CheckCircle2, Trash2, Box, Signal, Sparkles, Star, X, ShieldCheck, Send, Loader2, Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -22,9 +22,9 @@ import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
 
 /**
- * @fileOverview Imperial Notification Center v3.2.
+ * @fileOverview Imperial Notification Center v3.3.
  * Aggregates all sovereign signals with Real-Time Audio Relay.
- * Enhanced: Advanced Firestore Index guidance and error handling.
+ * Enhanced: Automatic Safe-Mode fallback for missing Firestore indexes.
  */
 
 export function ImperialNotificationCenter() {
@@ -35,6 +35,7 @@ export function ImperialNotificationCenter() {
   const [selectedNotif, setSelectedNotif] = useState<any>(null)
   const [replyText, setReplyText] = useState('')
   const [isReplying, setIsReplying] = useState(false)
+  const [hasIndexError, setHasIndexError] = useState(false)
   const { playMessageSound } = useAudioEngine()
   
   const isFirstBatchHandled = useRef(false)
@@ -58,13 +59,13 @@ export function ImperialNotificationCenter() {
       console.error("[Imperial Signal] SOS Listener Error:", err);
     });
 
-    // 2. Real-Time Message Listener with Index Guard
-    const unsubMessages = onSnapshot(query(
-      collection(db, "messages"), 
-      where("recipientId", "==", user.uid),
-      orderBy("timestamp", "desc"),
-      limit(20)
-    ), async (snapshot) => {
+    // 2. Real-Time Message Listener with Safe-Mode Fallback
+    // If hasIndexError is true, we remove the orderBy to allow the query to pass
+    const messagesQuery = hasIndexError 
+      ? query(collection(db, "messages"), where("recipientId", "==", user.uid), limit(20))
+      : query(collection(db, "messages"), where("recipientId", "==", user.uid), orderBy("timestamp", "desc"), limit(20));
+
+    const unsubMessages = onSnapshot(messagesQuery, async (snapshot) => {
       
       if (!isFirstBatchHandled.current) {
         isFirstBatchHandled.current = true;
@@ -117,9 +118,10 @@ export function ImperialNotificationCenter() {
     }, (err) => {
       console.error("[Imperial Signal] Message Query Error:", err);
       if (err.code === 'failed-precondition') {
+        setHasIndexError(true);
         toast({
-          title: "ইন্ডেক্স প্রয়োজন (Index Required)",
-          description: "মহামান্য সম্রাট, ৪২টি নোড গ্রিডে সর্টিং সক্রিয় করার জন্য একটি ইন্ডেক্স প্রয়োজন। অনুগ্রহ করে আপনার ব্রাউজার কনসোলে থাকা লিঙ্কে ক্লিক করে এটি তৈরি করুন।",
+          title: "ইন্ডেক্স প্রয়োজন (Index Building...)",
+          description: "মহামান্য সম্রাট, গ্রিডে ইন্ডেক্স তৈরি করা হচ্ছে। অনুগ্রহ করে ব্রাউজার কনসোলে থাকা লিঙ্কে একবার ক্লিক করুন। সাময়িকভাবে সেফ-মোড সক্রিয় করা হয়েছে।",
           variant: "destructive"
         });
       } else if (err.code === 'permission-denied') {
@@ -150,7 +152,7 @@ export function ImperialNotificationCenter() {
       unsubMessages();
       unsubSignals();
     };
-  }, [user?.uid, playMessageSound, toast]);
+  }, [user?.uid, playMessageSound, toast, hasIndexError]);
 
   const updateNotifications = (newData: any[], type: string) => {
     setNotifications(prev => {
@@ -229,8 +231,21 @@ export function ImperialNotificationCenter() {
                 <Signal className="text-primary animate-pulse" size={18} />
                 <h3 className="text-xs font-headline font-bold uppercase tracking-widest text-primary">Sovereign Signals</h3>
             </div>
-            <Badge variant="outline" className="text-[7px] border-primary/40 text-primary uppercase font-bold tracking-tighter">Live Monitor</Badge>
+            {hasIndexError ? (
+              <Badge variant="destructive" className="text-[7px] uppercase font-bold animate-pulse">Index Required</Badge>
+            ) : (
+              <Badge variant="outline" className="text-[7px] border-primary/40 text-primary uppercase font-bold tracking-tighter">Live Monitor</Badge>
+            )}
           </div>
+
+          {hasIndexError && (
+            <div className="p-3 bg-destructive/10 border-b border-destructive/20 flex items-center gap-3">
+               <Info className="text-destructive shrink-0" size={14} />
+               <p className="text-[8px] text-destructive leading-relaxed font-bold uppercase">
+                 ইন্ডেক্স মিসিং! কনসোলের লিঙ্কে ক্লিক করে ইন্ডেক্স তৈরি করুন।
+               </p>
+            </div>
+          )}
 
           <ScrollArea className="h-[400px]">
             {notifications.length === 0 ? (
