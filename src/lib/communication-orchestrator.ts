@@ -1,9 +1,9 @@
-
 /**
  * @fileOverview Sovereign Communication Orchestrator.
  * Manages encrypted messaging and sync logic.
  * Phase 35.0: Fixed ServerTimestamp handling and Connectivity tracking.
  * Phase 35.1: Optimized timestamp persistence for local/server consistency.
+ * Phase 35.5: Added 'read' status tracking for unread message counters.
  */
 
 import { db } from './firebase';
@@ -20,6 +20,7 @@ export interface Message {
   type: 'text' | 'file';
   timestamp: any;
   status: 'sent' | 'queued';
+  read: boolean;
 }
 
 export class CommunicationOrchestrator {
@@ -57,11 +58,10 @@ export class CommunicationOrchestrator {
 
     console.log(`[Comm Orchestrator] Syncing ${queue.length} pending operations...`);
     // Iteratively attempt to re-send messages
-    // For now, we clear to prevent loops in prototype
     DisasterStorage.clearSyncQueue();
   }
 
-  async sendMessage(msg: Omit<Message, 'timestamp' | 'status' | 'chatId'>) {
+  async sendMessage(msg: Omit<Message, 'timestamp' | 'status' | 'chatId' | 'read'>) {
     const chatId = CommunicationOrchestrator.getChatId(msg.senderId, msg.recipientId);
     const now = Date.now();
 
@@ -70,7 +70,8 @@ export class CommunicationOrchestrator {
       ...msg,
       chatId,
       status: 'sent' as const,
-      timestamp: serverTimestamp()
+      timestamp: serverTimestamp(),
+      read: false
     };
 
     // Local/Offline data uses numeric timestamp
@@ -79,7 +80,8 @@ export class CommunicationOrchestrator {
       chatId,
       status: 'queued' as const,
       timestamp: now,
-      id: 'local_' + now
+      id: 'local_' + now,
+      read: false
     };
 
     try {

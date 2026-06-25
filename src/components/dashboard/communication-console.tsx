@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
@@ -12,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { CommunicationOrchestrator, Message } from '@/lib/communication-orchestrator'
 import { db } from '@/lib/firebase'
 import { useUser } from '@/firebase'
-import { collection, query, limit, onSnapshot, where, getDocs, setDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore'
+import { collection, query, limit, onSnapshot, where, getDocs, setDoc, doc, serverTimestamp, orderBy, updateDoc, writeBatch } from 'firebase/firestore'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
@@ -25,6 +24,7 @@ export function CommunicationConsole() {
   const [selectedContact, setSelectedContact] = useState<any>(null)
   const [contacts, setContacts] = useState<any[]>([COMMAND_CENTER_CONTACT])
   const [serverMessages, setServerMessages] = useState<Message[]>([])
+  const [unreadCountMap, setUnreadCountMap] = useState<Record<string, number>>({})
   const [input, setInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
@@ -36,37 +36,44 @@ export function CommunicationConsole() {
   const { playMessageSound } = useAudioEngine()
   const lastMessageId = useRef<string | null>(null)
 
-  // 1. Listen for global messages involving the current user to update sorting order
+  // 1. Listen for global messages involving the current user to update sorting order and unread counts
   useEffect(() => {
     if (!user) return;
 
-    // Listen to the last 100 messages where the user could be involved
-    const qGlobal = query(
+    const qAll = query(
       collection(db, "messages"),
       orderBy("timestamp", "desc"),
-      limit(100)
+      limit(200)
     );
 
-    const unsubscribe = onSnapshot(qGlobal, (snapshot) => {
+    const unsubscribe = onSnapshot(qAll, (snapshot) => {
       const newInteractionMap = { ...lastInteractionMap };
+      const newUnreadMap: Record<string, number> = {};
       let hasChange = false;
 
       snapshot.docs.forEach(doc => {
         const d = doc.data();
-        if (d.senderId === user.uid || d.recipientId === user.uid) {
-          const otherId = d.senderId === user.uid ? d.recipientId : d.senderId;
+        const isRecipient = d.recipientId === user.uid;
+        const isSender = d.senderId === user.uid;
+
+        if (isRecipient || isSender) {
+          const otherId = isRecipient ? d.senderId : d.recipientId;
           const ts = d.timestamp?.toMillis?.() || (d.timestamp?.seconds ? d.timestamp.seconds * 1000 : null) || Date.now();
           
           if (!newInteractionMap[otherId] || ts > newInteractionMap[otherId]) {
             newInteractionMap[otherId] = ts;
             hasChange = true;
           }
+
+          // Count unread if I am the recipient
+          if (isRecipient && d.read === false) {
+            newUnreadMap[d.senderId] = (newUnreadMap[d.senderId] || 0) + 1;
+          }
         }
       });
 
-      if (hasChange) {
-        setLastInteractionMap(newInteractionMap);
-      }
+      if (hasChange) setLastInteractionMap(newInteractionMap);
+      setUnreadCountMap(newUnreadMap);
     });
 
     return () => unsubscribe();
@@ -101,7 +108,6 @@ export function CommunicationConsole() {
 
   // 3. Sort and Filter Contacts
   const sortedAndFilteredContacts = useMemo(() => {
-    // First apply search filter
     let filtered = contacts;
     if (searchQuery) {
       filtered = contacts.filter(c => 
@@ -110,18 +116,15 @@ export function CommunicationConsole() {
       );
     }
 
-    // Then sort by last interaction (highest timestamp first)
     return [...filtered].sort((a, b) => {
       const timeA = lastInteractionMap[a.id] || 0;
       const timeB = lastInteractionMap[b.id] || 0;
-      
-      // If timestamps are equal, maintain alphabetical or role-based order
       if (timeB === timeA) return 0;
       return timeB - timeA;
     });
   }, [contacts, searchQuery, lastInteractionMap]);
 
-  // Combine server messages with local queued messages for the active chat
+  // Combined messages for selected chat
   const messages = useMemo(() => {
     if (!selectedContact || !user) return [];
     const currentChatId = CommunicationOrchestrator.getChatId(user.uid, selectedContact.id);
@@ -154,13 +157,19 @@ export function CommunicationConsole() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const chatMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
       
-      const lastMsg = chatMsgs[chatMsgs.length - 1];
-      if (lastMsg && lastMsg.id !== lastMessageId.current) {
-        if (lastMsg.senderId !== user.uid) {
-          playMessageSound();
+      // Auto-read and sound logic
+      snapshot.docChanges().forEach(change => {
+        if (change.type === 'added') {
+          const d = change.doc.data();
+          if (d.senderId !== user.uid) {
+            playMessageSound();
+            // Mark as read immediately if chat is open
+            if (d.recipientId === user.uid && d.read === false) {
+              updateDoc(doc(db, "messages", change.doc.id), { read: true });
+            }
+          }
         }
-        lastMessageId.current = lastMsg.id || null;
-      }
+      });
 
       setServerMessages(chatMsgs);
       setTimeout(scrollToBottom, 200);
@@ -196,10 +205,8 @@ export function CommunicationConsole() {
         content: content,
         type: 'text'
       });
-      // Force update sorting on send
       setLastInteractionMap(prev => ({ ...prev, [selectedContact.id]: Date.now() }));
     } catch (err) {
-       console.error("[Comm] Send failed", err);
        setInput(content); 
     } finally {
       setIsSending(false);
@@ -229,10 +236,24 @@ export function CommunicationConsole() {
     }
   }
 
-  const handleSelectContact = (contact: any) => {
+  const handleSelectContact = async (contact: any) => {
     setSelectedContact(contact);
     setShowMobileList(false);
     setServerMessages([]); 
+
+    // Batch update to mark all unread messages from this contact as read
+    if (user && unreadCountMap[contact.id] > 0) {
+      const q = query(
+        collection(db, "messages"),
+        where("recipientId", "==", user.uid),
+        where("senderId", "==", contact.id),
+        where("read", "==", false)
+      );
+      const snap = await getDocs(q);
+      const batch = writeBatch(db);
+      snap.docs.forEach(d => batch.update(d.ref, { read: true }));
+      await batch.commit();
+    }
   }
 
   return (
@@ -316,7 +337,11 @@ export function CommunicationConsole() {
                   <div className="overflow-hidden flex-1">
                     <div className="flex justify-between items-start">
                       <p className="text-[11px] font-bold truncate text-foreground">{res.name}</p>
-                      {lastInteractionMap[res.id] && (
+                      {unreadCountMap[res.id] > 0 ? (
+                        <Badge className="bg-primary text-background h-4 min-w-4 px-1 flex items-center justify-center font-bold text-[9px] animate-pulse">
+                          {unreadCountMap[res.id]}
+                        </Badge>
+                      ) : lastInteractionMap[res.id] && (
                         <span className="text-[7px] text-primary font-mono ml-2">Active</span>
                       )}
                     </div>
