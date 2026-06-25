@@ -27,11 +27,10 @@ export function ThreatMap() {
             <p className="text-[10px] text-muted-foreground">রিয়েল-টাইমে আক্রমণের ভৌগোলিক উৎস এবং তীব্রতা পর্যবেক্ষণ করুন।</p>
           </div>
         </div>
-        <Badge variant="destructive" className="animate-bounce">ACTIVE WARFARE</Badge>
+        <Badge variant="destructive" className="animate-bounce uppercase text-[8px] font-bold tracking-widest">Active Warfare</Badge>
       </div>
 
       <div className="h-[300px] w-full bg-black/60 rounded-2xl border border-destructive/20 relative overflow-hidden">
-        {/* Abstract World Grid Background */}
         <div className="absolute inset-0 opacity-10 flex items-center justify-center pointer-events-none">
           <div className="w-full h-full border-t border-b border-destructive/20 scale-150 rotate-12" />
           <div className="absolute w-full h-full border-l border-r border-destructive/20 scale-150 -rotate-12" />
@@ -99,7 +98,7 @@ export function ThreatMap() {
             </div>
             <div className="text-right">
               <p className="text-xs font-mono font-bold text-destructive">{attack.intensity}%</p>
-              <Badge variant="outline" className="text-[7px] h-4 border-destructive/20 text-destructive">COUNTERED</Badge>
+              <Badge variant="outline" className="text-[7px] h-4 border-destructive/20 text-destructive">Countered</Badge>
             </div>
           </div>
         ))}

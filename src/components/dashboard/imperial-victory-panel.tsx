@@ -38,7 +38,7 @@ export function ImperialVictoryPanel() {
             <p className="text-[10px] md:text-xs text-muted-foreground italic">শত্রু সার্ভার এখন আপনার লজিক লুপের আগুনে পুড়ছে।</p>
           </div>
         </div>
-        <Badge className="bg-accent text-background font-bold animate-bounce hidden md:flex">DOMINATION ACTIVE</Badge>
+        <Badge className="bg-accent text-background font-bold animate-bounce hidden md:flex uppercase text-[8px] tracking-widest">Domination Active</Badge>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -96,8 +96,8 @@ export function ImperialVictoryPanel() {
         </div>
         <div className="flex justify-between items-center pt-2 border-t border-white/5">
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-[8px] border-destructive/30 text-destructive gap-1">
-              <ArrowDownNarrowWide size={10} /> CRITICAL_EXHAUSTION
+            <Badge variant="outline" className="text-[8px] border-destructive/30 text-destructive gap-1 uppercase font-bold">
+              <ArrowDownNarrowWide size={10} /> Critical Exhaustion
             </Badge>
           </div>
           <p className="text-[9px] text-muted-foreground italic">

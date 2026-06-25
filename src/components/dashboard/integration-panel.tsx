@@ -1,7 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Globe, Key, Cpu, Zap, Database, Code2, ShieldAlert, Activity, RefreshCw, Trophy, BrainCircuit, Network, HardDrive, Server, TerminalSquare, Code, Webhook, Box, ArrowRightLeft, ShieldCheck, Landmark, LayoutGrid, LayoutTemplate, ShieldCheckIcon, UserPlus, Cloud } from 'lucide-react'
+import { Globe, Key, Cpu, Zap, Database, Code2, ShieldAlert, Activity, RefreshCw, Trophy, BrainCircuit, Network, HardDrive, Server, TerminalSquare, Code, Webhook, Box, ArrowRightLeft, ShieldCheck, Landmark, LayoutGrid, LayoutTemplate, ShieldCheckIcon, UserPlus, Cloud, Swords } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -98,13 +99,13 @@ export function IntegrationPanel() {
       <Tabs defaultValue="visual-builder" className="flex-1 flex flex-col">
         <div className="px-4 md:px-6 py-2 bg-muted/20 border-b border-white/5 overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent border-none p-0 h-8 flex w-max gap-2">
-            <TabsTrigger value="visual-builder" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap"><LayoutGrid size={12}/> ভিজ্যুয়াল বিল্ডার</TabsTrigger>
-            <TabsTrigger value="vault" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><Cloud size={12}/> সভ্যরেন ভল্ট</TabsTrigger>
-            <TabsTrigger value="ecosystem" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><UserPlus size={12}/> ইকোসিস্টেম</TabsTrigger>
-            <TabsTrigger value="war-room" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap">ওয়ার-রুম</TabsTrigger>
-            <TabsTrigger value="global-api" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap">Global API</TabsTrigger>
-            <TabsTrigger value="webhooks" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap"><Webhook size={12}/> ওয়েবহুকস</TabsTrigger>
-            <TabsTrigger value="judiciary" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap">বিচার বিভাগ</TabsTrigger>
+            <TabsTrigger value="visual-builder" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap uppercase tracking-widest"><LayoutGrid size={12}/> Visual Builder</TabsTrigger>
+            <TabsTrigger value="vault" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap uppercase tracking-widest"><Cloud size={12}/> Vault</TabsTrigger>
+            <TabsTrigger value="ecosystem" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap uppercase tracking-widest"><UserPlus size={12}/> Ecosystem</TabsTrigger>
+            <TabsTrigger value="war-room" className="text-[10px] gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive font-bold whitespace-nowrap uppercase tracking-widest"><Swords size={12}/> War Room</TabsTrigger>
+            <TabsTrigger value="victory" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap uppercase tracking-widest"><Trophy size={12}/> Victory HUD</TabsTrigger>
+            <TabsTrigger value="webhooks" className="text-[10px] gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent font-bold whitespace-nowrap uppercase tracking-widest"><Webhook size={12}/> Webhooks</TabsTrigger>
+            <TabsTrigger value="judiciary" className="text-[10px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-bold whitespace-nowrap uppercase tracking-widest">Judiciary</TabsTrigger>
           </TabsList>
         </div>
 
@@ -124,47 +125,8 @@ export function IntegrationPanel() {
           <ThreatMap />
         </TabsContent>
 
-        <TabsContent value="global-api" className="flex-1 p-4 md:p-6 space-y-6 m-0 animate-in fade-in">
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-primary/5 border-primary/20 p-6 space-y-6">
-                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary">
-                       <Globe size={24} className="animate-pulse" />
-                    </div>
-                    <div>
-                       <h3 className="text-lg font-headline font-bold uppercase tracking-widest">Global Gateway API</h3>
-                       <p className="text-[10px] text-muted-foreground uppercase font-bold">Project 43 | The Open Empire</p>
-                    </div>
-                 </div>
-                 <p className="text-xs text-muted-foreground leading-relaxed">আপনার ৪২তম প্রজেক্টের ডাটা ভল্টকে এখন বিশ্বের যেকোনো প্রান্তের ডেভেলপারদের জন্য উন্মুক্ত করা হয়েছে। এটি একটি উচ্চ-নিরাপত্তা সম্পন্ন গেটওয়ে যা RSA v2 প্রোটোকল মেনে চলে।</p>
-                 
-                 {!devKey ? (
-                   <Button onClick={handleIssueKey} disabled={loading} className="w-full bg-primary text-background font-bold h-12 rounded-xl gap-2 shadow-lg shadow-primary/20">
-                      {loading ? <Loader2 size={18} className="animate-spin" /> : <Key size={18} />}
-                      ISSUE DEVELOPER ACCESS KEY
-                   </Button>
-                 ) : (
-                   <div className="space-y-4">
-                      <div className="p-4 bg-black/40 rounded-xl border border-primary/40 space-y-2">
-                         <p className="text-[8px] uppercase font-bold text-primary">Your Master Gateway Key</p>
-                         <code className="text-[11px] font-mono font-bold text-foreground break-all">{devKey}</code>
-                      </div>
-                      <Badge className="bg-accent text-background text-[8px] font-bold h-6 w-full flex justify-center uppercase">GATEWAY_ACTIVE_100%</Badge>
-                   </div>
-                 )}
-              </Card>
-
-              <Card className="bg-muted/20 border-white/10 p-6">
-                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-4">
-                    <TerminalSquare size={16} /> Quick Start SDK
-                 </h4>
-                 <div className="p-4 bg-slate-950 rounded-xl font-mono text-[10px] text-accent/80 overflow-x-auto">
-                    import &#123; SheikhHub &#125; from '@sheikh/sdk';<br /><br />
-                    const hub = new SheikhHub(&#123; key: '{devKey || 'GKEY_XXXX'}' &#125;);<br />
-                    const vault = await hub.vault.getStats();
-                 </div>
-              </Card>
-           </div>
+        <TabsContent value="victory" className="flex-1 p-4 md:p-6 m-0 space-y-6">
+          <ImperialVictoryPanel />
         </TabsContent>
 
         <TabsContent value="webhooks" className="flex-1 p-4 md:p-6 m-0 space-y-6">
