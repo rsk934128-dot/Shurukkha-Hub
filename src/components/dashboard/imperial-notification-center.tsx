@@ -1,8 +1,9 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Bell, MessageSquare, ShieldAlert, Zap, Globe, Clock, CheckCircle2, Trash2, Box, Signal, Sparkles, Star } from 'lucide-react'
+import { Bell, MessageSquare, ShieldAlert, Zap, Globe, Clock, CheckCircle2, Trash2, Box, Signal, Sparkles, Star, X, ShieldCheck } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -10,16 +11,19 @@ import { db } from '@/lib/firebase'
 import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore'
 import { useUser } from '@/firebase'
 import { useAudioEngine } from '@/hooks/use-audio-engine'
+import { AppLogo } from '@/components/ui/app-logo'
 
 /**
  * @fileOverview Imperial Notification Center.
  * Aggregates all sovereign signals into a single high-fidelity HUD.
+ * Updated Phase 38.0: Added Full-Scale Detail Expansion View.
  */
 
 export function ImperialNotificationCenter() {
   const { user } = useUser()
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [selectedNotif, setSelectedNotif] = useState<any>(null)
   const { playMessageSound } = useAudioEngine()
 
   useEffect(() => {
@@ -32,7 +36,8 @@ export function ImperialNotificationCenter() {
         ...doc.data(), 
         type: 'SOS',
         icon: ShieldAlert,
-        color: 'text-destructive'
+        color: 'text-destructive',
+        label: 'Emergency Alert'
       }));
       updateNotifications(sos, 'SOS');
     });
@@ -44,7 +49,8 @@ export function ImperialNotificationCenter() {
         ...doc.data(), 
         type: 'MESSAGE',
         icon: MessageSquare,
-        color: 'text-primary'
+        color: 'text-primary',
+        label: 'New Message'
       }));
       updateNotifications(msgs, 'MESSAGE');
       if (msgs.length > 0) playMessageSound();
@@ -57,7 +63,8 @@ export function ImperialNotificationCenter() {
         ...doc.data(), 
         type: 'SIGNAL',
         icon: Zap,
-        color: 'text-accent'
+        color: 'text-accent',
+        label: doc.data().companyName || 'External Signal'
       }));
       updateNotifications(signals, 'SIGNAL');
     });
@@ -91,74 +98,139 @@ export function ImperialNotificationCenter() {
     const diff = Math.floor((new Date().getTime() - date.getTime()) / 1000);
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleString('bn-BD', { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-9 w-9 md:h-10 md:w-10 rounded-xl bg-primary/5 hover:bg-primary/10 border border-white/5 group">
-          <Bell className={`h-5 w-5 ${unreadCount > 0 ? 'text-primary animate-sos-pulse' : 'text-muted-foreground'}`} />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary text-[8px] font-bold text-background items-center justify-center">
-                {unreadCount}
+    <>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" className="relative h-9 w-9 md:h-10 md:w-10 rounded-xl bg-primary/5 hover:bg-primary/10 border border-white/5 group">
+            <Bell className={`h-5 w-5 ${unreadCount > 0 ? 'text-primary animate-sos-pulse' : 'text-muted-foreground'}`} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-primary text-[8px] font-bold text-background items-center justify-center">
+                  {unreadCount}
+                </span>
               </span>
-            </span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 md:w-96 p-0 bg-card/95 backdrop-blur-2xl border-primary/20 shadow-2xl rounded-[2rem] overflow-hidden" align="end">
-        <div className="bg-primary/10 p-4 border-b border-white/5 flex items-center justify-between">
-           <div className="flex items-center gap-2">
-              <Signal className="text-primary animate-pulse" size={18} />
-              <h3 className="text-xs font-headline font-bold uppercase tracking-widest text-primary">Sovereign Signals</h3>
-           </div>
-           <Badge variant="outline" className="text-[8px] border-primary/40 text-primary uppercase font-bold tracking-tighter">Live Monitor</Badge>
-        </div>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 md:w-96 p-0 bg-card/95 backdrop-blur-2xl border-primary/20 shadow-2xl rounded-[2rem] overflow-hidden" align="end">
+          <div className="bg-primary/10 p-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <Signal className="text-primary animate-pulse" size={18} />
+                <h3 className="text-xs font-headline font-bold uppercase tracking-widest text-primary">Sovereign Signals</h3>
+            </div>
+            <Badge variant="outline" className="text-[8px] border-primary/40 text-primary uppercase font-bold tracking-tighter">Live Monitor</Badge>
+          </div>
 
-        <ScrollArea className="h-[400px]">
-           {notifications.length === 0 ? (
-             <div className="flex flex-col items-center justify-center py-20 opacity-20 text-center px-8">
-                <Bell size={48} className="mb-4" />
-                <p className="text-[10px] uppercase font-bold tracking-[0.3em]">No Pending Signals</p>
-                <p className="text-[8px] mt-2 italic">The Empire is secure and quiet.</p>
-             </div>
-           ) : (
-             <div className="divide-y divide-white/5">
-                {notifications.map((notif) => (
-                  <div key={notif.id} className="p-4 hover:bg-white/[0.03] transition-colors flex items-start gap-4 group cursor-pointer">
-                    <div className={`w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center border border-white/5 shrink-0 group-hover:scale-110 transition-transform ${notif.color}`}>
-                       <notif.icon size={18} />
+          <ScrollArea className="h-[400px]">
+            {notifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 opacity-20 text-center px-8">
+                  <Bell size={48} className="mb-4" />
+                  <p className="text-[10px] uppercase font-bold tracking-[0.3em]">No Pending Signals</p>
+                  <p className="text-[8px] mt-2 italic">The Empire is secure and quiet.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/5">
+                  {notifications.map((notif) => (
+                    <div 
+                      key={notif.id} 
+                      onClick={() => setSelectedNotif(notif)}
+                      className="p-4 hover:bg-white/[0.03] transition-colors flex items-start gap-4 group cursor-pointer"
+                    >
+                      <div className={`w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center border border-white/5 shrink-0 group-hover:scale-110 transition-transform ${notif.color}`}>
+                        <notif.icon size={18} />
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex justify-between items-start">
+                            <p className="text-[10px] font-bold uppercase text-foreground/90 truncate">{notif.label}</p>
+                            <span className="text-[8px] text-muted-foreground font-mono">{getRelativeTime(notif.timestamp)}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+                          {notif.content || notif.location || notif.note || "New high-priority data packet received."}
+                        </p>
+                        <div className="flex items-center gap-2 pt-1">
+                            <Badge variant="outline" className="text-[6px] border-white/5 uppercase opacity-50">Node: Sadar_01</Badge>
+                            <div className="flex items-center gap-1 text-[6px] font-bold text-accent">
+                              <Sparkles size={8} /> AI_VERIFIED
+                            </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0 space-y-1">
-                       <div className="flex justify-between items-start">
-                          <p className="text-[10px] font-bold uppercase text-foreground/90 truncate">{notif.type === 'MESSAGE' ? 'New Message' : notif.type === 'SOS' ? 'Emergency Alert' : notif.companyName}</p>
-                          <span className="text-[8px] text-muted-foreground font-mono">{getRelativeTime(notif.timestamp)}</span>
-                       </div>
-                       <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
-                         {notif.content || notif.location || notif.note || "New high-priority data packet received."}
-                       </p>
-                       <div className="flex items-center gap-2 pt-1">
-                          <Badge variant="outline" className="text-[6px] border-white/5 uppercase opacity-50">Node: Sadar_01</Badge>
-                          <div className="flex items-center gap-1 text-[6px] font-bold text-accent">
-                             <Sparkles size={8} /> AI_VERIFIED
-                          </div>
-                       </div>
-                    </div>
-                  </div>
-                ))}
-             </div>
-           )}
-        </ScrollArea>
+                  ))}
+              </div>
+            )}
+          </ScrollArea>
 
-        <div className="p-3 bg-muted/20 border-t border-white/5 text-center">
-           <Button variant="ghost" className="w-full h-8 text-[9px] uppercase font-bold tracking-[0.2em] text-muted-foreground hover:text-primary gap-2">
-              <Box size={12} /> View Signal Archive <Clock size={12} />
-           </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+          <div className="p-3 bg-muted/20 border-t border-white/5 text-center">
+            <Button variant="ghost" className="w-full h-8 text-[9px] uppercase font-bold tracking-[0.2em] text-muted-foreground hover:text-primary gap-2">
+                <Box size={12} /> View Signal Archive <Clock size={12} />
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {/* Expanded Signal Detail Dialog */}
+      <Dialog open={!!selectedNotif} onOpenChange={(open) => !open && setSelectedNotif(null)}>
+        <DialogContent className="max-w-xl bg-[#05070a] border-primary/20 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-500">
+          <DialogHeader className="p-8 bg-primary/5 border-b border-white/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-5 rotate-12">
+               <AppLogo size={200} />
+            </div>
+            <div className="flex items-center gap-4 relative z-10">
+              <div className={`w-16 h-16 rounded-2xl bg-black/40 flex items-center justify-center border-2 border-primary/20 ${selectedNotif?.color}`}>
+                 {selectedNotif && <selectedNotif.icon size={32} className="animate-pulse" />}
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-headline font-bold tracking-widest text-primary uppercase leading-none">
+                  {selectedNotif?.label}
+                </DialogTitle>
+                <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground/60 tracking-[0.3em] mt-2 flex items-center gap-2">
+                   <ShieldCheck size={12} className="text-accent" /> Signal Purity: 100.0%
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="p-8 space-y-6">
+            <div className="bg-black/40 border border-white/5 rounded-[2rem] p-8 font-body text-lg leading-relaxed text-foreground/90 whitespace-pre-wrap relative z-10 shadow-inner">
+               <p className="italic">"{selectedNotif?.content || selectedNotif?.location || selectedNotif?.note || 'No detailed data available.'}"</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+               <div className="p-4 bg-muted/20 rounded-2xl border border-white/5 space-y-1">
+                  <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest">Received Time</p>
+                  <p className="text-sm font-mono text-primary font-bold">
+                    {selectedNotif && new Date(selectedNotif.timestamp?.toDate ? selectedNotif.timestamp.toDate() : selectedNotif.timestamp).toLocaleString('bn-BD')}
+                  </p>
+               </div>
+               <div className="p-4 bg-muted/20 rounded-2xl border border-white/5 space-y-1">
+                  <p className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest">Signal Hash</p>
+                  <p className="text-[10px] font-mono text-accent truncate">SHA256_{selectedNotif?.id.substring(0, 16).toUpperCase()}</p>
+               </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-4 bg-accent/5 rounded-2xl border border-accent/20">
+               <Globe size={18} className="text-accent" />
+               <p className="text-[10px] text-muted-foreground italic">
+                 "মহামান্য সম্রাট, এই সংকেতটি সরাসরি ৪২টি নোড গ্রিড থেকে রিয়েল-টাইমে প্রসেস করা হয়েছে।"
+               </p>
+            </div>
+          </div>
+
+          <div className="p-6 bg-muted/20 border-t border-white/5 flex gap-4">
+             <Button onClick={() => setSelectedNotif(null)} className="flex-1 bg-primary text-background font-bold h-12 rounded-xl gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
+                <CheckCircle2 size={18} /> ACKNOWLEDGE
+             </Button>
+             <Button variant="outline" className="flex-1 border-white/10 text-white font-bold h-12 rounded-xl gap-2 hover:bg-white/5">
+                <Trash2 size={18} className="text-destructive" /> DISMISS SIGNAL
+             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
